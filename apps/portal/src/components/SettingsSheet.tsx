@@ -2,7 +2,6 @@ import { useState, type ReactNode } from "react"
 import {
   Badge,
   Button,
-  Card,
   Input,
   ListRow,
   Segmented,
@@ -38,16 +37,6 @@ import {
   SunIcon,
 } from "@/components/icons"
 
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("")
-}
-
-/** « Chrome · macOS », lisible sans exposer le user-agent brut. */
 function deviceLabel(userAgent: string | null): string {
   if (!userAgent) return "Appareil inconnu"
   const browser = /Edg\//.test(userAgent)
@@ -166,23 +155,6 @@ export function SettingsSheet({
       description={user ? `${user.displayName} · ${isAdmin ? "Admin" : "Invité"}` : undefined}
     >
       <div className="app-settings">
-        {user ? (
-          <Card variant="soft">
-            <div className="app-settings-profile">
-              <span className="app-settings-avatar" aria-hidden>
-                {initials(user.displayName)}
-              </span>
-              <div style={{ minWidth: 0 }}>
-                <p className="aura-h3">{user.displayName}</p>
-                <p className="app-small app-settings-email">{user.email}</p>
-                <Badge tone={isAdmin ? "accent" : "neutral"}>
-                  {isAdmin ? "Administrateur" : "Invité"}
-                </Badge>
-              </div>
-            </div>
-          </Card>
-        ) : null}
-
         <Section title="Apparence" icon={<SunIcon size={13} />}>
           <Segmented<ThemeMode>
             label="Thème"
@@ -194,18 +166,20 @@ export function SettingsSheet({
               { value: "dark", label: "Sombre" },
             ]}
           />
-          <p className="aura-hint">
-            <SunIcon size={13} /> <MoonIcon size={13} /> En mode Auto, le thème suit celui du
-            téléphone ou de l'ordinateur.
+          <p className="aura-hint app-settings-inline">
+            <SunIcon size={13} />
+            <MoonIcon size={13} />
+            <span>Suit le système en mode Auto.</span>
           </p>
         </Section>
 
-        <Section
-          title="Notifications"
-          icon={<BellIcon size={13} />}
-          description="Rappels des jalons et alertes du chantier, même application fermée."
-        >
-          <PushCard appName="CasaRenous" apiBase="/api" fetch={apiFetch} showDiagnostics />
+        <Section title="Notifications" icon={<BellIcon size={13} />}>
+          <PushCard
+            appName="CasaRenous"
+            apiBase="/api"
+            fetch={apiFetch}
+            showDiagnostics={false}
+          />
         </Section>
 
         <Section
