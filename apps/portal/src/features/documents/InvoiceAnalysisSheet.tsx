@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import {
+  centsToInput,
   formatCents,
+  parseEuroToCents,
   PROJECT_END_DATE,
   PROJECT_START_DATE,
   type Document,
@@ -10,7 +12,14 @@ import {
 import { Badge, Button, Card, Input, Skeleton, Sheet, type BadgeTone } from "@/aura/react"
 import { useNotify } from "@/aura/notify/react"
 import { useAuth } from "@/auth/AuthProvider"
-import { CalendarIcon, FileIcon, RefreshIcon, WalletIcon } from "@/components/icons"
+import {
+  CalendarIcon,
+  FileIcon,
+  PlusIcon,
+  RefreshIcon,
+  TrashIcon,
+  WalletIcon,
+} from "@/components/icons"
 import { useAnalyzeDocument, useCreateBudgetItem, useCreateMilestone } from "@/hooks/useApi"
 import { api } from "@/lib/api-client"
 import { formatDate } from "@/lib/dates"
@@ -172,9 +181,13 @@ export function InvoiceAnalysisSheet({
   const analyze = useAnalyzeDocument()
   const createMilestone = useCreateMilestone()
   const createBudgetItem = useCreateBudgetItem()
-  const [dueDate, setDueDate] = useState("")
+  const [amount, setAmount] = useState("")
+  const [rows, setRows] = useState<{ date: string; amount: string }[]>([
+    { date: "", amount: "" },
+  ])
   const [downloading, setDownloading] = useState(false)
   const [budgetAdded, setBudgetAdded] = useState(false)
+  const [remindersDone, setRemindersDone] = useState(false)
 
   const { mutate, data, isPending, error } = analyze
   const startedFor = useRef<string | null>(null)
@@ -188,10 +201,35 @@ export function InvoiceAnalysisSheet({
   const extraction = data?.extraction ?? null
 
   useEffect(() => {
-    setDueDate(extraction?.dueDate ?? "")
-  }, [extraction?.dueDate])
+    if (!extraction) return
+    const detected = extraction.amountDueCents ?? extraction.totalCents
+    const value = detected !== null ? centsToInput(detected) : ""
+    setAmount(value)
+    setRows([{ date: extraction.dueDate ?? "", amount: value }])
+    setBudgetAdded(false)
+    setRemindersDone(false)
+  }, [extraction])
 
-  const dueInRange = dueDate >= PROJECT_START_DATE && dueDate <= PROJECT_END_DATE
+  const totalCents = parseEuroToCents(amount)
+  const rowCents = rows.map((row) => parseEuroToCents(row.amount))
+  const allocatedCents = rowCents.reduce<number>((sum, cents) => sum + (cents ?? 0), 0)
+  const remainingCents = totalCents !== null ? totalCents - allocatedCents : null
+  const datesValid = rows.every(
+    (row) => !row.date || (row.date >= PROJECT_START_DATE && row.date <= PROJECT_END_DATE),
+  )
+  const scheduleValid =
+    totalCents !== null &&
+    totalCents > 0 &&
+    rows.length > 0 &&
+    rowCents.every((cents) => cents !== null && cents > 0) &&
+    remainingCents === 0 &&
+    datesValid
+  const datedRows = rows.filter((row, index) => {
+    const cents = rowCents[index] ?? null
+    return Boolean(row?.date) && cents !== null && cents > 0
+  })
+  const canAddBudget = isAdmin && scheduleValid && !budgetAdded
+  const canAddReminders = scheduleValid && datedRows.length > 0 && !remindersDone
 
   async function downloadFile() {
     setDownloading(true)
@@ -205,37 +243,44 @@ export function InvoiceAnalysisSheet({
     }
   }
 
-  async function createReminder() {
-    if (!extraction || !dueDate) return
+  async function createReminders() {
+    if (!extraction) return
     const who = extraction.supplierName ?? document.title
     const reference = extraction.invoiceNumber ? ` — ${extraction.invoiceNumber}` : ""
-    const parts = [
-      extraction.supplierName ? `Fournisseur : ${extraction.supplierName}.` : null,
-      extraction.invoiceNumber ? `Facture ${extraction.invoiceNumber}.` : null,
-      extraction.amountDueCents !== null
-        ? `Montant à régler : ${formatCents(extraction.amountDueCents)}.`
-        : null,
-      `Document : « ${document.title} ».`,
-    ].filter((value): value is string => Boolean(value))
-
+    const total = datedRows.length
     try {
-      await createMilestone.mutateAsync({
-        title: `Payer ${who}${reference}`.slice(0, 160),
-        description: parts.join(" ").slice(0, 2000),
-        category: "administratif",
-        status: "planned",
-        plannedStart: dueDate,
-        plannedEnd: dueDate,
-        isKey: true,
-        notifyDays: [7, 1],
-        actualDate: null,
-      })
+      for (let index = 0; index < rows.length; index += 1) {
+        const row = rows[index]
+        const cents = rowCents[index] ?? null
+        if (!row?.date || cents === null || cents <= 0) continue
+        const suffix = total > 1 ? ` (${index + 1}/${total})` : ""
+        const parts = [
+          extraction.supplierName ? `Fournisseur : ${extraction.supplierName}.` : null,
+          extraction.invoiceNumber ? `Facture ${extraction.invoiceNumber}.` : null,
+          `Montant : ${formatCents(cents)}.`,
+          `Document : « ${document.title} ».`,
+        ].filter((value): value is string => Boolean(value))
+        await createMilestone.mutateAsync({
+          title: `Payer ${who}${reference}${suffix}`.slice(0, 160),
+          description: parts.join(" ").slice(0, 2000),
+          category: "administratif",
+          status: "planned",
+          plannedStart: row.date,
+          plannedEnd: row.date,
+          isKey: true,
+          notifyDays: [7, 1],
+          actualDate: null,
+        })
+      }
+      setRemindersDone(true)
       notify({
-        title: "Rappel créé",
-        message: `Échéance du ${formatDate(dueDate)} ajoutée au rétroplanning.`,
+        title: total > 1 ? "Rappels créés" : "Rappel créé",
+        message:
+          total > 1
+            ? `${total} échéances ajoutées au rétroplanning.`
+            : `Échéance du ${formatDate(datedRows[0]?.date ?? "")} ajoutée au rétroplanning.`,
         tone: "success",
       })
-      onClose()
     } catch (cause) {
       notify({
         title: "Rappel impossible",
@@ -246,37 +291,42 @@ export function InvoiceAnalysisSheet({
   }
 
   async function addToBudget() {
-    if (!extraction) return
-    const amount = extraction.amountDueCents ?? extraction.totalCents
-    if (!amount || amount <= 0) {
-      notify({
-        title: "Montant introuvable",
-        message: "La lecture n'a pas trouvé de montant positif à ajouter.",
-        tone: "danger",
-      })
-      return
-    }
+    if (!extraction || !scheduleValid) return
     const who = extraction.supplierName ?? document.title
     const reference = extraction.invoiceNumber ? ` — ${extraction.invoiceNumber}` : ""
+    const today = new Date().toISOString().slice(0, 10)
+    const total = rows.length
     try {
-      await createBudgetItem.mutateAsync({
-        kind: "invoice",
-        label: `Facture ${who}${reference}`.slice(0, 180),
-        reference: extraction.invoiceNumber,
-        amountCents: amount,
-        dueDate: extraction.dueDate,
-        paidAt: extraction.dueDate
-          ? null
-          : (extraction.issuedOn ?? new Date().toISOString().slice(0, 10)),
-        status: extraction.dueDate ? "due" : "paid",
-        attachmentDocumentId: document.id,
-        notes: extraction.summary,
-        clientId: randomUUID(),
-      })
+      for (let index = 0; index < rows.length; index += 1) {
+        const row = rows[index]
+        const cents = rowCents[index] ?? null
+        if (!row || cents === null) continue
+        const dueDate = row.date || null
+        // Une facture sans échéance est considérée réglée (ticket, achat
+        // comptant) ; dès qu'une date existe, elle reste « à payer » tant
+        // que l'admin ne l'a pas marquée payée.
+        const settled = dueDate === null
+        const suffix = total > 1 ? ` (${index + 1}/${total})` : ""
+        await createBudgetItem.mutateAsync({
+          kind: "invoice",
+          label: `Facture ${who}${reference}${suffix}`.slice(0, 180),
+          reference: extraction.invoiceNumber,
+          amountCents: cents,
+          dueDate,
+          paidAt: settled ? (extraction.issuedOn ?? today) : null,
+          status: settled ? "paid" : "due",
+          attachmentDocumentId: document.id,
+          notes: total > 1 ? `${extraction.summary} — échéance ${index + 1}/${total}` : extraction.summary,
+          clientId: randomUUID(),
+        })
+      }
       setBudgetAdded(true)
       notify({
         title: "Ajouté au budget",
-        message: `${formatCents(amount)} intégrés au total de la maison.`,
+        message:
+          total > 1
+            ? `${formatCents(totalCents ?? 0)} en ${total} échéances intégrés au total de la maison.`
+            : `${formatCents(totalCents ?? 0)} intégrés au total de la maison.`,
         tone: "success",
       })
     } catch (cause) {
@@ -291,39 +341,128 @@ export function InvoiceAnalysisSheet({
   const footer = extraction ? (
     <div className="app-stack app-stack--tight">
       <Input
-        label="Date d'échéance du rappel"
-        type="date"
-        value={dueDate}
-        min={PROJECT_START_DATE}
-        max={PROJECT_END_DATE}
-        onChange={(event) => setDueDate(event.target.value)}
+        label="Montant total de la facture (€)"
+        inputMode="decimal"
+        value={amount}
+        onChange={(event) => setAmount(event.target.value)}
         hint={
-          dueInRange
-            ? undefined
-            : `Le rétroplanning n'accepte que les dates entre le ${formatDate(PROJECT_START_DATE)} et le ${formatDate(PROJECT_END_DATE)}.`
+          totalCents === null
+            ? "Saisis le montant total : il sera repris dans le budget de la maison."
+            : `${formatCents(totalCents)} au total`
         }
       />
-      <Button
-        block
-        icon={<CalendarIcon size={18} />}
-        loading={createMilestone.isPending}
-        disabled={!dueInRange || !extraction}
-        onClick={() => void createReminder()}
-      >
-        Créer le rappel d'échéance
-      </Button>
-      {isAdmin && (extraction.amountDueCents ?? extraction.totalCents) !== null ? (
+
+      <div className="app-stack app-stack--tight">
+        <p className="app-kicker">Échéances</p>
+        {rows.map((row, index) => (
+          <div
+            key={`echeance-${index}`}
+            style={{ display: "flex", gap: 8, alignItems: "flex-end" }}
+          >
+            <div style={{ flex: 1 }}>
+              <Input
+                label={`Date ${rows.length > 1 ? index + 1 : ""}`.trim()}
+                type="date"
+                min={PROJECT_START_DATE}
+                max={PROJECT_END_DATE}
+                value={row.date}
+                onChange={(event) =>
+                  setRows(
+                    rows.map((item, position) =>
+                      position === index ? { ...item, date: event.target.value } : item,
+                    ),
+                  )
+                }
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <Input
+                label="Montant (€)"
+                inputMode="decimal"
+                value={row.amount}
+                onChange={(event) =>
+                  setRows(
+                    rows.map((item, position) =>
+                      position === index ? { ...item, amount: event.target.value } : item,
+                    ),
+                  )
+                }
+              />
+            </div>
+            {rows.length > 1 ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label={`Supprimer l'échéance ${index + 1}`}
+                onClick={() => setRows(rows.filter((_, position) => position !== index))}
+              >
+                <TrashIcon size={16} />
+              </Button>
+            ) : null}
+          </div>
+        ))}
         <Button
           block
-          variant="outline"
+          size="sm"
+          variant="ghost"
+          icon={<PlusIcon size={16} />}
+          onClick={() =>
+            setRows([
+              ...rows,
+              {
+                date: "",
+                amount:
+                  remainingCents !== null && remainingCents > 0
+                    ? centsToInput(remainingCents)
+                    : "",
+              },
+            ])
+          }
+        >
+          Ajouter une échéance
+        </Button>
+        <p className="app-tiny">
+          {remainingCents === null
+            ? "Renseigne le montant total pour répartir les échéances."
+            : remainingCents === 0
+              ? `Réparti sur ${rows.length} échéance${rows.length > 1 ? "s" : ""}.`
+              : remainingCents > 0
+                ? `Reste à répartir : ${formatCents(remainingCents)}.`
+                : `Dépassement de ${formatCents(Math.abs(remainingCents))}.`}
+        </p>
+        {!datesValid ? (
+          <p className="app-tiny app-warn-text">
+            Le rétroplanning n'accepte que les dates entre le {formatDate(PROJECT_START_DATE)} et
+            le {formatDate(PROJECT_END_DATE)}.
+          </p>
+        ) : null}
+      </div>
+
+      {isAdmin ? (
+        <Button
+          block
           icon={<WalletIcon size={18} />}
           loading={createBudgetItem.isPending}
-          disabled={budgetAdded}
+          disabled={!canAddBudget}
           onClick={() => void addToBudget()}
         >
           {budgetAdded ? "Ajouté au budget maison" : "Ajouter au budget maison"}
         </Button>
       ) : null}
+      <Button
+        block
+        variant={isAdmin ? "outline" : "ghost"}
+        icon={<CalendarIcon size={18} />}
+        loading={createMilestone.isPending}
+        disabled={!canAddReminders}
+        onClick={() => void createReminders()}
+      >
+        {remindersDone
+          ? "Rappels ajoutés au rétroplanning"
+          : datedRows.length > 1
+            ? `Créer ${datedRows.length} rappels d'échéance`
+            : "Créer le rappel d'échéance"}
+      </Button>
       <Button block variant="ghost" size="sm" loading={downloading} onClick={() => void downloadFile()}>
         Télécharger le document
       </Button>

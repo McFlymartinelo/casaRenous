@@ -71,7 +71,7 @@ La charte fournie le 13 novembre 2026 est intégrée :
 | **3D & Plans** | `HouseViewer` R3F chargé en `React.lazy`, niveaux Global/RdC/Étage, sélection de pièce, fiche cotes + cuisine, fallback filaire si le GLB est absent |
 | **Rétroplanning** | Jalons administratifs, techniques, chantier et livraison ; filtres ; export `.ics` avec alarmes J-7/J-1 ; flux calendrier privé révocable |
 | **Docs & Chantier** | Coffre-fort (PDF, DOCX, XLSX, images), catégories personnalisées, lecture locale des factures PDF (fournisseur, échéance, montants, rappel), journal photo géolocalisé, notes, réserves, file d'attente hors-ligne, exports CSV |
-| **Budget** | Appels de fonds CCMI, avenants +/- et factures d'achat (incluses dans le total de la maison) ; montants en centimes entiers ; totaux serveur ; export CSV |
+| **Budget** | Appels de fonds CCMI, avenants +/- et factures d'achat avec échéancier (incluses dans le total de la maison) ; montants en centimes entiers ; totaux serveur ; export CSV |
 | **Réglages** | Thème Paper clair/sombre/auto, push, calendrier, sessions, invitations, changement de mot de passe |
 
 ---
@@ -294,6 +294,10 @@ stockage.
 - L'utilisateur confirme toujours : la fiche propose de créer un **jalon**
   `administratif` (`isKey`, rappels J-7/J-1) dans le rétroplanning — jamais
   d'écriture automatique.
+- Le montant est **modifiable** dans la fiche (utile si la lecture échoue) et
+  peut être réparti en **plusieurs échéances** (date + montant). Chaque
+  échéance devient une ligne `invoice` du budget et, si elle est datée, un
+  rappel du planning.
 - v0 : **PDF uniquement**. DOCX, XLSX et photos (OCR) renvoient un message
   explicite ; aucune donnée ne sort du serveur.
 
@@ -786,13 +790,15 @@ migrations SQL que la production, sans serveur externe. Elle couvre :
 - catégories de documents : création/renommage/suppression, doublons
   insensibles à la casse, classement et filtrage d'un document, détachement à
   la suppression, rôles admin/invités ;
-- budget : facture d'achat comptée dans le total de la maison.
+- budget : facture d'achat comptée dans le total de la maison ;
+- devises et libellés étrangers : facture allemande (montant de la facture,
+  taxe de vente, somme nette), IBAN et artefacts PDF ignorés.
 
 La suite portail couvre le parseur euro→centimes, le formatage, les dates du
 projet, la conversion OKLCH→sRGB pour WebGL et le contrat de réponse de
 `api-client` (Zod partagé).
 
-**99 tests** au total : 6 shared, 80 backend, 13 portail.
+**104 tests** au total : 6 shared, 85 backend, 13 portail.
 
 Vérifications effectuées lors de la livraison :
 

@@ -208,3 +208,56 @@ Votre facture fait office de garantie`
     expect(result.warnings).toHaveLength(0)
   })
 })
+
+describe("parseInvoiceText — facture allemande (ALTERNATE)", () => {
+  const INVOICE = `ALTERNATE GmbH Philipp-Reis-Straße 2-3 - 35440 Linden DEUTSCHLAND
+Alexandre MARTY
+1 allee du theatre
+78190 TRAPPES
+FRANKREICH
+N° de facture 1302003685435 / 30.03.2026
+%"$"*%!)-%%'&")""'$"%)!'##%*!&')!1N° de commande 1102004062951 / 30.03.2026
+N° de client 607703297
+PayPalMode de paiement
+Facture
+N° d'article Désignation Quantité Prix en EUR Prix total TVA
+Kingston FURY 32
+Go DDR4-3600
+Somme nette: 280,65 EUR
+Taxe de vente(A): 20 % on 280,65 EUR = 56,13 EUR
+Montant de la facture en EUR 336,78
+N° de TVA : DE 112 595 008
+IBAN: DE30 5138 0040 0880 8910 03
+Conditions de paiement: Paiement comptant
+Due without deduction on: 30.03.2026`
+
+  const result = parseInvoiceText(INVOICE)
+
+  it("lit le total, la TVA et le HT d'une facture allemande", () => {
+    expect(result.totalCents).toBe(33_678)
+    expect(result.vatCents).toBe(5_613)
+    expect(result.amountDueCents).toBe(33_678)
+    expect(result.confidence.totalCents).toBe("high")
+    expect(result.confidence.vatCents).toBe("high")
+  })
+
+  it("extrait le fournisseur sans l'adresse", () => {
+    expect(result.supplierName).toBe("ALTERNATE GmbH")
+  })
+
+  it("ne confond ni l'IBAN ni le numéro de TVA avec des montants", () => {
+    expect(result.supplierTaxId).toBeNull()
+    expect(
+      result.lines.every((line) => Math.abs(line.amountCents) <= 1_000_000_000),
+    ).toBe(true)
+  })
+
+  it("ne signale pas de devise étrangère à cause des artefacts du PDF", () => {
+    expect(result.warnings).toHaveLength(0)
+  })
+
+  it("conserve le numéro de facture et l'échéance", () => {
+    expect(result.invoiceNumber).toBe("1302003685435")
+    expect(result.dueDate).toBe("2026-03-30")
+  })
+})

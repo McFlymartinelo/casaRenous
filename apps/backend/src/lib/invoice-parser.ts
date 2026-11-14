@@ -118,14 +118,14 @@ function currencyAmounts(line: string): number[] {
  * Montant nu en fin de ligne (« Maçonnerie fondations 1 450,00 »).
  * Exige un espace devant, pour ne pas découper « F-2026-042 ».
  */
-function tailAmount(line: string): { cents: number; start: number } | null {
+function tailAmount(line: string): { cents: number; start: number; raw: string } | null {
   const match = TAIL_AMOUNT.exec(line)
   if (!match || match.index === undefined) return null
   const before = match.index === 0 ? "" : line[match.index - 1]
   if (before !== " ") return null
   const cents = parseAmountToCents(match[1] ?? "")
   if (cents === null || !isPlausibleAmount(cents)) return null
-  return { cents, start: match.index }
+  return { cents, start: match.index, raw: match[1] ?? "" }
 }
 
 /* ========================================================================== */
@@ -196,18 +196,21 @@ const DUE_LABEL =
 const ISSUE_LABEL =
   /(date de facture|date facture|facture du|emise le|date d emission|date d'emission|invoice date|date\s*:)/
 
-const TOTAL_TTC_LABEL = /total\s*(?:ttc|t\.t\.c)\b|total\s*toutes\s*taxes/
+const TOTAL_TTC_LABEL =
+  /total\s*(?:ttc|t\.t\.c)\b|total\s*toutes\s*taxes|montant de la facture|montant total|gesamtbetrag|invoice total|total amount|amount due/
 const TOTAL_SOFT_LABEL = /(montant total|total general|total facture|total de la facture)/
-const TOTAL_HT_LABEL = /total\s*(?:ht|h\.t\.t?|hors taxe)|sous[- ]?total/
+const TOTAL_HT_LABEL =
+  /total\s*(?:ht|h\.t\.t?|hors taxe)|sous[- ]?total|somme nette|net amount|montant ht|net commercial/
 const DUE_AMOUNT_LABEL =
   /(net a payer|montant du|montant a payer|reste a payer|solde a payer|total a payer|a payer au total|reglement percu|\bregle(?:ment)?\b|deja paye)/
-const VAT_LABEL = /\b(tva|vat)\b/
+const VAT_LABEL = /\b(tva|vat|taxe de vente|mwst|umsatzsteuer|sales tax)\b/
 const VAT_IDENTIFIER =
   /\btva\b[^0-9]{0,20}\b(?:i\.?\s?c\.?|intracommunautaire)\b|\b(?:n[°o]|numero|no)\s*(?:de\s*)?tva\b/
 const NON_ITEM_PREFIX =
   /^(facture|devis|avoir|bon de|commande|page |client|adresse|siret|siren|tva|iban|bic|tel|telephone|mail|e-?mail|site web|date|reference|ref\b|echéance|echeance|conditions|mode de paiement|dont |au capital|capital|rcs|ape |merci|systeme|votre facture|les conditions|informations|droit d)/
 
-const LEGAL_FORM = /\b(SARL|SASU?|EURL|SCI|SNC|SELARL|SELAS|SCP|GAEC|SCEA|SCOP|EI|EIRL)\b/
+const LEGAL_FORM =
+  /\b(SARL|SASU?|EURL|SCI|SNC|SELARL|SELAS|SCP|GAEC|SCEA|SCOP|EI|EIRL|GmbH|AG|KG|UG|BV|NV|Ltd|Limited|Inc|Srl|SpA|SA)\b/i
 const SUPPLIER_LABEL =
   /^(?:vendeur|fournisseur|prestataire|[ée]metteur|soci[ée]t[ée]|raison sociale|entreprise|artisan)\s*:?\s*(.+)$/i
 
@@ -326,6 +329,11 @@ function cleanSupplier(raw: string): string | null {
   if (/^[A-Z0-9._/-]+$/.test(value) && /\d/.test(value)) return null
   if (!/\s/.test(value) && /\d/.test(value)) return null
   if (/^(facture|devis|avoir|bon de|page)\b/i.test(value)) return null
+  // « ALTERNATE GmbH Philipp-Reis-Straße 2-3 - 35440 Linden » → « ALTERNATE GmbH »
+  const international = value.match(
+    /^(.*?\b(?:GmbH|AG|KG|UG|BV|NV|Ltd|Limited|Inc|Srl|SpA))\b(.*)$/i,
+  )
+  if (international && /\d/.test(international[2] ?? "")) value = international[1] ?? value
   value = value.slice(0, 120)
   return value
 }
@@ -357,7 +365,10 @@ function findSupplier(
 function findTaxId(
   lines: string[],
 ): { value: string | null; confidence: InvoiceConfidence } {
-  const text = lines.join("\n")
+  // Un IBAN contient des suites de chiffres qui ressemblent à un SIRET.
+  const text = lines
+    .filter((line) => !/\b(iban|bic|compte bancaire|bank)\b/i.test(line))
+    .join("\n")
   const siret = SIRET_LABEL.exec(text)
   if (siret?.[1]) {
     const digits = siret[1].replace(/\D/g, "")
@@ -509,7 +520,12 @@ function findAmounts(lines: string[], hasEuroContext: boolean): AmountsResult {
       // Un numéro de TVA (« TVA I.C. FR 78 347 384 570 ») n'est pas un
       // montant : on ignore la ligne au lieu d'y lire un faux total.
       if (VAT_IDENTIFIER.test(folded)) continue
-      const vatAmount = amountWithoutRates(line, amounts)
+      // « Taxe de vente: 20 % on 280,65 = 56,13 » : le montant de TVA est
+      // celui qui suit le « = », pas l'assiette.
+      const vatLine = line.includes("=")
+        ? line.slice(line.lastIndexOf("=") + 1)
+        : line
+      const vatAmount = amountWithoutRates(vatLine, currencyAmounts(vatLine))
       if (vatAmount === null || vatAmount < 0 || !isPlausibleAmount(vatAmount)) continue
       const rated = line.includes("%")
       const better =
@@ -523,6 +539,17 @@ function findAmounts(lines: string[], hasEuroContext: boolean): AmountsResult {
     if (NON_ITEM_PREFIX.test(folded)) continue
     if ((line.match(/[A-Za-zÀ-ÿ]/g) ?? []).length < 2) continue
     if (items.length >= MAX_LINES) continue
+    // « Kingston FURY 32 » : un petit entier nu en fin de ligne est une
+    // quantité, pas un montant (contrairement à « Main d'oeuvre 900 »).
+    if (
+      tail &&
+      amounts.length === 0 &&
+      !/[.,]\d{1,2}$/.test(tail.raw) &&
+      Math.abs(primary) < 10_000 &&
+      line.length <= 40
+    ) {
+      continue
+    }
 
     const label = (tail ? line.slice(0, tail.start) : line)
       .replace(/\s*(?:€|\bEUR\b)\s*/gi, " ")
@@ -584,7 +611,12 @@ function findAmounts(lines: string[], hasEuroContext: boolean): AmountsResult {
   if (vat === null && totalCents !== null) {
     warnings.push("TVA non retrouvée : montant TTC seul.")
   }
-  if (/[£$]|\b(?:usd|gbp|chf)\b/i.test(lines.join("\n"))) {
+  // Devise étrangère : uniquement un symbole accolé à un montant ou un code
+  // ISO explicite. Les PDF allemands contiennent parfois des artefacts « $ »
+  // isolés qui ne doivent pas déclencher l'alerte.
+  if (
+    /(?:[£$]\s?\d)|(?:\d\s?[£$])|\b(?:usd|gbp|chf)\b/i.test(lines.join("\n"))
+  ) {
     warnings.push("Devise étrangère détectée : seules les factures en euro sont prises en charge.")
   }
 

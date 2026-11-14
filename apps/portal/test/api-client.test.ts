@@ -68,6 +68,7 @@ describe("client API et schémas Zod partagés", () => {
         totalCents: 150000,
         ccmiCents: 150000,
         changeOrdersCents: 0,
+        invoiceCents: 0,
         paidCents: 0,
         remainingCents: 150000,
         count: 1,
