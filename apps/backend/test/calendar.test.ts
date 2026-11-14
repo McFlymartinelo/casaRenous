@@ -44,7 +44,7 @@ describe("rétroplanning et export ICS", () => {
     expect(res.text).toContain("SUMMARY:Signature du CCMI")
     expect(res.text).toContain("BEGIN:VALARM")
     expect(res.text).toContain("TRIGGER:-P7D")
-    expect(res.text).toContain("DTSTART;VALUE=DATE:20281215")
+    expect(res.text).toContain("DTSTART;VALUE=DATE:20280601")
     expect(res.text).toContain("\r\n")
   })
 

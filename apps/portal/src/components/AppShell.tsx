@@ -55,7 +55,7 @@ const DESKTOP_NAV = [
   {
     id: "planning",
     label: "Rétroplanning",
-    description: "Jusqu'en décembre 2028",
+    description: "Livraison prévue en juin 2028",
     icon: <CalendarIcon size={20} />,
   },
   {
@@ -77,7 +77,7 @@ const DEFAULT_META = { title: "La Piazza", subtitle: "Maison Sévin–Renous" }
 const SCREEN_META: Record<string, { title: string; subtitle: string }> = {
   "/": DEFAULT_META,
   "/3d": { title: "3D & Plans", subtitle: "La maison, pièce par pièce" },
-  "/planning": { title: "Rétroplanning", subtitle: "Jusqu'en décembre 2028" },
+  "/planning": { title: "Rétroplanning", subtitle: "Livraison prévue en juin 2028" },
   "/chantier": { title: "Docs & Chantier", subtitle: "Preuves, photos et réserves" },
   "/budget": { title: "Budget", subtitle: "CCMI et avenants" },
 }

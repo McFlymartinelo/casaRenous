@@ -1,7 +1,7 @@
 # CasaRenous
 
 Carnet de chantier privé de la maison **Sévin–Renous** : tableau de bord « La
-Piazza », visionneuse 3D, rétroplanning jusqu'en décembre 2028, coffre-fort
+Piazza », visionneuse 3D, rétroplanning jusqu'à la livraison (juin 2028), coffre-fort
 documentaire, journal photo hors-ligne, réserves de livraison, notifications
 push VAPID et suivi budgétaire CCMI.
 
@@ -159,8 +159,10 @@ Le seed est **idempotent**. Il crée :
 - le profil maison `7,10 × 13,60 m`, R+1 ;
 - les 15 pièces avec leurs surfaces exactes et la terrasse bois ;
 - les specs cuisine validées ;
-- les dates clés et jalons **provisoires** jusqu'en 2028 ;
-- **la signature du CCMI au 6 novembre 2026**, marquée comme réalisée ;
+- les dates clés et jalons **provisoires** jusqu'à la livraison de juin 2028 ;
+- **compromis signé le 19 octobre 2026** et **CCMI signé le 6 novembre 2026**,
+  marqués comme réalisés ; dépôt du permis fin novembre 2026, chantier de
+  juin 2027 à juin 2028 ;
 - **aucun montant financier inventé** : le budget démarre vide.
 
 > En production, le seed refuse de démarrer si les `SEED_*_PASSWORD` sont
