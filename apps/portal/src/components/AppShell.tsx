@@ -21,6 +21,7 @@ import {
 } from "@/components/icons"
 import { PasswordSheet, SettingsSheet } from "@/components/SettingsSheet"
 import { InvitationsSheet } from "@/features/invitations/InvitationsSheet"
+import { DocumentCategoriesSheet } from "@/features/documents/DocumentCategoriesSheet"
 import { SyncBanner } from "@/components/SyncBanner"
 
 const TABS: TabItem[] = [
@@ -97,6 +98,7 @@ export function AppShell() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [passwordOpen, setPasswordOpen] = useState(false)
   const [invitesOpen, setInvitesOpen] = useState(false)
+  const [categoriesOpen, setCategoriesOpen] = useState(false)
   const active = tabForPath(location.pathname)
   const meta = SCREEN_META[location.pathname] ?? DEFAULT_META
 
@@ -196,6 +198,10 @@ export function AppShell() {
             setSettingsOpen(false)
             setInvitesOpen(true)
           }}
+          onManageCategories={() => {
+            setSettingsOpen(false)
+            setCategoriesOpen(true)
+          }}
         />
       ) : null}
       {passwordOpen ? (
@@ -203,6 +209,9 @@ export function AppShell() {
       ) : null}
       {invitesOpen ? (
         <InvitationsSheet open={invitesOpen} onClose={() => setInvitesOpen(false)} />
+      ) : null}
+      {categoriesOpen ? (
+        <DocumentCategoriesSheet onClose={() => setCategoriesOpen(false)} />
       ) : null}
     </div>
   )

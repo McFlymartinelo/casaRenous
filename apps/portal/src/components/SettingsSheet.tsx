@@ -1,7 +1,8 @@
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import {
   Badge,
   Button,
+  Card,
   Input,
   ListRow,
   Segmented,
@@ -15,15 +16,19 @@ import { BrandLogo } from "@/components/BrandLogo"
 import { apiFetch } from "@/lib/api-client"
 import {
   useCalendarToken,
+  useInvitations,
   useRevokeCalendarToken,
   useRevokeSession,
   useRotateCalendarToken,
   useSessions,
 } from "@/hooks/useApi"
+import { formatDateTime } from "@/lib/dates"
 import {
   BellIcon,
   CalendarIcon,
+  ChevronRightIcon,
   DownloadIcon,
+  FolderIcon,
   LockIcon,
   LogOutIcon,
   MonitorIcon,
@@ -33,28 +38,98 @@ import {
   SunIcon,
 } from "@/components/icons"
 
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("")
+}
+
+/** « Chrome · macOS », lisible sans exposer le user-agent brut. */
+function deviceLabel(userAgent: string | null): string {
+  if (!userAgent) return "Appareil inconnu"
+  const browser = /Edg\//.test(userAgent)
+    ? "Edge"
+    : /OPR\//.test(userAgent)
+      ? "Opera"
+      : /Chrome\//.test(userAgent)
+        ? "Chrome"
+        : /Firefox\//.test(userAgent)
+          ? "Firefox"
+          : /Safari\//.test(userAgent)
+            ? "Safari"
+            : "Navigateur"
+  const system = /Android/.test(userAgent)
+    ? "Android"
+    : /iPhone|iPad|iPod/.test(userAgent)
+      ? "iOS"
+      : /Windows/.test(userAgent)
+        ? "Windows"
+        : /Mac OS X/.test(userAgent)
+          ? "macOS"
+          : /Linux/.test(userAgent)
+            ? "Linux"
+            : null
+  return system ? `${browser} · ${system}` : browser
+}
+
+function Section({
+  title,
+  icon,
+  description,
+  children,
+}: {
+  title: string
+  icon?: ReactNode
+  description?: string
+  children: ReactNode
+}) {
+  return (
+    <section className="app-settings-section">
+      <p className="app-kicker">
+        {icon ? <span className="app-settings-section__icon">{icon}</span> : null}
+        {title}
+      </p>
+      {description ? <p className="app-small">{description}</p> : null}
+      {children}
+    </section>
+  )
+}
+
 export function SettingsSheet({
   open,
   onClose,
   onChangePassword,
   onInvite,
+  onManageCategories,
 }: {
   open: boolean
   onClose: () => void
   onChangePassword: () => void
   onInvite: () => void
+  onManageCategories: () => void
 }) {
   const { user, logout, busy } = useAuth()
   const isAdmin = user?.role === "admin"
   const { theme, setTheme } = useTheme()
   const sessions = useSessions()
   const revoke = useRevokeSession()
+  const invitations = useInvitations(isAdmin)
   const calendarToken = useCalendarToken()
   const rotate = useRotateCalendarToken()
   const revokeToken = useRevokeCalendarToken()
   const [feedUrl, setFeedUrl] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
+
+  const pendingInvites = (invitations.data ?? []).filter(
+    (invitation) =>
+      !invitation.usedAt &&
+      !invitation.revokedAt &&
+      new Date(invitation.expiresAt).getTime() > Date.now(),
+  ).length
 
   async function handleRotate() {
     setFeedback(null)
@@ -88,13 +163,27 @@ export function SettingsSheet({
       open={open}
       onClose={onClose}
       title="Réglages"
-      description={user ? `${user.displayName} · ${user.role === "admin" ? "Admin" : "Invité"}` : undefined}
+      description={user ? `${user.displayName} · ${isAdmin ? "Admin" : "Invité"}` : undefined}
     >
-      <div className="aura-stack" style={{ gap: 20 }}>
-        <section>
-          <p className="app-kicker" style={{ marginBottom: 8 }}>
-            Apparence
-          </p>
+      <div className="app-settings">
+        {user ? (
+          <Card variant="soft">
+            <div className="app-settings-profile">
+              <span className="app-settings-avatar" aria-hidden>
+                {initials(user.displayName)}
+              </span>
+              <div style={{ minWidth: 0 }}>
+                <p className="aura-h3">{user.displayName}</p>
+                <p className="app-small app-settings-email">{user.email}</p>
+                <Badge tone={isAdmin ? "accent" : "neutral"}>
+                  {isAdmin ? "Administrateur" : "Invité"}
+                </Badge>
+              </div>
+            </div>
+          </Card>
+        ) : null}
+
+        <Section title="Apparence" icon={<SunIcon size={13} />}>
           <Segmented<ThemeMode>
             label="Thème"
             value={theme}
@@ -105,34 +194,33 @@ export function SettingsSheet({
               { value: "dark", label: "Sombre" },
             ]}
           />
-          <p className="aura-hint" style={{ marginTop: 6 }}>
-            <SunIcon size={13} /> <MoonIcon size={13} /> Le thème suit le système en mode Auto.
+          <p className="aura-hint">
+            <SunIcon size={13} /> <MoonIcon size={13} /> En mode Auto, le thème suit celui du
+            téléphone ou de l'ordinateur.
           </p>
-        </section>
+        </Section>
 
-        <section>
-          <p className="app-kicker" style={{ marginBottom: 8 }}>
-            <BellIcon size={13} /> Notifications
-          </p>
-          <PushCard
-            appName="CasaRenous"
-            apiBase="/api"
-            fetch={apiFetch}
-            showDiagnostics
-          />
-        </section>
+        <Section
+          title="Notifications"
+          icon={<BellIcon size={13} />}
+          description="Rappels des jalons et alertes du chantier, même application fermée."
+        >
+          <PushCard appName="CasaRenous" apiBase="/api" fetch={apiFetch} showDiagnostics />
+        </Section>
 
-        <section>
-          <p className="app-kicker" style={{ marginBottom: 8 }}>
-            <CalendarIcon size={13} /> Agenda externe
-          </p>
-          <p className="app-small" style={{ marginBottom: 8 }}>
-            Abonne ton calendrier (iPhone, Google, Outlook) au rétroplanning. Le lien est
-            personnel et révocable.
-          </p>
-          {calendarToken.data?.exists && !feedUrl ? (
-            <Badge tone="success">Lien actif</Badge>
-          ) : null}
+        <Section
+          title="Agenda externe"
+          icon={<CalendarIcon size={13} />}
+          description="Abonne ton calendrier (iPhone, Google, Outlook) au rétroplanning. Le lien est personnel et révocable."
+        >
+          <div className="app-settings-status">
+            <span className="app-small">Abonnement calendrier</span>
+            {calendarToken.data?.exists ? (
+              <Badge tone="success">Lien actif</Badge>
+            ) : (
+              <Badge tone="neutral">Aucun lien</Badge>
+            )}
+          </div>
           {feedUrl ? (
             <div className="aura-stack" style={{ gap: 8 }}>
               <Input readOnly value={feedUrl} label="Lien du calendrier" />
@@ -174,23 +262,24 @@ export function SettingsSheet({
             </div>
           )}
           {feedback ? (
-            <p className="aura-hint" role="status" style={{ marginTop: 8 }}>
+            <p className="aura-hint" role="status">
               {feedback}
             </p>
           ) : null}
-        </section>
+        </Section>
 
-        <section>
-          <p className="app-kicker" style={{ marginBottom: 8 }}>
-            <ShieldIcon size={13} /> Sessions actives
-          </p>
+        <Section
+          title="Sécurité"
+          icon={<ShieldIcon size={13} />}
+          description="Une session expire après 24 h d'inactivité et 14 jours au maximum."
+        >
           <div className="app-list">
             {sessions.data?.map((session) => (
               <ListRow
                 key={session.id}
                 icon={<MonitorIcon size={18} />}
-                title={session.current ? "Cet appareil" : "Autre appareil"}
-                subtitle={new Date(session.lastSeenAt).toLocaleString("fr-FR")}
+                title={session.current ? "Cet appareil" : deviceLabel(session.userAgent)}
+                subtitle={formatDateTime(session.lastSeenAt)}
                 meta={
                   session.current ? (
                     <Badge tone="accent">Courant</Badge>
@@ -208,31 +297,6 @@ export function SettingsSheet({
               />
             ))}
           </div>
-          <p className="aura-hint" style={{ marginTop: 6 }}>
-            Une session expire après 24 h d'inactivité et 14 jours au maximum.
-          </p>
-        </section>
-
-        {isAdmin ? (
-          <section>
-            <p className="app-kicker" style={{ marginBottom: 8 }}>
-              Accès
-            </p>
-            <Button
-              variant="soft"
-              block
-              icon={<PlusIcon size={17} />}
-              onClick={onInvite}
-            >
-              Inviter une personne
-            </Button>
-            <p className="aura-hint" style={{ marginTop: 6 }}>
-              Crée un accès nominatif avec rôle et code à usage unique.
-            </p>
-          </section>
-        ) : null}
-
-        <section className="aura-stack" style={{ gap: 8 }}>
           <Button
             variant="outline"
             block
@@ -241,6 +305,51 @@ export function SettingsSheet({
           >
             Changer de mot de passe
           </Button>
+        </Section>
+
+        {isAdmin ? (
+          <Section
+            title="Accès"
+            icon={<PlusIcon size={13} />}
+            description="Invitations, rôles et organisation du coffre-fort."
+          >
+            <Button
+              variant="soft"
+              block
+              icon={<PlusIcon size={17} />}
+              onClick={onInvite}
+            >
+              Inviter une personne
+            </Button>
+            <div className="app-list">
+              <ListRow
+                icon={<ShieldIcon size={18} />}
+                title="Invitations"
+                subtitle={
+                  pendingInvites > 0
+                    ? `${pendingInvites} invitation${pendingInvites > 1 ? "s" : ""} en attente`
+                    : "Aucune invitation en attente"
+                }
+                meta={<ChevronRightIcon size={16} />}
+                onClick={onInvite}
+              />
+              <ListRow
+                icon={<FolderIcon size={18} />}
+                title="Catégories de documents"
+                subtitle="Créer, renommer ou supprimer"
+                meta={<ChevronRightIcon size={16} />}
+                onClick={onManageCategories}
+              />
+            </div>
+          </Section>
+        ) : null}
+
+        <Section title="À propos">
+          <BrandLogo variant="horizontal" width={160} />
+          <p className="aura-hint">
+            CasaRenous 1.0 · PWA offline-first · hébergée sur Oracle Cloud Infrastructure.
+            Les données du chantier restent privées.
+          </p>
           <Button
             variant="ghost"
             block
@@ -250,18 +359,7 @@ export function SettingsSheet({
           >
             Se déconnecter
           </Button>
-        </section>
-
-        <section>
-          <p className="app-kicker" style={{ marginBottom: 8 }}>
-            À propos
-          </p>
-          <BrandLogo variant="horizontal" width={160} />
-          <p className="aura-hint" style={{ marginTop: 8 }}>
-            CasaRenous 1.0 · PWA offline-first · hébergée sur Oracle Cloud Infrastructure.
-            Les données du chantier restent privées.
-          </p>
-        </section>
+        </Section>
       </div>
     </Sheet>
   )

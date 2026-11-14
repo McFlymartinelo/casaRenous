@@ -96,8 +96,12 @@ export function useCalendarToken() {
   return useQuery({ queryKey: keys.calendarToken, queryFn: api.milestones.calendarToken })
 }
 
-export function useInvitations() {
-  return useQuery({ queryKey: keys.invitations, queryFn: api.admin.invitations.list })
+export function useInvitations(enabled = true) {
+  return useQuery({
+    queryKey: keys.invitations,
+    queryFn: api.admin.invitations.list,
+    enabled,
+  })
 }
 
 /* ── Mutations ────────────────────────────────────────────────────────── */

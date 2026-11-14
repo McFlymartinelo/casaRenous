@@ -861,3 +861,60 @@
     padding: 0;
   }
 }
+
+/* ── Réglages ─────────────────────────────────────────────────────────── */
+
+.app-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.app-settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 18px;
+  border-top: 1px solid var(--aura-line);
+}
+
+.app-settings-section__icon {
+  display: inline-flex;
+  margin-right: 4px;
+  vertical-align: -2px;
+}
+
+.app-settings-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.app-settings-avatar {
+  display: grid;
+  width: 50px;
+  height: 50px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--aura-accent-soft);
+  color: var(--aura-accent-strong);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.app-settings-email {
+  overflow: hidden;
+  margin: 2px 0 6px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-settings-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
