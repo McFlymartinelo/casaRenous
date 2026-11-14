@@ -1,0 +1,829 @@
+/* ============================================================================
+   CasaRenous — styles applicatifs (tokens uniquement)
+   ========================================================================== */
+
+.app-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.aura-screen {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.app-sidebar {
+  display: none;
+}
+
+/* Mobile / tablette : cadre réellement plein écran, scroll interne,
+   barre d'onglets toujours visible. */
+@media (max-width: 899px) {
+  .aura-frame.app-shell {
+    height: calc(100dvh - 32px);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-main {
+    height: 100%;
+  }
+}
+
+@media (max-width: 767px) {
+  .aura-frame.app-shell {
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    min-height: 100dvh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+.app-pad {
+  padding: var(--aura-space-4);
+}
+
+.app-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aura-space-4);
+}
+
+.app-stack--tight {
+  gap: var(--aura-space-2);
+}
+
+.app-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--aura-space-3);
+}
+
+.app-kicker {
+  font-size: var(--aura-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--aura-ink-3);
+}
+
+.app-muted {
+  color: var(--aura-ink-2);
+}
+
+.app-small {
+  font-size: var(--aura-text-sm);
+  color: var(--aura-ink-2);
+}
+
+.app-tiny {
+  font-size: var(--aura-text-xs);
+  color: var(--aura-ink-3);
+}
+
+.app-num {
+  font-family: var(--aura-font-sans);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.app-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--aura-space-2);
+}
+
+.app-stat-grid .aura-stat {
+  min-width: 0;
+  padding: var(--aura-space-3);
+}
+
+.app-stat-grid .aura-stat__value {
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.app-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--aura-space-2);
+}
+
+.app-scroll-row {
+  display: flex;
+  gap: var(--aura-space-2);
+  overflow-x: auto;
+  padding-bottom: var(--aura-space-1);
+  scrollbar-width: none;
+}
+
+.app-scroll-row::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Bandeau hors-ligne / synchronisation ───────────────────────────────── */
+
+.app-sync-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--aura-space-3);
+  padding: var(--aura-space-2) var(--aura-space-3);
+  border: 1px solid var(--aura-line);
+  border-radius: var(--aura-r-md);
+  background: var(--aura-surface-2);
+  color: var(--aura-ink-2);
+  font-size: var(--aura-text-sm);
+}
+
+.app-sync-bar--warn {
+  border-color: color-mix(in oklab, var(--aura-warn) 40%, var(--aura-line));
+  background: var(--aura-warn-soft);
+  color: var(--aura-ink);
+}
+
+.app-sync-bar--offline {
+  border-color: color-mix(in oklab, var(--aura-danger) 32%, var(--aura-line));
+  background: var(--aura-danger-soft);
+}
+
+.app-sync-bar__text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Dates clés ─────────────────────────────────────────────────────────── */
+
+.app-date-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--aura-space-3);
+  padding: var(--aura-space-3) 0;
+}
+
+.app-date-row + .app-date-row {
+  border-top: 1px solid var(--aura-line);
+}
+
+.app-date-row__date {
+  flex: 0 0 74px;
+  font-family: var(--aura-font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  color: var(--aura-ink);
+}
+
+.app-date-row__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-date-row__title {
+  display: flex;
+  align-items: center;
+  gap: var(--aura-space-2);
+  flex-wrap: wrap;
+  min-width: 0;
+  font-size: var(--aura-text-sm);
+  font-weight: 600;
+}
+
+.app-date-row__label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.app-date-row__title .aura-badge {
+  flex-shrink: 0;
+}
+
+.app-date-row__note {
+  margin-top: 2px;
+  font-size: var(--aura-text-xs);
+  color: var(--aura-ink-3);
+}
+
+.app-date-row.is-done .app-date-row__title {
+  color: var(--aura-ink-2);
+  text-decoration: line-through;
+  text-decoration-color: var(--aura-line-strong);
+}
+
+/* ── Timeline ───────────────────────────────────────────────────────────── */
+
+.app-quarter {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: var(--aura-space-4) 0 var(--aura-space-2);
+  padding: var(--aura-space-1) 0;
+  background: var(--aura-bg);
+  font-size: var(--aura-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--aura-ink-3);
+}
+
+.app-milestone {
+  cursor: pointer;
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: 0;
+  width: 100%;
+  color: inherit;
+}
+
+.app-milestone__title {
+  font-size: var(--aura-text-body);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.app-milestone__meta {
+  margin-top: 2px;
+  font-size: var(--aura-text-xs);
+  color: var(--aura-ink-3);
+}
+
+.app-dot {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--aura-accent-solid);
+  color: var(--aura-on-accent);
+}
+
+.app-dot--done {
+  background: var(--aura-success);
+}
+
+.app-dot--late {
+  background: var(--aura-danger);
+}
+
+.app-dot--cancelled {
+  background: var(--aura-ink-3);
+}
+
+/* ── Photos ─────────────────────────────────────────────────────────────── */
+
+.app-photo-strip {
+  display: flex;
+  gap: var(--aura-space-2);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: var(--aura-space-1);
+}
+
+.app-photo-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.app-photo-thumb {
+  position: relative;
+  flex: 0 0 116px;
+  height: 116px;
+  border-radius: var(--aura-r-md);
+  overflow: hidden;
+  border: 1px solid var(--aura-line);
+  background: var(--aura-surface-2);
+  scroll-snap-align: start;
+}
+
+.app-photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.app-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--aura-space-2);
+}
+
+.app-photo-card {
+  border: 1px solid var(--aura-line);
+  border-radius: var(--aura-r-md);
+  overflow: hidden;
+  background: var(--aura-surface);
+  text-align: left;
+  padding: 0;
+  color: inherit;
+}
+
+.app-photo-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--aura-surface-2);
+}
+
+.app-photo-card__body {
+  padding: var(--aura-space-2) var(--aura-space-3) var(--aura-space-3);
+}
+
+.app-photo-card__caption {
+  font-size: var(--aura-text-sm);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.app-media-placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--aura-ink-3);
+  background: var(--aura-surface-2);
+}
+
+/* ── Budget ─────────────────────────────────────────────────────────────── */
+
+.app-progress {
+  height: 8px;
+  border-radius: var(--aura-r-full);
+  background: color-mix(in oklab, var(--aura-on-accent) 20%, transparent);
+  overflow: hidden;
+}
+
+.app-progress__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--aura-on-accent);
+  transition: width var(--aura-dur-3) var(--aura-ease-out);
+}
+
+.app-budget-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--aura-space-2);
+  padding: var(--aura-space-3) 0;
+}
+
+.app-budget-row + .app-budget-row {
+  border-top: 1px solid var(--aura-line);
+}
+
+.app-budget-row__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-budget-row__amount {
+  font-family: var(--aura-font-sans);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.app-budget-row__amount--negative {
+  color: var(--aura-success);
+}
+
+/* ── Visionneuse 3D ─────────────────────────────────────────────────────── */
+
+.app-viewer {
+  position: relative;
+  height: clamp(300px, 52dvh, 460px);
+  border: 1px solid var(--aura-line);
+  border-radius: var(--aura-r-lg);
+  overflow: hidden;
+  background: var(--aura-surface-3);
+  touch-action: none;
+}
+
+.app-viewer canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.app-viewer__overlay {
+  position: absolute;
+  left: var(--aura-space-3);
+  bottom: var(--aura-space-3);
+  z-index: 2;
+  display: flex;
+  gap: var(--aura-space-2);
+  align-items: center;
+  padding: var(--aura-space-1) var(--aura-space-3);
+  border-radius: var(--aura-r-full);
+  background: var(--aura-glass-strong);
+  border: 1px solid var(--aura-glass-border);
+  backdrop-filter: blur(var(--aura-blur));
+  font-size: var(--aura-text-xs);
+  color: var(--aura-ink-2);
+}
+
+.app-viewer__fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--aura-space-2);
+  height: 100%;
+  padding: var(--aura-space-6);
+  text-align: center;
+  color: var(--aura-ink-2);
+}
+
+.app-room-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--aura-space-2);
+}
+
+.app-room-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--aura-space-3);
+  border: 1px solid var(--aura-line);
+  border-radius: var(--aura-r-md);
+  background: var(--aura-surface);
+  text-align: left;
+  color: inherit;
+}
+
+.app-room-card__area {
+  font-family: var(--aura-font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.app-room-card__name {
+  font-size: var(--aura-text-sm);
+  font-weight: 600;
+}
+
+.app-room-card__level {
+  font-size: var(--aura-text-xs);
+  color: var(--aura-ink-3);
+}
+
+.app-spec-list {
+  display: grid;
+  gap: var(--aura-space-2);
+  margin: 0;
+}
+
+.app-spec-list dt {
+  font-size: var(--aura-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--aura-ink-3);
+}
+
+.app-spec-list dd {
+  margin: 1px 0 0;
+  font-size: var(--aura-text-sm);
+}
+
+/* ── Auth ───────────────────────────────────────────────────────────────── */
+
+.app-auth {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: calc(var(--aura-space-6) + env(safe-area-inset-top))
+    var(--aura-space-5) calc(var(--aura-space-6) + env(safe-area-inset-bottom));
+}
+
+.app-auth__shell {
+  width: 100%;
+  max-width: 400px;
+  margin-inline: auto;
+}
+
+.app-auth__brand-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--aura-space-4);
+  padding: var(--aura-space-4) 0 var(--aura-space-2);
+  text-align: center;
+}
+
+.app-auth__brand-block .app-kicker {
+  color: var(--aura-accent-strong);
+}
+
+.app-auth__tagline {
+  max-width: 300px;
+  font-family: var(--aura-font-display);
+  font-size: var(--aura-text-body);
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--aura-ink-2);
+}
+
+.app-hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border: 1px solid color-mix(in oklab, var(--app-hero-ink) 22%, transparent);
+  border-radius: var(--aura-r-full);
+  background: color-mix(in oklab, var(--app-hero-ink) 12%, transparent);
+  color: var(--app-hero-ink);
+  font-size: var(--aura-text-xs);
+  font-weight: 600;
+}
+
+.app-auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aura-space-3);
+  margin-top: var(--aura-space-5);
+}
+
+.app-otp-input {
+  font-family: var(--aura-font-display);
+  font-size: 30px;
+  letter-spacing: 0.34em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  padding-inline: var(--aura-space-4);
+}
+
+.app-auth__footer {
+  margin-top: var(--aura-space-5);
+  text-align: center;
+  font-size: var(--aura-text-xs);
+  color: var(--aura-ink-3);
+}
+
+/* ── Divers ─────────────────────────────────────────────────────────────── */
+
+.app-empty-inline {
+  padding: var(--aura-space-5);
+  text-align: center;
+  color: var(--aura-ink-3);
+  font-size: var(--aura-text-sm);
+}
+
+.app-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-list > * + * {
+  border-top: 1px solid var(--aura-line);
+}
+
+.app-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--aura-space-2);
+}
+
+.app-danger-text {
+  color: var(--aura-danger);
+}
+
+.app-success-text {
+  color: var(--aura-success);
+}
+
+.app-warn-text {
+  color: var(--aura-warn);
+}
+
+.app-two-col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--aura-space-3);
+}
+
+.app-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Desktop : vraie application web avec sidebar ─────────────────────── */
+
+@media (min-width: 900px) {
+  .aura-frame.app-shell {
+    display: grid;
+    grid-template-columns: 244px minmax(0, 1fr);
+    max-width: 1240px;
+    height: calc(100dvh - 32px);
+    min-height: 0;
+  }
+
+  .app-main {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .app-sidebar {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px 16px calc(16px + env(safe-area-inset-bottom));
+    border-right: 1px solid var(--aura-line);
+    background: var(--aura-surface);
+  }
+
+  .app-sidebar__brand {
+    padding: 4px 8px 22px;
+  }
+
+  .app-sidebar__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .app-sidebar__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+    min-height: 48px;
+    padding: 9px 10px;
+    border: 1px solid transparent;
+    border-radius: var(--aura-r-md);
+    background: transparent;
+    color: var(--aura-ink-2);
+    text-align: left;
+    transition:
+      background-color var(--aura-dur-2) var(--aura-ease-out),
+      color var(--aura-dur-2) var(--aura-ease-out);
+  }
+
+  .app-sidebar__item:hover {
+    background: var(--aura-surface-2);
+    color: var(--aura-ink);
+  }
+
+  .app-sidebar__item[aria-current="page"] {
+    border-color: color-mix(in oklab, var(--aura-accent) 24%, var(--aura-line));
+    background: var(--aura-accent-soft);
+    color: var(--aura-accent-strong);
+  }
+
+  .app-sidebar__icon {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--aura-surface-2);
+    color: var(--aura-ink-2);
+  }
+
+  .app-sidebar__item[aria-current="page"] .app-sidebar__icon {
+    background: var(--aura-surface);
+    color: var(--aura-accent-strong);
+  }
+
+  .app-sidebar__text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .app-sidebar__label {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .app-sidebar__desc {
+    font-size: 11.5px;
+    line-height: 1.25;
+    color: var(--aura-ink-3);
+  }
+
+  .app-sidebar__item[aria-current="page"] .app-sidebar__desc {
+    color: color-mix(in oklab, var(--aura-accent-strong) 68%, var(--aura-ink-3));
+  }
+
+  .app-sidebar__footer {
+    margin-top: auto;
+    padding: 16px 8px 0;
+    border-top: 1px solid var(--aura-line);
+  }
+
+  .app-sidebar__user {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .app-sidebar__role {
+    margin: 2px 0 10px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--aura-ink-3);
+  }
+
+  .app-appbar-logo,
+  .app-appbar-settings {
+    display: none;
+  }
+
+  .aura-tabbar {
+    display: none;
+  }
+
+  .aura-screen--tabbar {
+    padding-bottom: 24px;
+  }
+
+  .app-pad {
+    width: 100%;
+    max-width: 1040px;
+    margin-inline: auto;
+    padding: 26px 32px 36px;
+  }
+
+  .app-photo-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .app-room-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .app-scroll-row {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .app-viewer {
+    height: clamp(400px, 56dvh, 580px);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 899px) {
+  .aura-frame.app-shell {
+    max-width: 760px;
+  }
+
+  .app-photo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 359px) {
+  .app-stat-grid {
+    grid-template-columns: 1fr;
+  }
+  .app-photo-grid,
+  .app-room-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .aura-appbar,
+  .aura-tabbar,
+  .app-no-print {
+    display: none !important;
+  }
+  .aura-frame {
+    max-width: none;
+    height: auto;
+    border: 0;
+    box-shadow: none;
+  }
+  .aura-screen {
+    overflow: visible;
+    padding: 0;
+  }
+}

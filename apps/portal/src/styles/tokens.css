@@ -1,0 +1,190 @@
+/* ============================================================================
+   CasaRenous — charte visuelle v2.0 (13 novembre 2026)
+   Palette, typographies et traitements issus du guide d'identité.
+   Les composants ne codent jamais de couleur : uniquement des tokens.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* Typographies officielles */
+  --aura-font-display: "Fraunces Variable", "Fraunces", Georgia,
+    "Times New Roman", serif;
+  --aura-font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", sans-serif;
+  --aura-font-mono: "Inter Variable", "Inter", ui-monospace, SFMono-Regular,
+    Menlo, Consolas, monospace;
+
+  /* Travertin, blanc, graphite, ardoise */
+  --aura-bg: oklch(0.96 0.012 79.8);
+  --aura-canvas: oklch(0.925 0.014 79.8);
+  --aura-surface: oklch(1 0 0);
+  --aura-surface-2: oklch(0.972 0.008 79.8);
+  --aura-surface-3: oklch(0.945 0.012 79.8);
+  --aura-ink: oklch(0.303 0.009 248.1);
+  --aura-ink-2: oklch(0.496 0.017 251.3);
+  --aura-ink-3: oklch(0.58 0.015 251.3);
+  --aura-line: oklch(0.895 0.012 79.8);
+  --aura-line-strong: oklch(0.8 0.02 79.8);
+  --aura-overlay: oklch(0.231 0.004 84.6 / 0.55);
+
+  /* Terracotta (graphiques / grand texte) et terracotta profond (texte, boutons) */
+  --aura-accent-h: 39.3;
+  --aura-accent-c: 0.149;
+  --aura-accent-l: 63.6%;
+  --aura-accent: oklch(0.636 0.149 39.3);
+  --aura-accent-solid: oklch(0.535 0.144 38.1);
+  --aura-accent-strong: oklch(0.535 0.144 38.1);
+  --aura-accent-soft: oklch(0.955 0.028 45);
+  --aura-on-accent: oklch(1 0 0);
+
+  /* Sauge, or, terracotta profond */
+  --aura-success: oklch(0.508 0.04 134.8);
+  --aura-success-soft: oklch(0.95 0.02 135);
+  --aura-warn: oklch(0.752 0.109 78.4);
+  --aura-warn-soft: oklch(0.96 0.03 82);
+  --aura-danger: oklch(0.535 0.144 38.1);
+  --aura-danger-soft: oklch(0.955 0.028 40);
+  --aura-info: oklch(0.496 0.017 251.3);
+  --aura-info-soft: oklch(0.955 0.012 251);
+
+  /* Ombres : nuit / graphite, jamais noires dures */
+  --aura-shadow-1: 0 1px 2px oklch(0.231 0.004 84.6 / 0.05),
+    0 8px 24px -18px oklch(0.231 0.004 84.6 / 0.22);
+  --aura-shadow-2: 0 2px 6px oklch(0.231 0.004 84.6 / 0.06),
+    0 18px 40px -24px oklch(0.231 0.004 84.6 / 0.3);
+  --aura-shadow-3: 0 4px 10px oklch(0.231 0.004 84.6 / 0.08),
+    0 36px 80px -28px oklch(0.231 0.004 84.6 / 0.38);
+
+  --aura-grain-opacity: 0.026;
+
+  /* Panneaux éditoriaux : Nuit + Graphite, touche terracotta discrète */
+  --app-hero-ink: oklch(0.96 0.012 79.8);
+  --app-hero-ink-muted: oklch(0.877 0.085 82.8 / 0.78);
+  --app-hero-accent-mix: 38%;
+  --app-hero-gradient:
+    radial-gradient(
+      120% 140% at 100% 0%,
+      color-mix(in oklab, var(--aura-accent) var(--app-hero-accent-mix), transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      95% 100% at 0% 100%,
+      color-mix(in oklab, var(--aura-accent) 18%, transparent),
+      transparent 62%
+    ),
+    linear-gradient(145deg, oklch(0.303 0.009 248.1), oklch(0.231 0.004 84.6));
+}
+
+/* Accent officiel : terracotta #D46640 */
+[data-accent="terracotta"] {
+  --aura-accent-h: 39.3;
+  --aura-accent-c: 0.149;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --aura-bg: oklch(0.231 0.004 84.6);
+  --aura-canvas: oklch(0.19 0.004 84.6);
+  --aura-surface: oklch(0.303 0.009 248.1);
+  --aura-surface-2: oklch(0.34 0.01 248.1);
+  --aura-surface-3: oklch(0.38 0.012 248.1);
+  --aura-ink: oklch(0.96 0.012 79.8);
+  --aura-ink-2: oklch(0.82 0.012 79.8);
+  --aura-ink-3: oklch(0.68 0.012 79.8);
+  --aura-line: oklch(0.36 0.01 248.1);
+  --aura-line-strong: oklch(0.46 0.012 248.1);
+  --aura-overlay: oklch(0.08 0.004 84.6 / 0.72);
+
+  /* Or satiné en accent, Or clair en texte, Graphite sur les boutons or */
+  --aura-accent: oklch(0.752 0.109 78.4);
+  --aura-accent-solid: oklch(0.752 0.109 78.4);
+  --aura-accent-strong: oklch(0.877 0.085 82.8);
+  --aura-accent-soft: oklch(0.32 0.04 75);
+  --aura-on-accent: oklch(0.303 0.009 248.1);
+
+  --aura-success: oklch(0.62 0.055 134.8);
+  --aura-success-soft: oklch(0.3 0.04 135);
+  --aura-warn: oklch(0.8 0.095 78.4);
+  --aura-warn-soft: oklch(0.33 0.05 80);
+  --aura-danger: oklch(0.636 0.149 39.3);
+  --aura-danger-soft: oklch(0.32 0.055 40);
+  --aura-info: oklch(0.72 0.015 251.3);
+  --aura-info-soft: oklch(0.31 0.015 251);
+
+  --aura-shadow-1: 0 1px 2px oklch(0 0 0 / 0.25),
+    0 8px 24px -18px oklch(0 0 0 / 0.5);
+  --aura-shadow-2: 0 2px 6px oklch(0 0 0 / 0.3),
+    0 18px 40px -24px oklch(0 0 0 / 0.6);
+  --aura-shadow-3: 0 4px 10px oklch(0 0 0 / 0.35),
+    0 36px 80px -28px oklch(0 0 0 / 0.7);
+
+  --aura-grain-opacity: 0.04;
+  --app-hero-accent-mix: 20%;
+}
+
+/* Héro : Nuit / Graphite, texte travertin, touche terracotta. */
+.aura-card--hero {
+  color: var(--app-hero-ink);
+  border-color: var(--aura-glass-border);
+  background: var(--app-hero-gradient);
+  box-shadow: var(--aura-shadow-2);
+}
+
+/* Pas de halo : la charte privilégie les bords et la typographie. */
+.aura-btn--primary {
+  box-shadow: var(--aura-shadow-1);
+}
+
+.aura-card--hero .aura-hero__eyebrow {
+  color: var(--app-hero-ink-muted);
+}
+
+.aura-card--hero .aura-hero__meta {
+  color: var(--app-hero-ink-muted);
+}
+
+.aura-card--hero .app-progress {
+  background: color-mix(in oklab, var(--app-hero-ink) 20%, transparent);
+}
+
+.aura-card--hero .app-progress__fill {
+  background: var(--app-hero-ink);
+}
+
+/* L'or satiné ne porte pas de petit texte sur fond clair : on garde
+   l'encre Graphite / Travertin sur les fonds or. */
+.aura-badge--warn,
+.aura-text-warn {
+  color: var(--aura-ink);
+}
+
+/* Chiffres de plans et budgets : Inter, tabulaire. */
+.aura-stat__value,
+.aura-hero__value.app-money,
+.app-num,
+.app-budget-row__amount,
+.app-room-card__area,
+.app-date-row__date {
+  font-family: var(--aura-font-sans);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Le fond papier reçoit un grain très discret, jamais sur le contenu. */
+.aura-app::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: var(--aura-grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+[data-theme="dark"] .aura-app::before {
+  mix-blend-mode: screen;
+}

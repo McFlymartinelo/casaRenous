@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512.00 512.00" width="512" height="512" role="img" aria-label="CasaRenous symbole"><title>CasaRenous symbole</title><defs>
+    <linearGradient id="terracotta-bg-icon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D46640" />
+      <stop offset="100%" stop-color="#B04826" />
+    </linearGradient>
+    <linearGradient id="gold-stroke-icon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F2D296" />
+      <stop offset="50%" stop-color="#D4A65A" />
+      <stop offset="100%" stop-color="#B5853B" />
+    </linearGradient>
+    <filter id="soft-shadow-icon" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#5E210D" flood-opacity="0.45" />
+    </filter>
+  </defs><g transform="translate(0, 32) scale(1.12)" style="transform-origin: 256px 230px;">
+    <g fill="none" stroke="#111111" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M126 206 L256 106 L316 152 V122 H346 V175 L386 206" stroke-width="11" />
+      <path d="M144 214 L256 128 L368 214" stroke-width="7.5" />
+
+      <path d="M154 202 V356 H204 V286 A52 52 0 0 1 308 286 V356 H358 V202" stroke-width="11" />
+      <path d="M170 214 V340 H188 V286 A68 68 0 0 1 324 286 V340 H342 V214" stroke-width="7.5" />
+    </g>
+
+    <g>
+      <path d="M154 268 Q210 232 272 178" fill="none" stroke="#111111" stroke-width="8.5" stroke-linecap="round" />
+      <path d="M226 214 C216 196 222 174 236 168 C244 182 240 202 226 214 Z" fill="#111111" />
+      <path d="M244 202 C258 190 278 190 286 200 C274 212 256 212 244 202 Z" fill="#111111" />
+      <path d="M256 188 C254 172 264 156 276 154 C280 166 270 182 256 188 Z" fill="#111111" />
+    </g>
+  </g>
+</svg>
