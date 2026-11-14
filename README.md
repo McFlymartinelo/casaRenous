@@ -300,6 +300,9 @@ stockage.
   peut être réparti en **plusieurs échéances** (date + montant). Chaque
   échéance devient une ligne `invoice` du budget et, si elle est datée, un
   rappel du planning.
+- Un **journal qualité** enregistre les champs manquants/incertains et les
+  corrections de montant. Il est consultable par l'admin dans
+  Réglages → Diagnostic → « Qualité de lecture ».
 - v0 : **PDF uniquement**. DOCX, XLSX et photos (OCR) renvoient un message
   explicite ; aucune donnée ne sort du serveur.
 
@@ -400,6 +403,8 @@ DELETE /documents/:id              admin (soft delete)
 GET    /documents/:id/file         auth, flux déchiffré
 POST   /documents/:id/analyze      auth (rate limit 120/h), extraction locale
 GET    /documents/:id/analysis     auth, dernier résultat mis en cache
+GET    /documents/analysis-quality admin, journal qualité agrégé
+POST   /documents/:id/analysis/correction admin, trace une correction manuelle
 
 GET    /document-categories        auth
 POST   /document-categories        admin
@@ -756,6 +761,8 @@ Points clés :
 - `document_categories.name` : unique insensible à la casse (`lower(name)`) ;
 - `document_analyses.document_id` : unique, une ligne par document, upsert à
   chaque ré-analyse ; l'extraction est stockée en `jsonb` ;
+- `document_analyses.quality` : journal qualité (`jsonb`) — champs manquants
+  ou incertains, correction manuelle et montant corrigé ;
 - `key_dates.date` et `milestones.planned_end` : `CHECK <= 2028-12-31` ;
 - `site_photos.client_id`, `site_notes.client_id`, `reserves.client_id`,
   `budget_items.client_id` : unicité pour l'idempotence hors-ligne ;
@@ -794,13 +801,15 @@ migrations SQL que la production, sans serveur externe. Elle couvre :
   la suppression, rôles admin/invités ;
 - budget : facture d'achat comptée dans le total de la maison ;
 - devises et libellés étrangers : facture allemande (montant de la facture,
-  taxe de vente, somme nette), IBAN et artefacts PDF ignorés.
+  taxe de vente, somme nette), IBAN et artefacts PDF ignorés ;
+- journal qualité : agrégats, champs fragiles, corrections manuelles
+  conservées après ré-analyse, accès réservé à l'admin.
 
 La suite portail couvre le parseur euro→centimes, le formatage, les dates du
 projet, la conversion OKLCH→sRGB pour WebGL et le contrat de réponse de
 `api-client` (Zod partagé).
 
-**104 tests** au total : 6 shared, 85 backend, 13 portail.
+**106 tests** au total : 6 shared, 87 backend, 13 portail.
 
 Vérifications effectuées lors de la livraison :
 

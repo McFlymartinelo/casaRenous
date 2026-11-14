@@ -155,6 +155,7 @@ export function toDocumentAnalysis(row: DocumentAnalysisRow): DocumentAnalysis {
     engine: row.engine,
     textLength: row.textLength,
     extraction: row.extraction ?? null,
+    quality: row.quality ?? null,
     message: row.message,
     analyzedAt: iso(row.analyzedAt),
   }

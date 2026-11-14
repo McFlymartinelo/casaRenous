@@ -20,7 +20,12 @@ import {
   TrashIcon,
   WalletIcon,
 } from "@/components/icons"
-import { useAnalyzeDocument, useCreateBudgetItem, useCreateMilestone } from "@/hooks/useApi"
+import {
+  useAnalyzeDocument,
+  useCreateBudgetItem,
+  useCreateMilestone,
+  useReportAnalysisCorrection,
+} from "@/hooks/useApi"
 import { api } from "@/lib/api-client"
 import { formatDate } from "@/lib/dates"
 import { downloadBlob } from "@/lib/media"
@@ -181,6 +186,7 @@ export function InvoiceAnalysisSheet({
   const analyze = useAnalyzeDocument()
   const createMilestone = useCreateMilestone()
   const createBudgetItem = useCreateBudgetItem()
+  const reportCorrection = useReportAnalysisCorrection()
   const [amount, setAmount] = useState("")
   const [rows, setRows] = useState<{ date: string; amount: string }[]>([
     { date: "", amount: "" },
@@ -321,6 +327,10 @@ export function InvoiceAnalysisSheet({
         })
       }
       setBudgetAdded(true)
+      const detected = extraction.amountDueCents ?? extraction.totalCents
+      if (totalCents !== null && totalCents !== detected) {
+        reportCorrection.mutate({ id: document.id, amountCents: totalCents })
+      }
       notify({
         title: "Ajouté au budget",
         message:

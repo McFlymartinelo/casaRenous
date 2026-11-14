@@ -36,6 +36,13 @@
       "when": 1794665000000,
       "tag": "0004_project_dates",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794674608205,
+      "tag": "0005_quick_lord_tyger",
+      "breakpoints": true
     }
   ]
 }

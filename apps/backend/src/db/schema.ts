@@ -17,6 +17,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core"
 import type {
+  AnalysisQuality,
   ExteriorSpecs,
   InvoiceExtraction,
   KitchenSpecs,
@@ -384,6 +385,7 @@ export const documentAnalyses = pgTable(
     engine: text("engine").notNull(),
     textLength: integer("text_length").notNull().default(0),
     extraction: jsonb("extraction").$type<InvoiceExtraction | null>(),
+    quality: jsonb("quality").$type<AnalysisQuality | null>(),
     message: text("message"),
     analyzedAt: timestamp("analyzed_at", { withTimezone: true }).notNull().defaultNow(),
   },

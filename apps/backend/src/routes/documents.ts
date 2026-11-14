@@ -1,6 +1,7 @@
 import { Router } from "express"
 import { and, desc, eq, ilike, isNull, or, type SQL } from "drizzle-orm"
 import {
+  AnalysisCorrectionInput,
   DocumentQuery,
   DocumentUpdateInput,
   DocumentUploadFields,
@@ -16,6 +17,7 @@ import { createUpload } from "../lib/multer.js"
 import { cursorCondition, decodeCursor, encodeCursor } from "../lib/pagination.js"
 import { toDocument, toDocumentAnalysis } from "../lib/serializers.js"
 import { analyzeDocument } from "../services/invoice-analysis.js"
+import { qualityFromExtraction, summarizeQuality } from "../services/analysis-quality.js"
 import {
   assertMagic,
   DOCUMENT_MIMES,
@@ -281,6 +283,66 @@ export function documentsRouter(
         throw ApiError.notFound("Aucune analyse pour ce document", "analysis_not_found")
       }
       res.json(toDocumentAnalysis(row))
+    }),
+  )
+
+  router.get(
+    "/documents/analysis-quality",
+    auth,
+    requireRole("admin"),
+    asyncHandler(async (_req, res) => {
+      const rows = await db
+        .select({
+          status: documentAnalyses.status,
+          analyzedAt: documentAnalyses.analyzedAt,
+          documentId: documentAnalyses.documentId,
+          quality: documentAnalyses.quality,
+          extraction: documentAnalyses.extraction,
+          title: documents.title,
+        })
+        .from(documentAnalyses)
+        .innerJoin(documents, eq(documentAnalyses.documentId, documents.id))
+        .where(isNull(documents.deletedAt))
+      res.json(summarizeQuality(rows))
+    }),
+  )
+
+  router.post(
+    "/documents/:id/analysis/correction",
+    auth,
+    requireRole("admin"),
+    asyncHandler(async (req, res) => {
+      const { id } = parseParams(IdParam, req.params)
+      const input = parseBody(AnalysisCorrectionInput, req.body)
+      const { user } = res.locals.auth as AuthLocals
+
+      const [row] = await db
+        .select()
+        .from(documentAnalyses)
+        .where(eq(documentAnalyses.documentId, id))
+        .limit(1)
+      if (!row) throw ApiError.notFound("Analyse introuvable", "analysis_not_found")
+
+      const quality = {
+        ...qualityFromExtraction(row.extraction),
+        corrected: true,
+        correctedAmountCents: input.amountCents,
+      }
+      await db
+        .update(documentAnalyses)
+        .set({ quality })
+        .where(eq(documentAnalyses.documentId, id))
+
+      await writeAudit(db, {
+        actorId: user.id,
+        action: "document.analysis_corrected",
+        entity: "document",
+        entityId: id,
+        ip: req.ip ?? null,
+        userAgent: req.header("user-agent") ?? null,
+        meta: { amountCents: input.amountCents },
+      })
+      res.json({ ok: true })
     }),
   )
 

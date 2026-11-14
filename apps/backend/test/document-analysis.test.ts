@@ -138,4 +138,66 @@ describe("lecture automatique d'une facture PDF", () => {
       .send({})
     expect(anonymous.status).toBe(401)
   })
+
+  it("journalise la qualité et les corrections manuelles", async () => {
+    await signIn(context, "admin@test.local", "Admin-Test-Password-2026!")
+    const list = await context.agent.get("/api/documents?category=facture").expect(200)
+    const invoice = (list.body.items as { id: string; mime: string }[]).find(
+      (item) => item.mime === "application/pdf",
+    )
+    if (!invoice) throw new Error("facture de test absente")
+
+    const analysis = await context.agent.get(`/api/documents/${invoice.id}/analysis`)
+    expect(analysis.status).toBe(200)
+    expect(analysis.body.quality).toMatchObject({
+      missingFields: [],
+      hasAmount: true,
+      hasDueDate: true,
+      corrected: false,
+    })
+
+    const summary = await context.agent
+      .get("/api/documents/analysis-quality")
+      .expect(200)
+    expect(summary.body.total).toBeGreaterThanOrEqual(2)
+    expect(summary.body.ready).toBeGreaterThanOrEqual(1)
+    expect(summary.body.unsupported).toBeGreaterThanOrEqual(1)
+    expect(summary.body.fields).toHaveLength(7)
+    expect(summary.body.missingAmount).toBe(0)
+
+    const correction = await context.agent
+      .post(`/api/documents/${invoice.id}/analysis/correction`)
+      .set("Origin", origin(context))
+      .send({ amountCents: 170_000 })
+    expect(correction.status).toBe(200)
+
+    const after = await context.agent
+      .get("/api/documents/analysis-quality")
+      .expect(200)
+    expect(after.body.corrected).toBeGreaterThanOrEqual(1)
+
+    // Une ré-analyse conserve la trace de la correction.
+    const again = await context.agent
+      .post(`/api/documents/${invoice.id}/analyze`)
+      .set("Origin", origin(context))
+      .send({})
+    expect(again.body.quality.corrected).toBe(true)
+    expect(again.body.quality.correctedAmountCents).toBe(170_000)
+  })
+
+  it("réserve le journal qualité et les corrections à l'admin", async () => {
+    await signIn(context, "sevin@test.local", "Sevin-Test-Password-2026!")
+    expect((await context.agent.get("/api/documents/analysis-quality")).status).toBe(403)
+
+    const list = await context.agent.get("/api/documents?category=facture").expect(200)
+    const invoice = (list.body.items as { id: string; mime: string }[]).find(
+      (item) => item.mime === "application/pdf",
+    )
+    if (!invoice) return
+    const forbidden = await context.agent
+      .post(`/api/documents/${invoice.id}/analysis/correction`)
+      .set("Origin", origin(context))
+      .send({ amountCents: 1_000 })
+    expect(forbidden.status).toBe(403)
+  })
 })

@@ -5,6 +5,8 @@ import {
   BudgetResponse,
   CalendarFeedResponse,
   CalendarTokenMetadata,
+  AnalysisCorrectionInput,
+  AnalysisQualitySummary,
   DocumentAnalysisSchema,
   DocumentCategoriesResponse,
   DocumentCategoryCreateInput,
@@ -391,6 +393,13 @@ export const api = {
         method: "POST",
         body: JSON.stringify({}),
       }),
+    analysisQuality: () =>
+      request("/api/documents/analysis-quality", AnalysisQualitySummary),
+    reportCorrection: (id: string, amountCents: number) =>
+      request(`/api/documents/${id}/analysis/correction`, OkResponse, {
+        method: "POST",
+        body: JSON.stringify(AnalysisCorrectionInput.parse({ amountCents })),
+      }),
   },
   documentCategories: {
     list: (): Promise<{ items: DocumentCategoryItem[] }> =>
@@ -441,6 +450,7 @@ export const api = {
       request(`/api/photos/${id}`, OkResponse, { method: "DELETE" }),
     file: (id: string): Promise<Blob> => requestBlob(`/api/photos/${id}/file`),
     thumb: (id: string): Promise<Blob> => requestBlob(`/api/photos/${id}/thumb`),
+    exportZip: (): Promise<Blob> => requestBlob("/api/photos/export.zip"),
   },
   notes: {
     list: (): Promise<Note[]> => request("/api/notes", NoteListSchema),

@@ -30,6 +30,7 @@ const keys = {
   milestones: (query: Partial<MilestoneQuery>) => ["milestones", query] as const,
   documents: (query: Partial<DocumentQuery>) => ["documents", query] as const,
   documentAnalysis: (id: string) => ["documents", "analysis", id] as const,
+  analysisQuality: ["analysis-quality"] as const,
   documentCategories: ["document-categories"] as const,
   photos: (query: Partial<PhotoQuery>) => ["photos", query] as const,
   notes: ["notes"] as const,
@@ -229,8 +230,24 @@ export function useAnalyzeDocument() {
   })
 }
 
-export function useDocumentCategories() {
+export function useAnalysisQuality(enabled = true) {
   return useQuery({
+    queryKey: keys.analysisQuality,
+    queryFn: api.documents.analysisQuality,
+    enabled,
+  })
+}
+
+export function useReportAnalysisCorrection() {
+  const invalidate = useInvalidate(keys.analysisQuality)
+  return useMutation({
+    mutationFn: ({ id, amountCents }: { id: string; amountCents: number }) =>
+      api.documents.reportCorrection(id, amountCents),
+    onSuccess: invalidate,
+  })
+}
+
+export function useDocumentCategories() {  return useQuery({
     queryKey: keys.documentCategories,
     queryFn: api.documentCategories.list,
   })

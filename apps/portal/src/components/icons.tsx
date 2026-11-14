@@ -241,6 +241,14 @@ export function SearchIcon(props: IconProps) {
   )
 }
 
+export function ChartIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+    </Icon>
+  )
+}
+
 export function SlidersIcon(props: IconProps) {
   return (
     <Icon {...props}>

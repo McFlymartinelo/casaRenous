@@ -15,6 +15,7 @@ import {
 } from "../lib/invoice-parser.js"
 import { toDocumentAnalysis } from "../lib/serializers.js"
 import { encryptionKey, readEncrypted } from "../lib/uploads.js"
+import { qualityFromExtraction } from "./analysis-quality.js"
 
 export interface DocumentAnalysisOutcome {
   analysis: DocumentAnalysis
@@ -62,7 +63,6 @@ export async function analyzeDocument(
   let message: string | null = null
   let extraction: DocumentAnalysis["extraction"] = null
   let engine = `${INVOICE_ENGINE}+${TEXT_ENGINE}`
-
   if (!extracted.ok) {
     status = extracted.reason === "invalid_pdf" ? "failed" : "unsupported"
     message = extracted.message
@@ -88,6 +88,17 @@ export async function analyzeDocument(
     }
   }
 
+  // Conserve la trace d'une correction manuelle lors d'une ré-analyse.
+  const [previous] = await db
+    .select({ quality: documentAnalyses.quality })
+    .from(documentAnalyses)
+    .where(eq(documentAnalyses.documentId, document.id))
+    .limit(1)
+  const quality = qualityFromExtraction(extraction, {
+    corrected: previous?.quality?.corrected ?? false,
+    correctedAmountCents: previous?.quality?.correctedAmountCents ?? null,
+  })
+
   const [row] = await db
     .insert(documentAnalyses)
     .values({
@@ -96,6 +107,7 @@ export async function analyzeDocument(
       engine,
       textLength,
       extraction,
+      quality,
       message,
       analyzedAt: new Date(),
     })
@@ -106,6 +118,7 @@ export async function analyzeDocument(
         engine,
         textLength,
         extraction,
+        quality,
         message,
         analyzedAt: new Date(),
       },

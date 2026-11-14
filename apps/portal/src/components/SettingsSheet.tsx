@@ -25,6 +25,7 @@ import { formatDateTime } from "@/lib/dates"
 import {
   BellIcon,
   CalendarIcon,
+  ChartIcon,
   DownloadIcon,
   FolderIcon,
   LockIcon,
@@ -92,12 +93,14 @@ export function SettingsSheet({
   onChangePassword,
   onInvite,
   onManageCategories,
+  onOpenQuality,
 }: {
   open: boolean
   onClose: () => void
   onChangePassword: () => void
   onInvite: () => void
   onManageCategories: () => void
+  onOpenQuality: () => void
 }) {
   const { user, logout, busy } = useAuth()
   const isAdmin = user?.role === "admin"
@@ -311,6 +314,23 @@ export function SettingsSheet({
                 title="Catégories de documents"
                 subtitle="Créer, renommer ou supprimer"
                 onClick={onManageCategories}
+              />
+            </div>
+          </Section>
+        ) : null}
+
+        {isAdmin ? (
+          <Section
+            title="Diagnostic"
+            icon={<ChartIcon size={13} />}
+            description="Mesure locale de ce que la lecture des factures réussit ou rate."
+          >
+            <div className="app-list">
+              <ListRow
+                icon={<ChartIcon size={18} />}
+                title="Qualité de lecture"
+                subtitle="Champs manquants, corrections manuelles"
+                onClick={onOpenQuality}
               />
             </div>
           </Section>

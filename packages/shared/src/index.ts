@@ -913,16 +913,75 @@ export const DocumentAnalysisStatus = z.enum([
 ])
 export type DocumentAnalysisStatus = z.infer<typeof DocumentAnalysisStatus>
 
+export const InvoiceField = z.enum([
+  "supplierName",
+  "supplierTaxId",
+  "invoiceNumber",
+  "issuedOn",
+  "dueDate",
+  "totalCents",
+  "vatCents",
+])
+export type InvoiceField = z.infer<typeof InvoiceField>
+
+/** Journal qualité : ce que le moteur n'a pas su lire, et les corrections. */
+export const AnalysisQualitySchema = z.object({
+  missingFields: z.array(InvoiceField).max(7),
+  lowConfidenceFields: z.array(InvoiceField).max(7),
+  hasAmount: z.boolean(),
+  hasDueDate: z.boolean(),
+  corrected: z.boolean(),
+  correctedAmountCents: MoneyCents.nullable(),
+})
+export type AnalysisQuality = z.infer<typeof AnalysisQualitySchema>
+
 export const DocumentAnalysisSchema = z.object({
   documentId: Uuid,
   status: DocumentAnalysisStatus,
   engine: z.string().max(60),
   textLength: z.number().int().min(0),
   extraction: InvoiceExtractionSchema.nullable(),
+  quality: AnalysisQualitySchema.nullable(),
   message: z.string().nullable(),
   analyzedAt: IsoDateTime,
 })
 export type DocumentAnalysis = z.infer<typeof DocumentAnalysisSchema>
+
+export const AnalysisFieldStat = z.object({
+  field: InvoiceField,
+  missing: z.number().int().min(0),
+  low: z.number().int().min(0),
+})
+export type AnalysisFieldStat = z.infer<typeof AnalysisFieldStat>
+
+export const AnalysisQualityRecent = z.object({
+  documentId: Uuid,
+  title: z.string(),
+  status: DocumentAnalysisStatus,
+  analyzedAt: IsoDateTime,
+  missingFields: z.array(InvoiceField),
+  corrected: z.boolean(),
+})
+export type AnalysisQualityRecent = z.infer<typeof AnalysisQualityRecent>
+
+export const AnalysisQualitySummary = z.object({
+  total: z.number().int().min(0),
+  ready: z.number().int().min(0),
+  unsupported: z.number().int().min(0),
+  failed: z.number().int().min(0),
+  corrected: z.number().int().min(0),
+  missingAmount: z.number().int().min(0),
+  missingDueDate: z.number().int().min(0),
+  missingSupplier: z.number().int().min(0),
+  fields: z.array(AnalysisFieldStat),
+  recent: z.array(AnalysisQualityRecent).max(20),
+})
+export type AnalysisQualitySummary = z.infer<typeof AnalysisQualitySummary>
+
+export const AnalysisCorrectionInput = z.object({
+  amountCents: MoneyCents,
+})
+export type AnalysisCorrectionInput = z.infer<typeof AnalysisCorrectionInput>
 
 export const PhotoSchema = z.object({
   id: Uuid,
