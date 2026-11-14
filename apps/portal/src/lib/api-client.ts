@@ -6,6 +6,10 @@ import {
   CalendarFeedResponse,
   CalendarTokenMetadata,
   DocumentAnalysisSchema,
+  DocumentCategoriesResponse,
+  DocumentCategoryCreateInput,
+  DocumentCategorySchema,
+  DocumentCategoryUpdateInput,
   DocumentPageSchema,
   DocumentSchema,
   DocumentUpdateInput,
@@ -54,6 +58,8 @@ import {
   type BudgetUpdateInput,
   type Document,
   type DocumentAnalysis,
+  type DocumentCategoryItem,
+  type DocumentCategoryCreateInput as DocumentCategoryCreate,
   type DocumentQuery,
   type DocumentUpdateInput as DocumentUpdate,
   type DocumentUploadFields as DocumentUpload,
@@ -350,6 +356,7 @@ export const api = {
       request(
         `/api/documents${queryString({
           category: query.category,
+          customCategoryId: query.customCategoryId,
           roomId: query.roomId,
           q: query.q,
           cursor: query.cursor,
@@ -384,6 +391,22 @@ export const api = {
         method: "POST",
         body: JSON.stringify({}),
       }),
+  },
+  documentCategories: {
+    list: (): Promise<{ items: DocumentCategoryItem[] }> =>
+      request("/api/document-categories", DocumentCategoriesResponse),
+    create: (input: DocumentCategoryCreate): Promise<DocumentCategoryItem> =>
+      request("/api/document-categories", DocumentCategorySchema, {
+        method: "POST",
+        body: JSON.stringify(DocumentCategoryCreateInput.parse(input)),
+      }),
+    update: (id: string, input: DocumentCategoryCreate): Promise<DocumentCategoryItem> =>
+      request(`/api/document-categories/${id}`, DocumentCategorySchema, {
+        method: "PATCH",
+        body: JSON.stringify(DocumentCategoryUpdateInput.parse(input)),
+      }),
+    remove: (id: string) =>
+      request(`/api/document-categories/${id}`, OkResponse, { method: "DELETE" }),
   },
   photos: {
     list: (query: Partial<PhotoQuery> = {}): Promise<Paginated<Photo>> =>

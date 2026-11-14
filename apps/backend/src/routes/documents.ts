@@ -8,7 +8,7 @@ import {
   type Env,
 } from "@casarenous/shared"
 import type { Database } from "../db/client.js"
-import { documentAnalyses, documents } from "../db/schema.js"
+import { documentAnalyses, documentCategories, documents } from "../db/schema.js"
 import { writeAudit } from "../lib/audit.js"
 import { ApiError } from "../lib/errors.js"
 import { asyncHandler, parseBody, parseParams, parseQuery } from "../lib/http.js"
@@ -31,6 +31,19 @@ import type { RateLimiters } from "../middleware/rate-limit.js"
 import { requireAuth, type AuthLocals } from "../middleware/require-auth.js"
 import { requireRole } from "../middleware/require-role.js"
 
+async function categoryName(
+  db: Database,
+  customCategoryId: string | null | undefined,
+): Promise<{ id: string; name: string } | null> {
+  if (!customCategoryId) return null
+  const [row] = await db
+    .select({ id: documentCategories.id, name: documentCategories.name })
+    .from(documentCategories)
+    .where(eq(documentCategories.id, customCategoryId))
+    .limit(1)
+  return row ?? null
+}
+
 export function documentsRouter(
   db: Database,
   env: Env,
@@ -49,6 +62,9 @@ export function documentsRouter(
       const query = parseQuery(DocumentQuery, req.query)
       const conditions: SQL[] = [isNull(documents.deletedAt)]
       if (query.category) conditions.push(eq(documents.category, query.category))
+      if (query.customCategoryId) {
+        conditions.push(eq(documents.customCategoryId, query.customCategoryId))
+      }
       if (query.roomId) conditions.push(eq(documents.roomId, query.roomId))
       if (query.q) {
         conditions.push(
@@ -65,17 +81,18 @@ export function documentsRouter(
       }
 
       const rows = await db
-        .select()
+        .select({ document: documents, categoryName: documentCategories.name })
         .from(documents)
+        .leftJoin(documentCategories, eq(documents.customCategoryId, documentCategories.id))
         .where(and(...conditions))
         .orderBy(desc(documents.createdAt), desc(documents.id))
         .limit(query.limit + 1)
 
       const hasMore = rows.length > query.limit
       const items = rows.slice(0, query.limit)
-      const last = items.at(-1)
+      const last = items.at(-1)?.document
       res.json({
-        items: items.map(toDocument),
+        items: items.map((row) => toDocument(row.document, row.categoryName ?? null)),
         nextCursor: hasMore && last ? encodeCursor(last.createdAt, last.id) : null,
       })
     }),
@@ -101,6 +118,12 @@ export function documentsRouter(
 
       const detected = assertMagic(req.file.buffer, DOCUMENT_MIMES)
       const originalName = safeOriginalName(req.file.originalname)
+      const customCategory = await categoryName(db, fields.customCategoryId)
+      if (fields.customCategoryId && !customCategory) {
+        throw ApiError.unprocessable("Catégorie inconnue", {
+          customCategoryId: ["Catégorie introuvable"],
+        })
+      }
       const storageKey = newStorageKey("documents", detected.extension)
       const encrypted = await writeEncrypted(env.UPLOAD_DIR, storageKey, req.file.buffer, key)
 
@@ -110,6 +133,7 @@ export function documentsRouter(
           .values({
             title: fields.title,
             category: fields.category,
+            customCategoryId: customCategory?.id ?? null,
             mime: detected.mime,
             sizeBytes: req.file.buffer.length,
             originalName,
@@ -135,7 +159,7 @@ export function documentsRouter(
           userAgent: req.header("user-agent") ?? null,
           meta: { category: created.category, size: created.sizeBytes, mime: created.mime },
         })
-        res.status(201).json(toDocument(created))
+        res.status(201).json(toDocument(created, customCategory?.name ?? null))
       } catch (error) {
         await removeStored(env.UPLOAD_DIR, storageKey)
         throw error
@@ -151,11 +175,25 @@ export function documentsRouter(
       const { id } = parseParams(IdParam, req.params)
       const input = parseBody(DocumentUpdateInput, req.body)
       const { user } = res.locals.auth as AuthLocals
+
+      let customCategory: { id: string; name: string } | null = null
+      if (input.customCategoryId !== undefined) {
+        customCategory = await categoryName(db, input.customCategoryId)
+        if (input.customCategoryId && !customCategory) {
+          throw ApiError.unprocessable("Catégorie inconnue", {
+            customCategoryId: ["Catégorie introuvable"],
+          })
+        }
+      }
+
       const [updated] = await db
         .update(documents)
         .set({
           ...(input.title !== undefined ? { title: input.title } : {}),
           ...(input.category !== undefined ? { category: input.category } : {}),
+          ...(input.customCategoryId !== undefined
+            ? { customCategoryId: customCategory?.id ?? null }
+            : {}),
           ...(input.roomId !== undefined ? { roomId: input.roomId } : {}),
           ...(input.milestoneId !== undefined ? { milestoneId: input.milestoneId } : {}),
           ...(input.notes !== undefined ? { notes: input.notes } : {}),
@@ -171,7 +209,7 @@ export function documentsRouter(
         ip: req.ip ?? null,
         userAgent: req.header("user-agent") ?? null,
       })
-      res.json(toDocument(updated))
+      res.json(toDocument(updated, customCategory?.name ?? null))
     }),
   )
 

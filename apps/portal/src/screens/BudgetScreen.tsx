@@ -94,6 +94,13 @@ export function BudgetScreen() {
           <span className="aura-stat__hint">+/- values</span>
         </div>
         <div className="aura-stat">
+          <span className="aura-stat__label">Achats</span>
+          <span className="aura-stat__value app-num">
+            {summary ? formatCents(summary.invoiceCents) : "—"}
+          </span>
+          <span className="aura-stat__hint">factures</span>
+        </div>
+        <div className="aura-stat">
           <span className="aura-stat__label">Reste</span>
           <span className={`aura-stat__value app-num ${summary && summary.remainingCents < 0 ? "app-danger-text" : ""}`}>
             {summary ? formatCents(summary.remainingCents) : "—"}
@@ -149,7 +156,7 @@ export function BudgetScreen() {
                     </span>
                   </span>
                 }
-                subtitle={`${item.kind === "ccmi_call" ? "Appel CCMI" : "Avenant"}${item.reference ? ` · ${item.reference}` : ""}${item.dueDate ? ` · ${formatDate(item.dueDate)}` : ""}`}
+                subtitle={`${item.kind === "ccmi_call" ? "Appel CCMI" : item.kind === "invoice" ? "Facture" : "Avenant"}${item.reference ? ` · ${item.reference}` : ""}${item.dueDate ? ` · ${formatDate(item.dueDate)}` : ""}`}
                 meta={<Badge tone={STATUS_LABEL[item.status].tone}>{STATUS_LABEL[item.status].label}</Badge>}
                 onClick={isAdmin ? () => setSelected(item) : undefined}
               />

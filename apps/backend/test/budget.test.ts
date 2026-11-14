@@ -58,6 +58,7 @@ describe("budget en centimes entiers", () => {
       totalCents: 125_000,
       ccmiCents: 150_000,
       changeOrdersCents: -25_000,
+      invoiceCents: 0,
       paidCents: 0,
       remainingCents: 125_000,
       count: 2,
@@ -105,6 +106,39 @@ describe("budget en centimes entiers", () => {
     const budget = await context.agent.get("/api/budget").expect(200)
     expect(budget.body.summary.paidCents).toBe(150_000)
     expect(budget.body.summary.remainingCents).toBe(-25_000)
+  })
+
+  it("compte les factures d'achat dans le total de la maison", async () => {
+    await signIn(context, "admin@test.local", "Admin-Test-Password-2026!")
+    const invoice = await context.agent
+      .post("/api/budget/items")
+      .set("Origin", origin(context))
+      .send({
+        kind: "invoice",
+        label: "Facture Boulanger — F905NV89219",
+        reference: "F905NV89219",
+        amountCents: 18_999,
+        status: "paid",
+        paidAt: "2026-07-06",
+        clientId: randomUUID(),
+      })
+    expect(invoice.status).toBe(201)
+
+    const negative = await context.agent
+      .post("/api/budget/items")
+      .set("Origin", origin(context))
+      .send({
+        kind: "invoice",
+        label: "Facture négative",
+        amountCents: -100,
+        clientId: randomUUID(),
+      })
+    expect(negative.status).toBe(422)
+
+    const budget = await context.agent.get("/api/budget").expect(200)
+    expect(budget.body.summary.invoiceCents).toBe(18_999)
+    expect(budget.body.summary.totalCents).toBe(143_999)
+    expect(budget.body.summary.paidCents).toBe(168_999)
   })
 
   it("réserve l'écriture à l'admin et l'export CSV à l'admin", async () => {

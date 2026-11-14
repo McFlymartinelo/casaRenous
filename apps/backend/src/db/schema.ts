@@ -74,7 +74,11 @@ export const reserveStatusEnum = pgEnum("reserve_status", [
   "resolved",
   "accepted",
 ])
-export const budgetKindEnum = pgEnum("budget_kind", ["ccmi_call", "change_order"])
+export const budgetKindEnum = pgEnum("budget_kind", [
+  "ccmi_call",
+  "change_order",
+  "invoice",
+])
 export const budgetStatusEnum = pgEnum("budget_status", [
   "planned",
   "due",
@@ -315,12 +319,29 @@ export const milestones = pgTable(
 /*  Coffre-fort, journal, réserves                                            */
 /* ========================================================================== */
 
+export const documentCategories = pgTable(
+  "document_categories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("document_categories_name_idx").on(sql`lower(${table.name})`),
+  ],
+)
+
 export const documents = pgTable(
   "documents",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     title: text("title").notNull(),
     category: documentCategoryEnum("category").notNull(),
+    customCategoryId: uuid("custom_category_id").references(
+      () => documentCategories.id,
+      { onDelete: "set null" },
+    ),
     mime: text("mime").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
     originalName: text("original_name").notNull(),
@@ -542,6 +563,7 @@ export type RoomRow = typeof rooms.$inferSelect
 export type KeyDateRow = typeof keyDates.$inferSelect
 export type MilestoneRow = typeof milestones.$inferSelect
 export type DocumentRow = typeof documents.$inferSelect
+export type DocumentCategoryRow = typeof documentCategories.$inferSelect
 export type DocumentAnalysisRow = typeof documentAnalyses.$inferSelect
 export type PhotoRow = typeof sitePhotos.$inferSelect
 export type NoteRow = typeof siteNotes.$inferSelect

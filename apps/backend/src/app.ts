@@ -15,6 +15,7 @@ import { adminRouter } from "./routes/admin.js"
 import { authRouter } from "./routes/auth.js"
 import { budgetRouter } from "./routes/budget.js"
 import { documentsRouter } from "./routes/documents.js"
+import { documentCategoriesRouter } from "./routes/document-categories.js"
 import { healthRouter } from "./routes/health.js"
 import { keyDatesRouter } from "./routes/key-dates.js"
 import { milestonesRouter } from "./routes/milestones.js"
@@ -91,6 +92,7 @@ export function createApp({ env, db, mailer, logger }: AppDependencies) {
   app.use("/api", keyDatesRouter(db, env))
   app.use("/api", milestonesRouter(db, env, limiters))
   app.use("/api", documentsRouter(db, env, limiters))
+  app.use("/api", documentCategoriesRouter(db, env))
   app.use("/api", photosRouter(db, env, limiters))
   app.use("/api", notesRouter(db, env))
   app.use("/api", reservesRouter(db, env))

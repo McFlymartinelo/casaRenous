@@ -2,6 +2,7 @@ import type {
   BudgetItem,
   Document,
   DocumentAnalysis,
+  DocumentCategoryItem,
   KeyDate,
   Milestone,
   Note,
@@ -14,6 +15,7 @@ import type {
 import type {
   BudgetItemRow,
   DocumentAnalysisRow,
+  DocumentCategoryRow,
   DocumentRow,
   KeyDateRow,
   MilestoneRow,
@@ -116,11 +118,13 @@ export function toMilestone(row: MilestoneRow): Milestone {
   }
 }
 
-export function toDocument(row: DocumentRow): Document {
+export function toDocument(row: DocumentRow, customCategoryName: string | null = null): Document {
   return {
     id: row.id,
     title: row.title,
     category: row.category,
+    customCategoryId: row.customCategoryId ?? null,
+    customCategoryName,
     mime: row.mime,
     sizeBytes: row.sizeBytes,
     originalName: row.originalName,
@@ -128,6 +132,18 @@ export function toDocument(row: DocumentRow): Document {
     roomId: row.roomId,
     milestoneId: row.milestoneId,
     notes: row.notes,
+    createdAt: iso(row.createdAt),
+  }
+}
+
+export function toDocumentCategory(
+  row: DocumentCategoryRow,
+  documentCount = 0,
+): DocumentCategoryItem {
+  return {
+    id: row.id,
+    name: row.name,
+    documentCount,
     createdAt: iso(row.createdAt),
   }
 }

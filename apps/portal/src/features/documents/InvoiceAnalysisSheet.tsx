@@ -9,11 +9,13 @@ import {
 } from "@casarenous/shared"
 import { Badge, Button, Card, Input, Skeleton, Sheet, type BadgeTone } from "@/aura/react"
 import { useNotify } from "@/aura/notify/react"
-import { CalendarIcon, FileIcon, RefreshIcon } from "@/components/icons"
-import { useAnalyzeDocument, useCreateMilestone } from "@/hooks/useApi"
+import { useAuth } from "@/auth/AuthProvider"
+import { CalendarIcon, FileIcon, RefreshIcon, WalletIcon } from "@/components/icons"
+import { useAnalyzeDocument, useCreateBudgetItem, useCreateMilestone } from "@/hooks/useApi"
 import { api } from "@/lib/api-client"
 import { formatDate } from "@/lib/dates"
 import { downloadBlob } from "@/lib/media"
+import { randomUUID } from "@/lib/uuid"
 
 const CONFIDENCE: Record<InvoiceConfidence, { label: string; tone: BadgeTone }> = {
   high: { label: "fiable", tone: "success" },
@@ -165,10 +167,14 @@ export function InvoiceAnalysisSheet({
   onClose: () => void
 }) {
   const { notify } = useNotify()
+  const { user } = useAuth()
+  const isAdmin = user?.role === "admin"
   const analyze = useAnalyzeDocument()
   const createMilestone = useCreateMilestone()
+  const createBudgetItem = useCreateBudgetItem()
   const [dueDate, setDueDate] = useState("")
   const [downloading, setDownloading] = useState(false)
+  const [budgetAdded, setBudgetAdded] = useState(false)
 
   const { mutate, data, isPending, error } = analyze
   const startedFor = useRef<string | null>(null)
@@ -239,6 +245,49 @@ export function InvoiceAnalysisSheet({
     }
   }
 
+  async function addToBudget() {
+    if (!extraction) return
+    const amount = extraction.amountDueCents ?? extraction.totalCents
+    if (!amount || amount <= 0) {
+      notify({
+        title: "Montant introuvable",
+        message: "La lecture n'a pas trouvé de montant positif à ajouter.",
+        tone: "danger",
+      })
+      return
+    }
+    const who = extraction.supplierName ?? document.title
+    const reference = extraction.invoiceNumber ? ` — ${extraction.invoiceNumber}` : ""
+    try {
+      await createBudgetItem.mutateAsync({
+        kind: "invoice",
+        label: `Facture ${who}${reference}`.slice(0, 180),
+        reference: extraction.invoiceNumber,
+        amountCents: amount,
+        dueDate: extraction.dueDate,
+        paidAt: extraction.dueDate
+          ? null
+          : (extraction.issuedOn ?? new Date().toISOString().slice(0, 10)),
+        status: extraction.dueDate ? "due" : "paid",
+        attachmentDocumentId: document.id,
+        notes: extraction.summary,
+        clientId: randomUUID(),
+      })
+      setBudgetAdded(true)
+      notify({
+        title: "Ajouté au budget",
+        message: `${formatCents(amount)} intégrés au total de la maison.`,
+        tone: "success",
+      })
+    } catch (cause) {
+      notify({
+        title: "Ajout impossible",
+        message: cause instanceof Error ? cause.message : "Réessaie dans un instant.",
+        tone: "danger",
+      })
+    }
+  }
+
   const footer = extraction ? (
     <div className="app-stack app-stack--tight">
       <Input
@@ -263,6 +312,18 @@ export function InvoiceAnalysisSheet({
       >
         Créer le rappel d'échéance
       </Button>
+      {isAdmin && (extraction.amountDueCents ?? extraction.totalCents) !== null ? (
+        <Button
+          block
+          variant="outline"
+          icon={<WalletIcon size={18} />}
+          loading={createBudgetItem.isPending}
+          disabled={budgetAdded}
+          onClick={() => void addToBudget()}
+        >
+          {budgetAdded ? "Ajouté au budget maison" : "Ajouter au budget maison"}
+        </Button>
+      ) : null}
       <Button block variant="ghost" size="sm" loading={downloading} onClick={() => void downloadFile()}>
         Télécharger le document
       </Button>

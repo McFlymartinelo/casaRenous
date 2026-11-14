@@ -1,5 +1,5 @@
 import { useDeferredValue, useState } from "react"
-import type { Document, DocumentCategory, Photo, Reserve, Room } from "@casarenous/shared"
+import type { Document, Photo, Reserve, Room } from "@casarenous/shared"
 import {
   Badge,
   Button,
@@ -28,6 +28,8 @@ import {
 } from "@/components/icons"
 import { UploadDocumentSheet } from "@/features/documents/UploadDocumentSheet"
 import { InvoiceAnalysisSheet } from "@/features/documents/InvoiceAnalysisSheet"
+import { DocumentCategoriesSheet } from "@/features/documents/DocumentCategoriesSheet"
+import { BUILTIN_CATEGORIES, BUILTIN_LABEL } from "@/features/documents/categories"
 import { NoteSheet } from "@/features/notes/NoteSheet"
 import { PhotoDetailSheet } from "@/features/photos/PhotoDetailSheet"
 import { PhotoSheet } from "@/features/photos/PhotoSheet"
@@ -36,6 +38,7 @@ import { ReserveSheet } from "@/features/reserves/ReserveSheet"
 import {
   useDeleteDocument,
   useDeletePhoto,
+  useDocumentCategories,
   useDocuments,
   useNotes,
   usePhotos,
@@ -54,17 +57,6 @@ const MODES: { value: Mode; label: string }[] = [
   { value: "journal", label: "Journal" },
   { value: "reserves", label: "Réserves" },
 ]
-
-const DOC_LABEL: Record<DocumentCategory, string> = {
-  permis: "Permis",
-  ccmi: "CCMI",
-  plan: "Plan",
-  facture: "Facture",
-  avenant: "Avenant",
-  assurance: "Assurance",
-  notice: "Notice",
-  autre: "Autre",
-}
 
 const RESERVE_STATUS: Record<Reserve["status"], { label: string; tone: "neutral" | "warn" | "success" | "danger" }> = {
   open: { label: "Ouverte", tone: "warn" },
@@ -98,10 +90,17 @@ export function ChantierScreen() {
   const [mode, setMode] = useState<Mode>("documents")
   const [query, setQuery] = useState("")
   const deferredQuery = useDeferredValue(query)
-  const [category, setCategory] = useState<"all" | DocumentCategory>("all")
+  const [filter, setFilter] = useState("all")
+  const categories = useDocumentCategories()
+  const customCategories = categories.data?.items ?? []
   const documents = useDocuments({
     q: deferredQuery.trim() || undefined,
-    category: category === "all" ? undefined : category,
+    category: filter.startsWith("built:")
+      ? (filter.slice("built:".length) as Document["category"])
+      : undefined,
+    customCategoryId: filter.startsWith("custom:")
+      ? filter.slice("custom:".length)
+      : undefined,
     limit: 60,
   })
 
@@ -109,6 +108,7 @@ export function ChantierScreen() {
   const deletePhoto = useDeletePhoto()
 
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [categoriesOpen, setCategoriesOpen] = useState(false)
   const [photoOpen, setPhotoOpen] = useState(false)
   const [noteOpen, setNoteOpen] = useState(false)
   const [reserveOpen, setReserveOpen] = useState(false)
@@ -202,19 +202,38 @@ export function ChantierScreen() {
             onChange={(event) => setQuery(event.target.value)}
           />
           <div className="app-scroll-row">
-            <Chip active={category === "all"} onClick={() => setCategory("all")}>
+            <Chip active={filter === "all"} onClick={() => setFilter("all")}>
               Tout
             </Chip>
-            {(Object.keys(DOC_LABEL) as DocumentCategory[]).map((value) => (
+            {BUILTIN_CATEGORIES.map((item) => (
               <Chip
-                key={value}
-                active={category === value}
-                onClick={() => setCategory(value)}
+                key={item.value}
+                active={filter === `built:${item.value}`}
+                onClick={() => setFilter(`built:${item.value}`)}
               >
-                {DOC_LABEL[value]}
+                {item.label}
+              </Chip>
+            ))}
+            {customCategories.map((item) => (
+              <Chip
+                key={item.id}
+                active={filter === `custom:${item.id}`}
+                onClick={() => setFilter(`custom:${item.id}`)}
+              >
+                {item.name}
               </Chip>
             ))}
           </div>
+          {isAdmin ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={<PlusIcon size={14} />}
+              onClick={() => setCategoriesOpen(true)}
+            >
+              Gérer les catégories
+            </Button>
+          ) : null}
 
           {documents.isLoading && !documents.data ? (
             <Skeleton height={200} />
@@ -226,7 +245,7 @@ export function ChantierScreen() {
                     key={doc.id}
                     icon={<FileIcon size={19} />}
                     title={doc.title}
-                    subtitle={`${DOC_LABEL[doc.category]} · ${formatDate(doc.createdAt.slice(0, 10))}`}
+                    subtitle={`${doc.customCategoryName ?? BUILTIN_LABEL[doc.category]} · ${formatDate(doc.createdAt.slice(0, 10))}`}
                     trailing={
                       <span className="aura-row-flex">
                         {doc.mime === "application/pdf" ? (
@@ -457,12 +476,16 @@ export function ChantierScreen() {
           open={uploadOpen}
           onClose={() => setUploadOpen(false)}
           rooms={rooms.data ?? []}
+          categories={customCategories}
           onUploaded={(doc) => {
             if (doc.category === "facture" && doc.mime === "application/pdf") {
               setAnalysisTarget(doc)
             }
           }}
         />
+      ) : null}
+      {categoriesOpen ? (
+        <DocumentCategoriesSheet onClose={() => setCategoriesOpen(false)} />
       ) : null}
       {analysisTarget ? (
         <InvoiceAnalysisSheet

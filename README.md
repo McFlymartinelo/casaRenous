@@ -70,8 +70,8 @@ La charte fournie le 13 novembre 2026 est intégrée :
 | **La Piazza** | Héro livraison + compte à rebours, 3 stats, dates clés éditables jusqu'au 31/12/2028, dernières photos, installation PWA |
 | **3D & Plans** | `HouseViewer` R3F chargé en `React.lazy`, niveaux Global/RdC/Étage, sélection de pièce, fiche cotes + cuisine, fallback filaire si le GLB est absent |
 | **Rétroplanning** | Jalons administratifs, techniques, chantier et livraison ; filtres ; export `.ics` avec alarmes J-7/J-1 ; flux calendrier privé révocable |
-| **Docs & Chantier** | Coffre-fort (PDF, DOCX, XLSX, images), lecture locale des factures PDF (fournisseur, échéance, montants, rappel), journal photo géolocalisé, notes, réserves, file d'attente hors-ligne, exports CSV |
-| **Budget** | Appels de fonds CCMI, avenants +/- ; montants en centimes entiers ; totaux serveur ; export CSV |
+| **Docs & Chantier** | Coffre-fort (PDF, DOCX, XLSX, images), catégories personnalisées, lecture locale des factures PDF (fournisseur, échéance, montants, rappel), journal photo géolocalisé, notes, réserves, file d'attente hors-ligne, exports CSV |
+| **Budget** | Appels de fonds CCMI, avenants +/- et factures d'achat (incluses dans le total de la maison) ; montants en centimes entiers ; totaux serveur ; export CSV |
 | **Réglages** | Thème Paper clair/sombre/auto, push, calendrier, sessions, invitations, changement de mot de passe |
 
 ---
@@ -394,6 +394,11 @@ DELETE /documents/:id              admin (soft delete)
 GET    /documents/:id/file         auth, flux déchiffré
 POST   /documents/:id/analyze      auth (rate limit 120/h), extraction locale
 GET    /documents/:id/analysis     auth, dernier résultat mis en cache
+
+GET    /document-categories        auth
+POST   /document-categories        admin
+PATCH  /document-categories/:id    admin (renommage)
+DELETE /document-categories/:id    admin (documents replacés dans « Autre »)
 
 GET    /photos                     auth
 POST   /photos                     auth, multipart idempotent
@@ -730,18 +735,19 @@ service worker sont servis en `no-cache` pour éviter les versions figées.
 
 ## 9. Modèle de données
 
-19 tables PostgreSQL :
+20 tables PostgreSQL :
 
 ```text
 users, sessions, otp_challenges, invitations, registration_challenges,
 calendar_tokens, audit_log, project_profile, rooms, key_dates, milestones,
-documents, document_analyses, site_photos, site_notes, reserves, budget_items,
-push_subscriptions, push_deliveries
+documents, document_categories, document_analyses, site_photos, site_notes,
+reserves, budget_items, push_subscriptions, push_deliveries
 ```
 
 Points clés :
 
 - `budget_items.amount_cents` : `integer`, jamais de `float` ;
+- `document_categories.name` : unique insensible à la casse (`lower(name)`) ;
 - `document_analyses.document_id` : unique, une ligne par document, upsert à
   chaque ré-analyse ; l'extraction est stockée en `jsonb` ;
 - `key_dates.date` et `milestones.planned_end` : `CHECK <= 2028-12-31` ;
@@ -776,13 +782,17 @@ migrations SQL que la production, sans serveur externe. Elle couvre :
 - invitations : création admin, rôle, email imposé, OTP, réutilisation, révocation, doublon ;
 - lecture de factures : parseur `heuristic-v1` sur texte réel (fournisseur,
   SIRET, dates FR, totaux, TVA, lignes), pdf non pris en charge, PDF scanné,
-  montant incohérent, upsert et contrôle d'accès des endpoints d'analyse.
+  montant incohérent, upsert et contrôle d'accès des endpoints d'analyse ;
+- catégories de documents : création/renommage/suppression, doublons
+  insensibles à la casse, classement et filtrage d'un document, détachement à
+  la suppression, rôles admin/invités ;
+- budget : facture d'achat comptée dans le total de la maison.
 
 La suite portail couvre le parseur euro→centimes, le formatage, les dates du
 projet, la conversion OKLCH→sRGB pour WebGL et le contrat de réponse de
 `api-client` (Zod partagé).
 
-**93 tests** au total : 6 shared, 74 backend, 13 portail.
+**99 tests** au total : 6 shared, 80 backend, 13 portail.
 
 Vérifications effectuées lors de la livraison :
 

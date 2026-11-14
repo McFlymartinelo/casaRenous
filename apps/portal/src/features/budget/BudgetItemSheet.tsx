@@ -83,6 +83,10 @@ export function BudgetItemSheet({
       setError("Un appel de fonds CCMI est toujours positif.")
       return
     }
+    if (draft.kind === "invoice" && cents < 0) {
+      setError("Une facture d'achat est toujours positive.")
+      return
+    }
     try {
       if (isNew) {
         await create.mutateAsync({
@@ -162,11 +166,16 @@ export function BudgetItemSheet({
           >
             <option value="ccmi_call">Appel de fonds CCMI</option>
             <option value="change_order">Avenant (+/-)</option>
+            <option value="invoice">Facture d'achat</option>
           </Select>
         ) : (
           <div className="aura-row-flex">
             <Badge tone={draft.kind === "ccmi_call" ? "accent" : "neutral"}>
-              {draft.kind === "ccmi_call" ? "Appel CCMI" : "Avenant"}
+              {draft.kind === "ccmi_call"
+                ? "Appel CCMI"
+                : draft.kind === "invoice"
+                  ? "Facture"
+                  : "Avenant"}
             </Badge>
             <span className="app-tiny">Le type n'est pas modifiable.</span>
           </div>

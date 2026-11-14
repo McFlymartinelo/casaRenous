@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type {
   BudgetCreateInput,
   BudgetUpdateInput,
+  DocumentCategoryCreateInput,
   DocumentQuery,
   DocumentUpdateInput,
   DocumentUploadFields,
@@ -29,6 +30,7 @@ const keys = {
   milestones: (query: Partial<MilestoneQuery>) => ["milestones", query] as const,
   documents: (query: Partial<DocumentQuery>) => ["documents", query] as const,
   documentAnalysis: (id: string) => ["documents", "analysis", id] as const,
+  documentCategories: ["document-categories"] as const,
   photos: (query: Partial<PhotoQuery>) => ["photos", query] as const,
   notes: ["notes"] as const,
   reserves: (query: Partial<ReserveQuery>) => ["reserves", query] as const,
@@ -220,6 +222,39 @@ export function useAnalyzeDocument() {
     onSuccess: (analysis) => {
       client.setQueryData(keys.documentAnalysis(analysis.documentId), analysis)
     },
+  })
+}
+
+export function useDocumentCategories() {
+  return useQuery({
+    queryKey: keys.documentCategories,
+    queryFn: api.documentCategories.list,
+  })
+}
+
+export function useCreateDocumentCategory() {
+  const invalidate = useInvalidate(keys.documentCategories, ["documents"])
+  return useMutation({
+    mutationFn: (input: DocumentCategoryCreateInput) =>
+      api.documentCategories.create(input),
+    onSuccess: invalidate,
+  })
+}
+
+export function useUpdateDocumentCategory() {
+  const invalidate = useInvalidate(keys.documentCategories, ["documents"])
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: DocumentCategoryCreateInput }) =>
+      api.documentCategories.update(id, input),
+    onSuccess: invalidate,
+  })
+}
+
+export function useDeleteDocumentCategory() {
+  const invalidate = useInvalidate(keys.documentCategories, ["documents"])
+  return useMutation({
+    mutationFn: (id: string) => api.documentCategories.remove(id),
+    onSuccess: invalidate,
   })
 }
 

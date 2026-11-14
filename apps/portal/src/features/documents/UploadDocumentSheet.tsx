@@ -1,29 +1,26 @@
 import { useEffect, useRef, useState } from "react"
-import type { Document, DocumentCategory, Room } from "@casarenous/shared"
+import type {
+  Document,
+  DocumentCategory,
+  DocumentCategoryItem,
+  Room,
+} from "@casarenous/shared"
 import { Button, Input, Select, Sheet, Textarea } from "@/aura/react"
 import { useNotify } from "@/aura/notify/react"
 import { useUploadDocument } from "@/hooks/useApi"
-
-const CATEGORIES: { value: DocumentCategory; label: string }[] = [
-  { value: "permis", label: "Permis" },
-  { value: "ccmi", label: "CCMI" },
-  { value: "plan", label: "Plan" },
-  { value: "facture", label: "Facture" },
-  { value: "avenant", label: "Avenant" },
-  { value: "assurance", label: "Assurance" },
-  { value: "notice", label: "Notice" },
-  { value: "autre", label: "Autre" },
-]
+import { BUILTIN_CATEGORIES } from "@/features/documents/categories"
 
 export function UploadDocumentSheet({
   open,
   onClose,
   rooms,
+  categories,
   onUploaded,
 }: {
   open: boolean
   onClose: () => void
   rooms: Room[]
+  categories: DocumentCategoryItem[]
   onUploaded?: (document: Document) => void
 }) {
   const { notify } = useNotify()
@@ -31,7 +28,7 @@ export function UploadDocumentSheet({
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState("")
-  const [category, setCategory] = useState<DocumentCategory>("plan")
+  const [category, setCategory] = useState("built:plan")
   const [roomId, setRoomId] = useState("")
   const [notes, setNotes] = useState("")
   const [progress, setProgress] = useState(0)
@@ -41,7 +38,7 @@ export function UploadDocumentSheet({
     if (!open) {
       setFile(null)
       setTitle("")
-      setCategory("plan")
+      setCategory("built:plan")
       setRoomId("")
       setNotes("")
       setProgress(0)
@@ -69,10 +66,17 @@ export function UploadDocumentSheet({
     }
     setError(null)
     try {
+      const customCategoryId = category.startsWith("custom:")
+        ? category.slice("custom:".length)
+        : null
+      const builtin = category.startsWith("built:")
+        ? (category.slice("built:".length) as DocumentCategory)
+        : "autre"
       const created = await upload.mutateAsync({
         fields: {
           title: title.trim(),
-          category,
+          category: builtin,
+          customCategoryId,
           roomId: roomId || null,
           notes: notes.trim() || null,
         },
@@ -120,13 +124,24 @@ export function UploadDocumentSheet({
           <Select
             label="Catégorie"
             value={category}
-            onChange={(event) => setCategory(event.target.value as DocumentCategory)}
+            onChange={(event) => setCategory(event.target.value)}
           >
-            {CATEGORIES.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
+            <optgroup label="Catégories">
+              {BUILTIN_CATEGORIES.map((item) => (
+                <option key={item.value} value={`built:${item.value}`}>
+                  {item.label}
+                </option>
+              ))}
+            </optgroup>
+            {categories.length ? (
+              <optgroup label="Mes catégories">
+                {categories.map((item) => (
+                  <option key={item.id} value={`custom:${item.id}`}>
+                    {item.name}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
           </Select>
           <Select
             label="Pièce (optionnel)"

@@ -24,17 +24,20 @@ function csvCell(value: unknown): string {
 function summary(rows: Awaited<ReturnType<typeof loadBudgetRows>>) {
   let ccmiCents = 0
   let changeOrdersCents = 0
+  let invoiceCents = 0
   let paidCents = 0
   for (const row of rows) {
     if (row.kind === "ccmi_call") ccmiCents += row.amountCents
+    else if (row.kind === "invoice") invoiceCents += row.amountCents
     else changeOrdersCents += row.amountCents
     if (row.status === "paid") paidCents += row.amountCents
   }
-  const totalCents = ccmiCents + changeOrdersCents
+  const totalCents = ccmiCents + changeOrdersCents + invoiceCents
   return {
     totalCents,
     ccmiCents,
     changeOrdersCents,
+    invoiceCents,
     paidCents,
     remainingCents: totalCents - paidCents,
     count: rows.length,
@@ -218,10 +221,15 @@ export function budgetRouter(db: Database, env: Env): Router {
         "Notes",
       ]
       const lines = [header.map(csvCell).join(";")]
+      const KIND_LABEL: Record<(typeof rows)[number]["kind"], string> = {
+        ccmi_call: "appel_ccmi",
+        change_order: "avenant",
+        invoice: "facture",
+      }
       for (const row of rows) {
         lines.push(
           [
-            row.kind,
+            KIND_LABEL[row.kind],
             row.label,
             row.reference,
             row.amountCents,

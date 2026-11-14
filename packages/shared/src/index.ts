@@ -799,6 +799,8 @@ export const DocumentSchema = z.object({
   id: Uuid,
   title: z.string(),
   category: DocumentCategory,
+  customCategoryId: Uuid.nullable(),
+  customCategoryName: z.string().nullable(),
   mime: z.string(),
   sizeBytes: z.number().int(),
   originalName: z.string(),
@@ -812,7 +814,8 @@ export type Document = z.infer<typeof DocumentSchema>
 
 export const DocumentUploadFields = z.object({
   title: z.string().trim().min(1).max(180),
-  category: DocumentCategory,
+  category: DocumentCategory.default("autre"),
+  customCategoryId: Uuid.nullable().optional(),
   roomId: Uuid.nullable().optional(),
   milestoneId: Uuid.nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
@@ -822,6 +825,7 @@ export type DocumentUploadFields = z.infer<typeof DocumentUploadFields>
 export const DocumentUpdateInput = z.object({
   title: z.string().trim().min(1).max(180).optional(),
   category: DocumentCategory.optional(),
+  customCategoryId: Uuid.nullable().optional(),
   roomId: Uuid.nullable().optional(),
   milestoneId: Uuid.nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
@@ -830,10 +834,34 @@ export type DocumentUpdateInput = z.infer<typeof DocumentUpdateInput>
 
 export const DocumentQuery = PageQuery.extend({
   category: DocumentCategory.optional(),
+  customCategoryId: Uuid.optional(),
   roomId: Uuid.optional(),
   q: z.string().trim().max(120).optional(),
 })
 export type DocumentQuery = z.infer<typeof DocumentQuery>
+
+/* ── Catégories personnalisées de documents ───────────────────────────── */
+
+export const DocumentCategorySchema = z.object({
+  id: Uuid,
+  name: z.string(),
+  documentCount: z.number().int().min(0),
+  createdAt: IsoDateTime,
+})
+export type DocumentCategoryItem = z.infer<typeof DocumentCategorySchema>
+
+export const DocumentCategoriesResponse = z.object({
+  items: z.array(DocumentCategorySchema),
+})
+export type DocumentCategoriesResponse = z.infer<typeof DocumentCategoriesResponse>
+
+export const DocumentCategoryCreateInput = z.object({
+  name: z.string().trim().min(2, "Nom trop court").max(60, "Nom trop long"),
+})
+export type DocumentCategoryCreateInput = z.infer<typeof DocumentCategoryCreateInput>
+
+export const DocumentCategoryUpdateInput = DocumentCategoryCreateInput
+export type DocumentCategoryUpdateInput = z.infer<typeof DocumentCategoryUpdateInput>
 
 export const DocumentPageSchema = paginated(DocumentSchema)
 
@@ -1037,7 +1065,7 @@ export const ReservePageSchema = paginated(ReserveSchema)
 /*  9. Budget                                                                 */
 /* ========================================================================== */
 
-export const BudgetKind = z.enum(["ccmi_call", "change_order"])
+export const BudgetKind = z.enum(["ccmi_call", "change_order", "invoice"])
 export type BudgetKind = z.infer<typeof BudgetKind>
 
 export const BudgetStatus = z.enum(["planned", "due", "paid", "cancelled"])
@@ -1080,6 +1108,10 @@ export const BudgetCreateInput = z
     message: "Un appel de fonds est toujours positif",
     path: ["amountCents"],
   })
+  .refine((value) => value.kind !== "invoice" || value.amountCents > 0, {
+    message: "Une facture d'achat est toujours positive",
+    path: ["amountCents"],
+  })
 export type BudgetCreateInput = z.infer<typeof BudgetCreateInput>
 
 export const BudgetUpdateInput = z.object({
@@ -1098,6 +1130,7 @@ export const BudgetSummary = z.object({
   totalCents: z.number().int(),
   ccmiCents: z.number().int(),
   changeOrdersCents: z.number().int(),
+  invoiceCents: z.number().int(),
   paidCents: z.number().int(),
   remainingCents: z.number().int(),
   count: z.number().int(),
