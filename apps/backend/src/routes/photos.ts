@@ -1,4 +1,6 @@
 import { Router } from "express"
+import { Readable } from "node:stream"
+import { pipeline } from "node:stream/promises"
 import { and, desc, eq, gte, isNull, lte, type SQL } from "drizzle-orm"
 import {
   IdParam,
@@ -8,7 +10,7 @@ import {
   type Env,
 } from "@casarenous/shared"
 import type { Database } from "../db/client.js"
-import { sitePhotos } from "../db/schema.js"
+import { rooms, sitePhotos, type PhotoRow } from "../db/schema.js"
 import { writeAudit } from "../lib/audit.js"
 import { ApiError } from "../lib/errors.js"
 import { asyncHandler, parseBody, parseParams, parseQuery } from "../lib/http.js"
@@ -26,9 +28,33 @@ import {
   sha256Buffer,
   writeEncrypted,
 } from "../lib/uploads.js"
+import { ZIP32_MAX_BYTES, ZIP32_MAX_ENTRIES, zipStream, type ZipEntry } from "../lib/zip.js"
 import type { RateLimiters } from "../middleware/rate-limit.js"
 import { requireAuth, type AuthLocals } from "../middleware/require-auth.js"
 import { requireRole } from "../middleware/require-role.js"
+
+function csvCell(value: unknown): string {
+  const text = value === null || value === undefined ? "" : String(value)
+  return `"${text.replace(/"/g, '""')}"`
+}
+
+function exportFileName(photo: PhotoRow): string {
+  const date = photo.takenAt.toISOString().slice(0, 10)
+  const slug = (photo.caption ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40)
+    .replace(/-+$/g, "")
+  return `${date}-${slug || "photo"}-${photo.id.slice(0, 8)}.jpg`
+}
+
+function zipStamp(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0")
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}`
+}
 
 export function photosRouter(db: Database, env: Env, limiters: RateLimiters): Router {
   const router = Router()
@@ -69,6 +95,83 @@ export function photosRouter(db: Database, env: Env, limiters: RateLimiters): Ro
         items: items.map(toPhoto),
         nextCursor: hasMore && last ? encodeCursor(last.takenAt, last.id) : null,
       })
+    }),
+  )
+
+  router.get(
+    "/photos/export.zip",
+    auth,
+    requireRole("admin", "invites"),
+    asyncHandler(async (_req, res) => {
+      const rows = await db
+        .select({ photo: sitePhotos, roomName: rooms.name })
+        .from(sitePhotos)
+        .leftJoin(rooms, eq(sitePhotos.roomId, rooms.id))
+        .where(isNull(sitePhotos.deletedAt))
+        .orderBy(desc(sitePhotos.takenAt), desc(sitePhotos.id))
+
+      const entries = rows.map((row) => ({
+        photo: row.photo,
+        roomName: row.roomName,
+        fileName: exportFileName(row.photo),
+      }))
+      const totalBytes = entries.reduce((sum, entry) => sum + entry.photo.sizeBytes, 0)
+      if (entries.length > ZIP32_MAX_ENTRIES || totalBytes > ZIP32_MAX_BYTES) {
+        throw ApiError.tooLarge(
+          "Le journal est trop volumineux pour un export ZIP en une fois.",
+          "journal_export_too_large",
+        )
+      }
+
+      const header = ["Fichier", "Date", "Légende", "Latitude", "Longitude", "Pièce"]
+      const lines = [header.map(csvCell).join(";")]
+      for (const entry of entries) {
+        lines.push(
+          [
+            `photos/${entry.fileName}`,
+            entry.photo.takenAt.toISOString().slice(0, 10),
+            entry.photo.caption,
+            entry.photo.lat,
+            entry.photo.lng,
+            entry.roomName,
+          ]
+            .map(csvCell)
+            .join(";"),
+        )
+      }
+      const manifest = Buffer.from(`\ufeff${lines.join("\r\n")}\r\n`, "utf8")
+
+      async function* files(): AsyncGenerator<ZipEntry> {
+        yield { name: "journal.csv", data: manifest }
+        for (const entry of entries) {
+          const { photo } = entry
+          const data = await readEncrypted(
+            env.UPLOAD_DIR,
+            photo.storageKey,
+            key,
+            photo.encIv,
+            photo.encTag,
+          )
+          yield { name: `photos/${entry.fileName}`, data, date: photo.takenAt }
+        }
+      }
+
+      res.setHeader("Content-Type", "application/zip")
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="casarenous-journal-${zipStamp(new Date())}.zip"`,
+      )
+      res.setHeader("Cache-Control", "private, no-store")
+      res.setHeader("X-Content-Type-Options", "nosniff")
+
+      try {
+        await pipeline(Readable.from(zipStream(files())), res)
+      } catch (error) {
+        // Les en-têtes sont déjà partis : on coupe la connexion au lieu de
+        // tenter d'écrire une réponse JSON dans un flux ZIP.
+        if (!res.headersSent) throw error
+        res.destroy()
+      }
     }),
   )
 

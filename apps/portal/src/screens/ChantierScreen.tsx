@@ -116,6 +116,7 @@ export function ChantierScreen() {
   const [selectedReserve, setSelectedReserve] = useState<Reserve | null>(null)
   const [analysisTarget, setAnalysisTarget] = useState<Document | null>(null)
   const [downloading, setDownloading] = useState<string | null>(null)
+  const [exportingPhotos, setExportingPhotos] = useState(false)
 
   const openReserves = (reserves.data?.items ?? []).filter(
     (item) => item.status === "open" || item.status === "in_progress",
@@ -139,6 +140,22 @@ export function ChantierScreen() {
       downloadBlob(blob, "casarenous-reserves.csv")
     } catch {
       notify({ title: "Export impossible", message: "Le serveur est injoignable.", tone: "danger" })
+    }
+  }
+
+  async function exportPhotos() {
+    setExportingPhotos(true)
+    try {
+      const blob = await api.photos.exportZip()
+      downloadBlob(blob, "casarenous-journal-photos.zip")
+    } catch {
+      notify({
+        title: "Export impossible",
+        message: "Le serveur est injoignable ou le journal est trop lourd.",
+        tone: "danger",
+      })
+    } finally {
+      setExportingPhotos(false)
     }
   }
 
@@ -303,6 +320,19 @@ export function ChantierScreen() {
 
       {mode === "journal" ? (
         <div className="app-stack">
+          <div className="app-section-head">
+            <p className="app-kicker">Journal de chantier</p>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={<DownloadIcon size={15} />}
+              loading={exportingPhotos}
+              disabled={!online || !photos.data?.items.length}
+              onClick={() => void exportPhotos()}
+            >
+              Exporter les photos
+            </Button>
+          </div>
           {photos.isLoading && !photos.data ? (
             <Skeleton height={220} />
           ) : photos.data?.items.length ? (

@@ -112,6 +112,37 @@ describe("journal photo", () => {
     expect(list.body.items.some((item: { id: string }) => item.id === res.body.id)).toBe(true)
   })
 
+  it("exporte tout le journal en ZIP avec un manifeste", async () => {
+    await signIn(context, "admin@test.local", "Admin-Test-Password-2026!")
+    const res = await context.agent
+      .get("/api/photos/export.zip")
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = []
+        response.on("data", (chunk: Buffer) => chunks.push(chunk))
+        response.on("end", () => callback(null, Buffer.concat(chunks)))
+      })
+    expect(res.status).toBe(200)
+    expect(res.headers["content-type"]).toBe("application/zip")
+    expect(res.headers["content-disposition"]).toContain("attachment")
+    expect(res.headers["cache-control"]).toBe("private, no-store")
+
+    const body = res.body as Buffer
+    expect(Buffer.isBuffer(body)).toBe(true)
+    expect(body.subarray(0, 4).toString("latin1")).toBe("PK\x03\x04")
+    expect(body.subarray(-22, -18).toString("latin1")).toBe("PK\x05\x06")
+
+    const listing = body.toString("latin1")
+    expect(listing).toContain("journal.csv")
+    expect(listing).toContain("photos/")
+    expect(listing).toContain("Fondations")
+  })
+
+  it("refuse l'export ZIP à un visiteur non authentifié", async () => {
+    const res = await request(context.app).get("/api/photos/export.zip")
+    expect(res.status).toBe(401)
+  })
+
   it("refuse une photo non authentifiée", async () => {
     const res = await request(context.app)
       .post("/api/photos")

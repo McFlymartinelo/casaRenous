@@ -70,7 +70,7 @@ La charte fournie le 13 novembre 2026 est intégrée :
 | **La Piazza** | Héro livraison + compte à rebours, 3 stats, dates clés éditables jusqu'au 31/12/2028, dernières photos, installation PWA |
 | **3D & Plans** | `HouseViewer` R3F chargé en `React.lazy`, niveaux Global/RdC/Étage, sélection de pièce, fiche cotes + cuisine, fallback filaire si le GLB est absent |
 | **Rétroplanning** | Jalons administratifs, techniques, chantier et livraison ; filtres ; export `.ics` avec alarmes J-7/J-1 ; flux calendrier privé révocable |
-| **Docs & Chantier** | Coffre-fort (PDF, DOCX, XLSX, images), catégories personnalisées, lecture locale des factures PDF (fournisseur, échéance, montants, rappel), journal photo géolocalisé, notes, réserves, file d'attente hors-ligne, exports CSV |
+| **Docs & Chantier** | Coffre-fort (PDF, DOCX, XLSX, images), catégories personnalisées, lecture locale des factures PDF (fournisseur, échéance, montants, rappel), journal photo géolocalisé, notes, réserves, file d'attente hors-ligne, exports CSV et ZIP |
 | **Budget** | Appels de fonds CCMI, avenants +/- et factures d'achat avec échéancier (incluses dans le total de la maison) ; montants en centimes entiers ; totaux serveur ; export CSV |
 | **Réglages** | Thème Paper clair/sombre/auto, push, calendrier, sessions, invitations, changement de mot de passe |
 
@@ -417,6 +417,7 @@ PATCH  /photos/:id                 auteur/admin
 DELETE /photos/:id                 admin
 GET    /photos/:id/file            auth
 GET    /photos/:id/thumb           auth
+GET    /photos/export.zip          auth, ZIP du journal + manifeste CSV
 
 GET    /notes                      auth
 POST   /notes                      auth
