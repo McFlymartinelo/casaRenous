@@ -1,0 +1,15 @@
+# Tests / démonstration locaux — OTP affiché dans les logs, pas d'email requis.
+#   docker compose -f compose.yaml -f compose.test.yaml up -d backend
+#   npm run dev -w @casarenous/portal
+# Puis ouvrir http://localhost:5173
+# Ne pas laisser ce profil actif en production réelle.
+services:
+  backend:
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      NODE_ENV: development
+      MAIL_TRANSPORT: console
+      COOKIE_SECURE: "false"
+      APP_ORIGIN: ${APP_ORIGIN:-https://casarenous.martylab.fr}
+      EXTRA_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174
