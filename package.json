@@ -1,0 +1,43 @@
+{
+  "name": "casarenous",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "npm run build -w @casarenous/shared && concurrently -n shared,api,web -c cyan,green,magenta \"npm:dev:shared\" \"npm:dev:backend\" \"npm:dev:portal\"",
+    "dev:shared": "npm run dev -w @casarenous/shared",
+    "dev:backend": "npm run dev -w @casarenous/backend",
+    "dev:portal": "npm run dev -w @casarenous/portal",
+    "build": "npm run build -w @casarenous/shared && npm run build -w @casarenous/backend && npm run build -w @casarenous/portal",
+    "typecheck": "npm run build -w @casarenous/shared && npm run typecheck -w @casarenous/backend && npm run typecheck -w @casarenous/portal",
+    "lint": "eslint .",
+    "lint:aura": "node scripts/check-invariants.mjs",
+    "test": "npm run test -w @casarenous/shared && npm run test -w @casarenous/backend && npm run test -w @casarenous/portal",
+    "test:backend": "npm run test -w @casarenous/backend",
+    "db:generate": "npm run db:generate -w @casarenous/backend",
+    "db:migrate": "npm run db:migrate -w @casarenous/backend",
+    "db:seed": "npm run db:seed -w @casarenous/backend",
+    "user:create": "npm run user:create -w @casarenous/backend",
+    "user:passwd": "npm run user:passwd -w @casarenous/backend",
+    "compose:config": "docker compose config",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "concurrently": "^9.2.0",
+    "eslint": "^9.30.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.0.0",
+    "prettier": "^3.6.0",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.35.0"
+  }
+}
