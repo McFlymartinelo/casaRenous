@@ -216,13 +216,19 @@ export function KeyDatesSheet({
     >
       <div className="app-list">
         {dates.map((item) => (
-          <div key={item.id} className="app-date-row">
+          <div key={item.id} className={`app-date-row ${item.completedOn ? "is-done" : ""}`}>
             <p className="app-date-row__date">{formatDate(item.date, { year: "numeric" })}</p>
             <div className="app-date-row__body">
               <p className="app-date-row__title">
-                {item.completedOn ? <CheckIcon size={14} /> : null}
                 <span className="app-date-row__label">{item.label}</span>
-                {item.isProvisional ? <Badge tone="warn">Provisoire</Badge> : null}
+                {item.completedOn ? (
+                  <Badge tone="success">
+                    <CheckIcon size={12} />
+                    Réalisé
+                  </Badge>
+                ) : item.isProvisional ? (
+                  <Badge tone="warn">Provisoire</Badge>
+                ) : null}
                 {item.isSystem ? <Badge tone="neutral">Système</Badge> : null}
               </p>
               {item.note ? <p className="app-date-row__note">{item.note}</p> : null}

@@ -12,7 +12,13 @@ import {
 } from "@/aura/react"
 import { useAuth } from "@/auth/AuthProvider"
 import { AuthenticatedImage } from "@/components/AuthenticatedImage"
-import { CalendarIcon, CameraIcon, EditIcon, MapPinIcon } from "@/components/icons"
+import {
+  CalendarIcon,
+  CameraIcon,
+  CheckIcon,
+  EditIcon,
+  MapPinIcon,
+} from "@/components/icons"
 import { KeyDatesSheet } from "@/features/key-dates/KeyDatesSheet"
 import { PhotoSheet } from "@/features/photos/PhotoSheet"
 import {
@@ -157,7 +163,14 @@ export function PiazzaScreen() {
               <div className="app-date-row__body">
                 <p className="app-date-row__title">
                   <span className="app-date-row__label">{item.label}</span>
-                  {item.isProvisional ? <Badge tone="warn">Provisoire</Badge> : null}
+                  {item.completedOn ? (
+                    <Badge tone="success">
+                      <CheckIcon size={12} />
+                      Réalisé
+                    </Badge>
+                  ) : item.isProvisional ? (
+                    <Badge tone="warn">Provisoire</Badge>
+                  ) : null}
                 </p>
                 {item.note ? <p className="app-date-row__note">{item.note}</p> : null}
               </div>

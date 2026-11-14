@@ -214,10 +214,16 @@
   color: var(--aura-ink-3);
 }
 
-.app-date-row.is-done .app-date-row__title {
+.app-date-row.is-done .app-date-row__date {
+  color: var(--aura-ink-3);
+}
+
+.app-date-row.is-done .app-date-row__label {
   color: var(--aura-ink-2);
-  text-decoration: line-through;
-  text-decoration-color: var(--aura-line-strong);
+}
+
+.app-date-row.is-done .app-date-row__note {
+  color: var(--aura-ink-3);
 }
 
 /* ── Timeline ───────────────────────────────────────────────────────────── */
