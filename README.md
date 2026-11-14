@@ -70,7 +70,7 @@ La charte fournie le 13 novembre 2026 est intégrée :
 | **La Piazza** | Héro livraison + compte à rebours, 3 stats, dates clés éditables jusqu'au 31/12/2028, dernières photos, installation PWA |
 | **3D & Plans** | `HouseViewer` R3F chargé en `React.lazy`, niveaux Global/RdC/Étage, sélection de pièce, fiche cotes + cuisine, fallback filaire si le GLB est absent |
 | **Rétroplanning** | Jalons administratifs, techniques, chantier et livraison ; filtres ; export `.ics` avec alarmes J-7/J-1 ; flux calendrier privé révocable |
-| **Docs & Chantier** | Coffre-fort (PDF, DOCX, XLSX, images), journal photo géolocalisé, notes, réserves, file d'attente hors-ligne, exports CSV |
+| **Docs & Chantier** | Coffre-fort (PDF, DOCX, XLSX, images), lecture locale des factures PDF (fournisseur, échéance, montants, rappel), journal photo géolocalisé, notes, réserves, file d'attente hors-ligne, exports CSV |
 | **Budget** | Appels de fonds CCMI, avenants +/- ; montants en centimes entiers ; totaux serveur ; export CSV |
 | **Réglages** | Thème Paper clair/sombre/auto, push, calendrier, sessions, invitations, changement de mot de passe |
 
@@ -281,6 +281,22 @@ stockage.
 - Le client push Aura reçoit explicitement `fetch: apiFetch`.
 - Les médias authentifiés passent par `useMediaUrl` / `AuthenticatedImage`.
 
+### Lecture locale des factures
+
+- 100 % serveur, **sans modèle ni service externe** : le texte du PDF est
+  extrait avec `unpdf`, puis `heuristic-v1` reconnaît fournisseur, numéro,
+  SIRET, dates, total TTC, TVA, montant à régler et lignes.
+- Les montants sont convertis en **centimes entiers** ; le modèle n'en calcule
+  jamais. Chaque champ porte un niveau de confiance (`high`, `medium`, `low`,
+  `missing`) affiché dans la fiche de vérification.
+- L'analyse est **synchrone** (`POST /documents/:id/analyze`, ~0,5 s), mise en
+  cache dans `document_analyses` et rejouable sans effet de bord.
+- L'utilisateur confirme toujours : la fiche propose de créer un **jalon**
+  `administratif` (`isKey`, rappels J-7/J-1) dans le rétroplanning — jamais
+  d'écriture automatique.
+- v0 : **PDF uniquement**. DOCX, XLSX et photos (OCR) renvoient un message
+  explicite ; aucune donnée ne sort du serveur.
+
 ### Hors-ligne
 
 - Cache TanStack Query persisté dans IndexedDB, **vidé à la déconnexion**.
@@ -376,6 +392,8 @@ POST   /documents                  admin, multipart
 PATCH  /documents/:id              admin
 DELETE /documents/:id              admin (soft delete)
 GET    /documents/:id/file         auth, flux déchiffré
+POST   /documents/:id/analyze      auth (rate limit 120/h), extraction locale
+GET    /documents/:id/analysis     auth, dernier résultat mis en cache
 
 GET    /photos                     auth
 POST   /photos                     auth, multipart idempotent
@@ -712,18 +730,20 @@ service worker sont servis en `no-cache` pour éviter les versions figées.
 
 ## 9. Modèle de données
 
-18 tables PostgreSQL :
+19 tables PostgreSQL :
 
 ```text
 users, sessions, otp_challenges, invitations, registration_challenges,
 calendar_tokens, audit_log, project_profile, rooms, key_dates, milestones,
-documents, site_photos, site_notes, reserves, budget_items,
+documents, document_analyses, site_photos, site_notes, reserves, budget_items,
 push_subscriptions, push_deliveries
 ```
 
 Points clés :
 
 - `budget_items.amount_cents` : `integer`, jamais de `float` ;
+- `document_analyses.document_id` : unique, une ligne par document, upsert à
+  chaque ré-analyse ; l'extraction est stockée en `jsonb` ;
 - `key_dates.date` et `milestones.planned_end` : `CHECK <= 2028-12-31` ;
 - `site_photos.client_id`, `site_notes.client_id`, `reserves.client_id`,
   `budget_items.client_id` : unicité pour l'idempotence hors-ligne ;
@@ -753,13 +773,16 @@ migrations SQL que la production, sans serveur externe. Elle couvre :
 - budget en centimes, doublons, montants négatifs ;
 - export ICS, alarmes, jeton de calendrier révocable ;
 - push : allowlist d'endpoint, abonnement/désabonnement, état ;
-- invitations : création admin, rôle, email imposé, OTP, réutilisation, révocation, doublon.
+- invitations : création admin, rôle, email imposé, OTP, réutilisation, révocation, doublon ;
+- lecture de factures : parseur `heuristic-v1` sur texte réel (fournisseur,
+  SIRET, dates FR, totaux, TVA, lignes), pdf non pris en charge, PDF scanné,
+  montant incohérent, upsert et contrôle d'accès des endpoints d'analyse.
 
 La suite portail couvre le parseur euro→centimes, le formatage, les dates du
 projet, la conversion OKLCH→sRGB pour WebGL et le contrat de réponse de
 `api-client` (Zod partagé).
 
-**66 tests** au total : 6 shared, 47 backend, 13 portail.
+**87 tests** au total : 6 shared, 68 backend, 13 portail.
 
 Vérifications effectuées lors de la livraison :
 
@@ -811,6 +834,11 @@ Composants Aura étendus (dans le kit source et dans le projet) :
   un script de ré-chiffrement (non inclus).
 - **Antivirus** : les uploads sont validés par magic bytes et les images
   ré-encodées ; un scan ClamAV peut être ajouté en amont sur OCI.
+- **Lecture de factures** : déterministe et volontairement conservatrice en
+  v0. Les PDF **scannés** (image sans couche texte), les PDF protégés, les
+  DOCX/XLSX et les photos ne sont pas lus : l'app l'indique et propose le
+  téléchargement. Une couche IA locale (Ollama, modèle ≤ 3B, job asynchrone)
+  pourra compléter les cas « incertain », sans jamais calculer les montants.
 - **PWA** : le chunk Three.js (~1 Mo) est précaché pour permettre la 3D
   hors-ligne ; il n'est **exécuté** qu'à l'ouverture de l'onglet 3D.
 

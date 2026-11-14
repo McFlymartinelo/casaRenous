@@ -5,6 +5,7 @@ import {
   BudgetResponse,
   CalendarFeedResponse,
   CalendarTokenMetadata,
+  DocumentAnalysisSchema,
   DocumentPageSchema,
   DocumentSchema,
   DocumentUpdateInput,
@@ -52,6 +53,7 @@ import {
   type BudgetResponse as BudgetResponseType,
   type BudgetUpdateInput,
   type Document,
+  type DocumentAnalysis,
   type DocumentQuery,
   type DocumentUpdateInput as DocumentUpdate,
   type DocumentUploadFields as DocumentUpload,
@@ -375,6 +377,13 @@ export const api = {
     remove: (id: string) =>
       request(`/api/documents/${id}`, OkResponse, { method: "DELETE" }),
     file: (id: string): Promise<Blob> => requestBlob(`/api/documents/${id}/file`),
+    analysis: (id: string): Promise<DocumentAnalysis> =>
+      request(`/api/documents/${id}/analysis`, DocumentAnalysisSchema),
+    analyze: (id: string): Promise<DocumentAnalysis> =>
+      request(`/api/documents/${id}/analyze`, DocumentAnalysisSchema, {
+        method: "POST",
+        body: JSON.stringify({}),
+      }),
   },
   photos: {
     list: (query: Partial<PhotoQuery> = {}): Promise<Paginated<Photo>> =>

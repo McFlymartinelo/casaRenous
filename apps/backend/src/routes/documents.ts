@@ -8,13 +8,14 @@ import {
   type Env,
 } from "@casarenous/shared"
 import type { Database } from "../db/client.js"
-import { documents } from "../db/schema.js"
+import { documentAnalyses, documents } from "../db/schema.js"
 import { writeAudit } from "../lib/audit.js"
 import { ApiError } from "../lib/errors.js"
 import { asyncHandler, parseBody, parseParams, parseQuery } from "../lib/http.js"
 import { createUpload } from "../lib/multer.js"
 import { cursorCondition, decodeCursor, encodeCursor } from "../lib/pagination.js"
-import { toDocument } from "../lib/serializers.js"
+import { toDocument, toDocumentAnalysis } from "../lib/serializers.js"
+import { analyzeDocument } from "../services/invoice-analysis.js"
 import {
   assertMagic,
   DOCUMENT_MIMES,
@@ -196,6 +197,52 @@ export function documentsRouter(
         userAgent: req.header("user-agent") ?? null,
       })
       res.json({ ok: true })
+    }),
+  )
+
+  router.post(
+    "/documents/:id/analyze",
+    auth,
+    requireRole("admin", "invites"),
+    limiters.analysis,
+    asyncHandler(async (req, res) => {
+      const { id } = parseParams(IdParam, req.params)
+      const { user } = res.locals.auth as AuthLocals
+      const { analysis } = await analyzeDocument(db, env, id)
+
+      await writeAudit(db, {
+        actorId: user.id,
+        action: "document.analyzed",
+        entity: "document",
+        entityId: id,
+        ip: req.ip ?? null,
+        userAgent: req.header("user-agent") ?? null,
+        meta: {
+          status: analysis.status,
+          engine: analysis.engine,
+          textLength: analysis.textLength,
+        },
+      })
+
+      res.json(analysis)
+    }),
+  )
+
+  router.get(
+    "/documents/:id/analysis",
+    auth,
+    requireRole("admin", "invites"),
+    asyncHandler(async (req, res) => {
+      const { id } = parseParams(IdParam, req.params)
+      const [row] = await db
+        .select()
+        .from(documentAnalyses)
+        .where(eq(documentAnalyses.documentId, id))
+        .limit(1)
+      if (!row) {
+        throw ApiError.notFound("Aucune analyse pour ce document", "analysis_not_found")
+      }
+      res.json(toDocumentAnalysis(row))
     }),
   )
 

@@ -617,6 +617,40 @@
   gap: var(--aura-space-3);
 }
 
+/* ── Lecture de facture ─────────────────────────────────────────────── */
+
+.app-analysis-summary {
+  font-size: var(--aura-text-body);
+  line-height: 1.5;
+}
+
+.app-analysis-fields {
+  display: grid;
+  gap: var(--aura-space-3);
+}
+
+.app-analysis-field {
+  display: grid;
+  gap: 2px;
+}
+
+.app-analysis-field__value {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--aura-space-2);
+  font-size: var(--aura-text-sm);
+  color: var(--aura-ink-2);
+}
+
+.app-analysis-warnings {
+  display: grid;
+  gap: var(--aura-space-2);
+  margin: 0;
+  padding-left: 18px;
+  font-size: var(--aura-text-sm);
+}
+
 .app-visually-hidden {
   position: absolute;
   width: 1px;

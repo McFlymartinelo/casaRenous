@@ -26,6 +26,7 @@ export interface RateLimiters {
   otp: RequestHandler
   otpResend: RequestHandler
   upload: RequestHandler
+  analysis: RequestHandler
   pushTest: RequestHandler
   calendar: RequestHandler
 }
@@ -41,6 +42,7 @@ export function createRateLimiters(_env: Env): RateLimiters {
     otp: limiter({ windowMs: 15 * 60_000, limit: 20 }),
     otpResend: limiter({ windowMs: 60 * 60_000, limit: 8 }),
     upload: limiter({ windowMs: 60 * 60_000, limit: 60 }),
+    analysis: limiter({ windowMs: 60 * 60_000, limit: 120 }),
     pushTest: limiter({ windowMs: 60 * 60_000, limit: 3 }),
     calendar: limiter({ windowMs: 15 * 60_000, limit: 60 }),
   }

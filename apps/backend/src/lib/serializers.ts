@@ -1,6 +1,7 @@
 import type {
   BudgetItem,
   Document,
+  DocumentAnalysis,
   KeyDate,
   Milestone,
   Note,
@@ -12,6 +13,7 @@ import type {
 } from "@casarenous/shared"
 import type {
   BudgetItemRow,
+  DocumentAnalysisRow,
   DocumentRow,
   KeyDateRow,
   MilestoneRow,
@@ -127,6 +129,18 @@ export function toDocument(row: DocumentRow): Document {
     milestoneId: row.milestoneId,
     notes: row.notes,
     createdAt: iso(row.createdAt),
+  }
+}
+
+export function toDocumentAnalysis(row: DocumentAnalysisRow): DocumentAnalysis {
+  return {
+    documentId: row.documentId,
+    status: row.status,
+    engine: row.engine,
+    textLength: row.textLength,
+    extraction: row.extraction ?? null,
+    message: row.message,
+    analyzedAt: iso(row.analyzedAt),
   }
 }
 

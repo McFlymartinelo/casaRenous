@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import type { DocumentCategory, Room } from "@casarenous/shared"
+import type { Document, DocumentCategory, Room } from "@casarenous/shared"
 import { Button, Input, Select, Sheet, Textarea } from "@/aura/react"
 import { useNotify } from "@/aura/notify/react"
 import { useUploadDocument } from "@/hooks/useApi"
@@ -19,10 +19,12 @@ export function UploadDocumentSheet({
   open,
   onClose,
   rooms,
+  onUploaded,
 }: {
   open: boolean
   onClose: () => void
   rooms: Room[]
+  onUploaded?: (document: Document) => void
 }) {
   const { notify } = useNotify()
   const upload = useUploadDocument()
@@ -67,7 +69,7 @@ export function UploadDocumentSheet({
     }
     setError(null)
     try {
-      await upload.mutateAsync({
+      const created = await upload.mutateAsync({
         fields: {
           title: title.trim(),
           category,
@@ -79,6 +81,7 @@ export function UploadDocumentSheet({
       })
       notify({ title: "Document ajouté", message: "Le coffre-fort est à jour.", tone: "success" })
       onClose()
+      onUploaded?.(created)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Envoi impossible.")
     }

@@ -837,6 +837,65 @@ export type DocumentQuery = z.infer<typeof DocumentQuery>
 
 export const DocumentPageSchema = paginated(DocumentSchema)
 
+/* ── Lecture automatique des factures (moteur déterministe v0) ────────── */
+
+export const InvoiceConfidence = z.enum(["high", "medium", "low", "missing"])
+export type InvoiceConfidence = z.infer<typeof InvoiceConfidence>
+
+export const InvoiceLineSchema = z.object({
+  label: z.string().max(180),
+  amountCents: MoneyCents,
+})
+export type InvoiceLine = z.infer<typeof InvoiceLineSchema>
+
+export const InvoiceConfidenceMap = z.object({
+  supplierName: InvoiceConfidence,
+  supplierTaxId: InvoiceConfidence,
+  invoiceNumber: InvoiceConfidence,
+  issuedOn: InvoiceConfidence,
+  dueDate: InvoiceConfidence,
+  totalCents: InvoiceConfidence,
+  vatCents: InvoiceConfidence,
+})
+export type InvoiceConfidenceMap = z.infer<typeof InvoiceConfidenceMap>
+
+export const InvoiceExtractionSchema = z.object({
+  supplierName: z.string().nullable(),
+  supplierTaxId: z.string().nullable(),
+  invoiceNumber: z.string().nullable(),
+  issuedOn: IsoDate.nullable(),
+  dueDate: IsoDate.nullable(),
+  totalCents: MoneyCents.nullable(),
+  vatCents: MoneyCents.nullable(),
+  amountDueCents: MoneyCents.nullable(),
+  currency: z.literal("EUR"),
+  lineCount: z.number().int().min(0),
+  lines: z.array(InvoiceLineSchema).max(100),
+  confidence: InvoiceConfidenceMap,
+  warnings: z.array(z.string().max(300)).max(20),
+  summary: z.string().max(500),
+})
+export type InvoiceExtraction = z.infer<typeof InvoiceExtractionSchema>
+
+export const DocumentAnalysisStatus = z.enum([
+  "pending",
+  "ready",
+  "unsupported",
+  "failed",
+])
+export type DocumentAnalysisStatus = z.infer<typeof DocumentAnalysisStatus>
+
+export const DocumentAnalysisSchema = z.object({
+  documentId: Uuid,
+  status: DocumentAnalysisStatus,
+  engine: z.string().max(60),
+  textLength: z.number().int().min(0),
+  extraction: InvoiceExtractionSchema.nullable(),
+  message: z.string().nullable(),
+  analyzedAt: IsoDateTime,
+})
+export type DocumentAnalysis = z.infer<typeof DocumentAnalysisSchema>
+
 export const PhotoSchema = z.object({
   id: Uuid,
   caption: z.string().nullable(),

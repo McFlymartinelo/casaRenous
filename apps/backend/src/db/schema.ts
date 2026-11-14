@@ -18,6 +18,7 @@ import {
 } from "drizzle-orm/pg-core"
 import type {
   ExteriorSpecs,
+  InvoiceExtraction,
   KitchenSpecs,
 } from "@casarenous/shared"
 
@@ -55,6 +56,12 @@ export const documentCategoryEnum = pgEnum("document_category", [
   "assurance",
   "notice",
   "autre",
+])
+export const documentAnalysisStatusEnum = pgEnum("document_analysis_status", [
+  "pending",
+  "ready",
+  "unsupported",
+  "failed",
 ])
 export const reserveSeverityEnum = pgEnum("reserve_severity", [
   "mineure",
@@ -341,6 +348,29 @@ export const documents = pgTable(
   ],
 )
 
+/**
+ * Résultat de la lecture automatique d'un document. Une ligne par document :
+ * relancer l'analyse remplace le résultat précédent (onConflict sur document_id).
+ */
+export const documentAnalyses = pgTable(
+  "document_analyses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    status: documentAnalysisStatusEnum("status").notNull(),
+    engine: text("engine").notNull(),
+    textLength: integer("text_length").notNull().default(0),
+    extraction: jsonb("extraction").$type<InvoiceExtraction | null>(),
+    message: text("message"),
+    analyzedAt: timestamp("analyzed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("document_analyses_document_idx").on(table.documentId),
+  ],
+)
+
 export const sitePhotos = pgTable(
   "site_photos",
   {
@@ -512,6 +542,7 @@ export type RoomRow = typeof rooms.$inferSelect
 export type KeyDateRow = typeof keyDates.$inferSelect
 export type MilestoneRow = typeof milestones.$inferSelect
 export type DocumentRow = typeof documents.$inferSelect
+export type DocumentAnalysisRow = typeof documentAnalyses.$inferSelect
 export type PhotoRow = typeof sitePhotos.$inferSelect
 export type NoteRow = typeof siteNotes.$inferSelect
 export type ReserveRow = typeof reserves.$inferSelect

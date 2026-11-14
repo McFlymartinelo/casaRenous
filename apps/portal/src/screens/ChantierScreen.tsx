@@ -22,10 +22,12 @@ import {
   MapPinIcon,
   NoteIcon,
   PlusIcon,
+  SearchIcon,
   TrashIcon,
   UploadIcon,
 } from "@/components/icons"
 import { UploadDocumentSheet } from "@/features/documents/UploadDocumentSheet"
+import { InvoiceAnalysisSheet } from "@/features/documents/InvoiceAnalysisSheet"
 import { NoteSheet } from "@/features/notes/NoteSheet"
 import { PhotoDetailSheet } from "@/features/photos/PhotoDetailSheet"
 import { PhotoSheet } from "@/features/photos/PhotoSheet"
@@ -112,6 +114,7 @@ export function ChantierScreen() {
   const [reserveOpen, setReserveOpen] = useState(false)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const [selectedReserve, setSelectedReserve] = useState<Reserve | null>(null)
+  const [analysisTarget, setAnalysisTarget] = useState<Document | null>(null)
   const [downloading, setDownloading] = useState<string | null>(null)
 
   const openReserves = (reserves.data?.items ?? []).filter(
@@ -226,6 +229,17 @@ export function ChantierScreen() {
                     subtitle={`${DOC_LABEL[doc.category]} · ${formatDate(doc.createdAt.slice(0, 10))}`}
                     trailing={
                       <span className="aura-row-flex">
+                        {doc.mime === "application/pdf" ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            aria-label={`Lire ${doc.title}`}
+                            title="Lire la facture"
+                            onClick={() => setAnalysisTarget(doc)}
+                          >
+                            <SearchIcon size={16} />
+                          </Button>
+                        ) : null}
                         <Button
                           size="sm"
                           variant="ghost"
@@ -443,6 +457,18 @@ export function ChantierScreen() {
           open={uploadOpen}
           onClose={() => setUploadOpen(false)}
           rooms={rooms.data ?? []}
+          onUploaded={(doc) => {
+            if (doc.category === "facture" && doc.mime === "application/pdf") {
+              setAnalysisTarget(doc)
+            }
+          }}
+        />
+      ) : null}
+      {analysisTarget ? (
+        <InvoiceAnalysisSheet
+          key={analysisTarget.id}
+          document={analysisTarget}
+          onClose={() => setAnalysisTarget(null)}
         />
       ) : null}
       {photoOpen ? (

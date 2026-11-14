@@ -15,6 +15,13 @@
       "when": 1794611452707,
       "tag": "0001_mushy_veda",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794641404210,
+      "tag": "0002_silky_diamondback",
+      "breakpoints": true
     }
   ]
 }

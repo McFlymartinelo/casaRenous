@@ -28,6 +28,7 @@ const keys = {
   keyDates: ["key-dates"] as const,
   milestones: (query: Partial<MilestoneQuery>) => ["milestones", query] as const,
   documents: (query: Partial<DocumentQuery>) => ["documents", query] as const,
+  documentAnalysis: (id: string) => ["documents", "analysis", id] as const,
   photos: (query: Partial<PhotoQuery>) => ["photos", query] as const,
   notes: ["notes"] as const,
   reserves: (query: Partial<ReserveQuery>) => ["reserves", query] as const,
@@ -208,6 +209,16 @@ export function useDeleteDocument() {
     mutationFn: (id: string) => api.documents.remove(id),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["documents"] })
+    },
+  })
+}
+
+export function useAnalyzeDocument() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.documents.analyze(id),
+    onSuccess: (analysis) => {
+      client.setQueryData(keys.documentAnalysis(analysis.documentId), analysis)
     },
   })
 }
