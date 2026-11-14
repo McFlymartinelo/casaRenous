@@ -22,6 +22,17 @@ const MAX_TEXT_CHARS = 60_000
 const MIN_USABLE_TEXT = 40
 const MAX_LINES = 100
 
+/**
+ * Borne de plausibilité d'un montant de facture : 10 M€, alignée sur
+ * `MoneyCents`. Les longs numéros (SIRET, TVA intracommunautaire, capital
+ * social, RCS) dépassent presque toujours cette borne et sont ainsi écartés.
+ */
+const MAX_AMOUNT_CENTS = 1_000_000_000
+
+function isPlausibleAmount(cents: number): boolean {
+  return cents >= -MAX_AMOUNT_CENTS && cents <= MAX_AMOUNT_CENTS
+}
+
 /* ========================================================================== */
 /*  Normalisation                                                             */
 /* ========================================================================== */
@@ -61,7 +72,9 @@ const CURRENCY_PREFIX_AMOUNT = new RegExp(
   String.raw`(?:€|EUR\b)\s*(${AMOUNT_BODY})`,
   "gi",
 )
-const TAIL_AMOUNT = new RegExp(String.raw`(${AMOUNT_BODY})\s*$`)
+const TAIL_AMOUNT = new RegExp(
+  String.raw`(?<![\d.,])(${AMOUNT_BODY})\s*$`,
+)
 
 /** "1 234,56" / "1.234,56" / "1234.56" / "890" → centimes. */
 export function parseAmountToCents(raw: string): number | null {
@@ -92,11 +105,11 @@ function currencyAmounts(line: string): number[] {
   const found: number[] = []
   for (const match of line.matchAll(CURRENCY_AMOUNT)) {
     const cents = parseAmountToCents(match[1] ?? "")
-    if (cents !== null) found.push(cents)
+    if (cents !== null && isPlausibleAmount(cents)) found.push(cents)
   }
   for (const match of line.matchAll(CURRENCY_PREFIX_AMOUNT)) {
     const cents = parseAmountToCents(match[1] ?? "")
-    if (cents !== null) found.push(cents)
+    if (cents !== null && isPlausibleAmount(cents)) found.push(cents)
   }
   return found
 }
@@ -111,7 +124,7 @@ function tailAmount(line: string): { cents: number; start: number } | null {
   const before = match.index === 0 ? "" : line[match.index - 1]
   if (before !== " ") return null
   const cents = parseAmountToCents(match[1] ?? "")
-  if (cents === null) return null
+  if (cents === null || !isPlausibleAmount(cents)) return null
   return { cents, start: match.index }
 }
 
@@ -187,10 +200,12 @@ const TOTAL_TTC_LABEL = /total\s*(?:ttc|t\.t\.c)\b|total\s*toutes\s*taxes/
 const TOTAL_SOFT_LABEL = /(montant total|total general|total facture|total de la facture)/
 const TOTAL_HT_LABEL = /total\s*(?:ht|h\.t\.t?|hors taxe)|sous[- ]?total/
 const DUE_AMOUNT_LABEL =
-  /(net a payer|montant du|montant a payer|reste a payer|solde a payer|total a payer|a payer au total)/
+  /(net a payer|montant du|montant a payer|reste a payer|solde a payer|total a payer|a payer au total|reglement percu|\bregle(?:ment)?\b|deja paye)/
 const VAT_LABEL = /\b(tva|vat)\b/
+const VAT_IDENTIFIER =
+  /\btva\b[^0-9]{0,20}\b(?:i\.?\s?c\.?|intracommunautaire)\b|\b(?:n[°o]|numero|no)\s*(?:de\s*)?tva\b/
 const NON_ITEM_PREFIX =
-  /^(facture|devis|avoir|bon de|commande|page |client|adresse|siret|siren|tva|iban|bic|tel|telephone|mail|e-?mail|site web|date|reference|ref\b|echéance|echeance|conditions|mode de paiement)/
+  /^(facture|devis|avoir|bon de|commande|page |client|adresse|siret|siren|tva|iban|bic|tel|telephone|mail|e-?mail|site web|date|reference|ref\b|echéance|echeance|conditions|mode de paiement|dont |au capital|capital|rcs|ape |merci|systeme|votre facture|les conditions|informations|droit d)/
 
 const LEGAL_FORM = /\b(SARL|SASU?|EURL|SCI|SNC|SELARL|SELAS|SCP|GAEC|SCEA|SCOP|EI|EIRL)\b/
 const SUPPLIER_LABEL =
@@ -239,7 +254,9 @@ const NUMBER_STOPWORDS = new Set([
 /* ========================================================================== */
 
 function looksLikeDate(value: string): boolean {
-  return /\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}/.test(value) || /^\d{4}-\d{2}-\d{2}$/.test(value)
+  const token = value.trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(token)) return true
+  return /^\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}$/.test(token)
 }
 
 function maxAbs(values: number[]): number {
@@ -263,6 +280,9 @@ function cleanInvoiceNumber(raw: string | undefined): string | null {
   if (NUMBER_STOPWORDS.has(fold(token))) return null
   if (looksLikeDate(token)) return null
   if (/^\d{1,4}$/.test(token)) return null
+  // Un numéro de facture contient toujours au moins un chiffre : évite les
+  // faux positifs du type « facture fait office de garantie ».
+  if (!/\d/.test(token)) return null
   return token
 }
 
@@ -292,14 +312,19 @@ function findInvoiceNumber(
 
 function cleanSupplier(raw: string): string | null {
   let value = raw
-    .replace(/^[:\-–—\s]+/, "")
+    .replace(/^[:\-–—\s*]+/, "")
     .replace(/\b(siret|siren|tva|n° tva|tel|telephone|mail)\b.*$/i, "")
-    .replace(/[|,;:.\-–—\s]+$/, "")
+    .replace(/[|,;:*.\-–—\s]+$/, "")
     .replace(/[ \t]+/g, " ")
     .trim()
   if (value.length < 2 || value.length > 120) return null
   if ((value.match(/[A-Za-zÀ-ÿ]/g) ?? []).length < 2) return null
   if (looksLikeDate(value)) return null
+  if (/^[*#|]/.test(value)) return null
+  // Code-barres, référence ou numéro de facture : pas de minuscule, ou
+  // aucune espace et des chiffres.
+  if (/^[A-Z0-9._/-]+$/.test(value) && /\d/.test(value)) return null
+  if (!/\s/.test(value) && /\d/.test(value)) return null
   if (/^(facture|devis|avoir|bon de|page)\b/i.test(value)) return null
   value = value.slice(0, 120)
   return value
@@ -450,7 +475,7 @@ function findAmounts(lines: string[], hasEuroContext: boolean): AmountsResult {
   let ttc: { cents: number; confidence: InvoiceConfidence } | null = null
   let soft: { cents: number; confidence: InvoiceConfidence } | null = null
   let ht: number | null = null
-  let vat: { cents: number; confidence: InvoiceConfidence } | null = null
+  let vat: { cents: number; confidence: InvoiceConfidence; rated: boolean } | null = null
   let due: { cents: number; confidence: InvoiceConfidence } | null = null
   const items: InvoiceLine[] = []
 
@@ -481,10 +506,17 @@ function findAmounts(lines: string[], hasEuroContext: boolean): AmountsResult {
       continue
     }
     if (VAT_LABEL.test(folded)) {
+      // Un numéro de TVA (« TVA I.C. FR 78 347 384 570 ») n'est pas un
+      // montant : on ignore la ligne au lieu d'y lire un faux total.
+      if (VAT_IDENTIFIER.test(folded)) continue
       const vatAmount = amountWithoutRates(line, amounts)
-      if (vatAmount !== null && (!vat || Math.abs(vatAmount) > Math.abs(vat.cents))) {
-        vat = { cents: vatAmount, confidence: "high" }
-      }
+      if (vatAmount === null || vatAmount < 0 || !isPlausibleAmount(vatAmount)) continue
+      const rated = line.includes("%")
+      const better =
+        !vat ||
+        (rated && !vat.rated) ||
+        (rated === vat.rated && Math.abs(vatAmount) > Math.abs(vat.cents))
+      if (better) vat = { cents: vatAmount, confidence: "high", rated }
       continue
     }
 
@@ -493,7 +525,7 @@ function findAmounts(lines: string[], hasEuroContext: boolean): AmountsResult {
     if (items.length >= MAX_LINES) continue
 
     const label = (tail ? line.slice(0, tail.start) : line)
-      .replace(/\s*(?:€|EUR\b)\s*/gi, " ")
+      .replace(/\s*(?:€|\bEUR\b)\s*/gi, " ")
       .replace(/\s+/g, " ")
       .trim()
     if (label.length < 3) continue
@@ -530,6 +562,15 @@ function findAmounts(lines: string[], hasEuroContext: boolean): AmountsResult {
     warnings.push(
       `Le montant à régler (${formatCents(amountDueCents)}) diffère du total TTC (${formatCents(totalCents)}).`,
     )
+  }
+  // Une TVA supérieure au TTC est nécessairement un faux positif : on
+  // préfère ne rien affirmer plutôt que de valider un montant incohérent.
+  if (vat && totalCents !== null && vat.cents > totalCents) {
+    warnings.push("La TVA détectée dépasse le total TTC : elle a été ignorée.")
+    vat = null
+  }
+  if (vat === null && ht !== null && totalCents !== null && totalCents > ht) {
+    vat = { cents: totalCents - ht, confidence: "medium", rated: false }
   }
   if (ht !== null && vat && totalCents !== null) {
     const expected = ht + vat.cents

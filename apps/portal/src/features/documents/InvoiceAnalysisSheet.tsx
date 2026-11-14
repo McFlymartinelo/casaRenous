@@ -27,6 +27,15 @@ function ConfidenceBadge({ value }: { value: InvoiceConfidence }) {
   return <Badge tone={meta.tone}>{meta.label}</Badge>
 }
 
+/** Ne jamais afficher le JSON brut de Zod dans une fiche utilisateur. */
+function readableError(error: unknown): string {
+  const message = error instanceof Error ? error.message : ""
+  if (!message || message.trim().startsWith("[") || message.includes('"code"')) {
+    return "La lecture a échoué : les informations détectées sont incohérentes. Tu peux réessayer ou télécharger le document."
+  }
+  return message
+}
+
 function Field({
   label,
   children,
@@ -283,7 +292,7 @@ export function InvoiceAnalysisSheet({
         <div className="app-stack">
           <Card variant="soft">
             <p className="app-small">
-              {error instanceof Error ? error.message : "Le document n'a pas pu être lu."}
+              {readableError(error)}
             </p>
           </Card>
           <Button block variant="outline" icon={<RefreshIcon size={16} />} onClick={() => mutate(document.id)}>

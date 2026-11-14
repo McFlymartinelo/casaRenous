@@ -782,7 +782,7 @@ La suite portail couvre le parseur euro→centimes, le formatage, les dates du
 projet, la conversion OKLCH→sRGB pour WebGL et le contrat de réponse de
 `api-client` (Zod partagé).
 
-**87 tests** au total : 6 shared, 68 backend, 13 portail.
+**93 tests** au total : 6 shared, 74 backend, 13 portail.
 
 Vérifications effectuées lors de la livraison :
 

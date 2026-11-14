@@ -1,5 +1,9 @@
 import { and, eq, isNull } from "drizzle-orm"
-import type { DocumentAnalysis, Env } from "@casarenous/shared"
+import {
+  InvoiceExtractionSchema,
+  type DocumentAnalysis,
+  type Env,
+} from "@casarenous/shared"
 import type { Database } from "../db/client.js"
 import { documentAnalyses, documents } from "../db/schema.js"
 import { extractTextFromDocument, TEXT_ENGINE } from "../lib/document-text.js"
@@ -70,7 +74,17 @@ export async function analyzeDocument(
       message =
         "Le texte extrait est trop court pour être une facture exploitable. Le document est peut-être scanné."
     } else {
-      extraction = parseInvoiceText(extracted.text)
+      const parsed = InvoiceExtractionSchema.safeParse(parseInvoiceText(extracted.text))
+      if (parsed.success) {
+        extraction = parsed.data
+      } else {
+        // Filet de sécurité : le moteur ne doit jamais renvoyer un contrat
+        // invalide au portail (montant hors bornes, date impossible…).
+        status = "failed"
+        message =
+          "Les informations lues sont incohérentes (montant ou date hors bornes). Vérifie le document ou saisis le rappel manuellement."
+        engine = INVOICE_ENGINE
+      }
     }
   }
 

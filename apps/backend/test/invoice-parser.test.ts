@@ -147,3 +147,64 @@ Total TTC 100,00 EUR`)
     expect(result.lines).toHaveLength(0)
   })
 })
+
+describe("parseInvoiceText — ticket de caisse réel", () => {
+  // Reproduit les pièges d'un ticket Boulanger : code-barres en tête,
+  // numéro de TVA intracommunautaire, capital social, RCS, colonnes
+  // P.U./TVA et montants déjà réglés.
+  const TICKET = `*F905NV89219*
+Boulanger
+avec vous, 7j/7
+Facture F905NV89219-26-002 du 06.07.2026 12:53 Page /1 1
+Boulanger Les Clayes-Sous-Bois
+SIRET 34738457001340
+M MARTY ALEXANDRE
+REFERENCE DE L'ACHAT CODE Qté P.U.TTC T.TVA TOTAL TTC
+Ecouteur SHOKZ OpenDots One 2 Blanc 0001240661 1 199.95 20.00 199.95
+ECO-PART DEEE 0.04
+Remise commerciale -10.00
+TOTAL HT (Euros) 158.33
+TOTAL TTC (Euros) 189.99
+Dont TVA (20.00 %) 31.66
+Dont éco-part. DEEE (TTC) 0.04
+REGLEMENTS Règlement perçu 189.99
+Au capital de 40 611 564 EUR
+RCS LILLE B 347 384 570
+TVA I.C. FR 78 347 384 570
+Votre facture fait office de garantie`
+
+  const result = parseInvoiceText(TICKET)
+
+  it("ignore les longs identifiants et trouve les vrais montants", () => {
+    expect(result.totalCents).toBe(18_999)
+    expect(result.vatCents).toBe(3_166)
+    expect(result.amountDueCents).toBe(18_999)
+    expect(result.confidence.vatCents).toBe("high")
+  })
+
+  it("lit le numéro de facture malgré des groupes qui ressemblent à une date", () => {
+    expect(result.invoiceNumber).toBe("F905NV89219-26-002")
+    expect(result.confidence.invoiceNumber).toBe("high")
+  })
+
+  it("ne prend ni le code-barres ni le capital social comme fournisseur", () => {
+    expect(result.supplierName).toBe("Boulanger")
+  })
+
+  it("écarte les mentions légales et le numéro de TVA des lignes", () => {
+    const labels = result.lines.map((line) => line.label)
+    expect(labels).toHaveLength(3)
+    expect(labels.some((label) => label.includes("capital"))).toBe(false)
+    expect(labels.some((label) => label.includes("RCS"))).toBe(false)
+    expect(labels.some((label) => /^dont/i.test(label))).toBe(false)
+    expect(result.lines[0]?.amountCents).toBe(19_995)
+  })
+
+  it("ne tronque pas un libellé contenant « eur »", () => {
+    expect(result.lines[0]?.label).toContain("Ecouteur")
+  })
+
+  it("ne produit aucun avertissement d'incohérence comptable", () => {
+    expect(result.warnings).toHaveLength(0)
+  })
+})
