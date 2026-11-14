@@ -25,7 +25,6 @@ import { formatDateTime } from "@/lib/dates"
 import {
   BellIcon,
   CalendarIcon,
-  ChevronRightIcon,
   DownloadIcon,
   FolderIcon,
   LockIcon,
@@ -179,6 +178,7 @@ export function SettingsSheet({
             apiBase="/api"
             fetch={apiFetch}
             showDiagnostics={false}
+            compact
           />
         </Section>
 
@@ -304,14 +304,12 @@ export function SettingsSheet({
                     ? `${pendingInvites} invitation${pendingInvites > 1 ? "s" : ""} en attente`
                     : "Aucune invitation en attente"
                 }
-                meta={<ChevronRightIcon size={16} />}
                 onClick={onInvite}
               />
               <ListRow
                 icon={<FolderIcon size={18} />}
                 title="Catégories de documents"
                 subtitle="Créer, renommer ou supprimer"
-                meta={<ChevronRightIcon size={16} />}
                 onClick={onManageCategories}
               />
             </div>

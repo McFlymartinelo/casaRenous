@@ -10,6 +10,8 @@ export interface PushCardProps extends UsePushOptions {
   description?: string
   /** Affiche la ligne de diagnostic (iOS, standalone, HTTPS, API). */
   showDiagnostics?: boolean
+  /** Variante dense : icône réduite, pas de nom d'app, action à droite. */
+  compact?: boolean
   className?: string
   onEnabled?: () => void
   onDisabled?: () => void
@@ -58,6 +60,7 @@ export function PushCard({
   title = "Notifications",
   description = "Rappels et alertes, même quand l’app est fermée.",
   showDiagnostics = true,
+  compact = false,
   className,
   onEnabled,
   onDisabled,
@@ -115,13 +118,55 @@ export function PushCard({
     setBusy(null)
   }
 
+  const actions = unavailable ? (
+    <Button size="sm" variant="ghost" loading={loading} onClick={() => void refresh()}>
+      Revérifier
+    </Button>
+  ) : enabled ? (
+    <>
+      <Button
+        size="sm"
+        variant="soft"
+        loading={busy === "test"}
+        onClick={() => void handleTest()}
+      >
+        Tester
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        loading={busy === "disable"}
+        onClick={() => void handleDisable()}
+      >
+        Désactiver
+      </Button>
+    </>
+  ) : (
+    <Button
+      size="sm"
+      loading={busy === "enable" || loading}
+      onClick={() => void handleEnable()}
+    >
+      Activer
+    </Button>
+  )
+
   return (
     <Card variant="soft" className={className}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-        <div className="aura-empty__icon" style={{ width: 44, height: 44 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: compact ? "center" : "flex-start",
+          gap: 12,
+        }}
+      >
+        <div
+          className="aura-empty__icon"
+          style={{ width: compact ? 36 : 44, height: compact ? 36 : 44 }}
+        >
           <svg
-            width="22"
-            height="22"
+            width={compact ? 18 : 22}
+            height={compact ? 18 : 22}
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -142,9 +187,11 @@ export function PushCard({
           <p className="aura-small" style={{ marginTop: 2 }}>
             {description}
           </p>
-          <p className="aura-hint" style={{ marginTop: 6 }}>
-            {appName}
-          </p>
+          {!compact && (
+            <p className="aura-hint" style={{ marginTop: 6 }}>
+              {appName}
+            </p>
+          )}
           {hint && (
             <p
               className="aura-hint"
@@ -159,55 +206,26 @@ export function PushCard({
             </p>
           )}
         </div>
+        {compact ? (
+          <div style={{ display: "flex", flex: "none", gap: 8 }}>{actions}</div>
+        ) : null}
       </div>
 
-      <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-        {unavailable ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            loading={loading}
-            onClick={() => void refresh()}
-          >
-            Revérifier
-          </Button>
-        ) : enabled ? (
-          <>
-            <Button
-              size="sm"
-              variant="soft"
-              loading={busy === "test"}
-              onClick={() => void handleTest()}
-            >
-              Tester
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              loading={busy === "disable"}
-              onClick={() => void handleDisable()}
-            >
-              Désactiver
-            </Button>
-          </>
-        ) : (
-          <Button
-            size="sm"
-            loading={busy === "enable" || loading}
-            onClick={() => void handleEnable()}
-          >
-            Activer
-          </Button>
-        )}
-      </div>
+      {!compact ? (
+        <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+          {actions}
+        </div>
+      ) : null}
 
-      <p
-        className="aura-hint"
-        aria-live="polite"
-        style={{ marginTop: 8, minHeight: 16 }}
-      >
-        {error ?? feedback ?? ""}
-      </p>
+      {error || feedback ? (
+        <p
+          className="aura-hint"
+          aria-live="polite"
+          style={{ marginTop: compact ? 6 : 8 }}
+        >
+          {error ?? feedback}
+        </p>
+      ) : null}
     </Card>
   )
 }
