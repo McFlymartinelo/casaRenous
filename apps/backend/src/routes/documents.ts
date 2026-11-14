@@ -1,0 +1,248 @@
+import { Router } from "express"
+import { and, desc, eq, ilike, isNull, or, type SQL } from "drizzle-orm"
+import {
+  DocumentQuery,
+  DocumentUpdateInput,
+  DocumentUploadFields,
+  IdParam,
+  type Env,
+} from "@casarenous/shared"
+import type { Database } from "../db/client.js"
+import { documents } from "../db/schema.js"
+import { writeAudit } from "../lib/audit.js"
+import { ApiError } from "../lib/errors.js"
+import { asyncHandler, parseBody, parseParams, parseQuery } from "../lib/http.js"
+import { createUpload } from "../lib/multer.js"
+import { cursorCondition, decodeCursor, encodeCursor } from "../lib/pagination.js"
+import { toDocument } from "../lib/serializers.js"
+import {
+  assertMagic,
+  DOCUMENT_MIMES,
+  encryptionKey,
+  newStorageKey,
+  readEncrypted,
+  removeStored,
+  safeOriginalName,
+  sha256Buffer,
+  writeEncrypted,
+} from "../lib/uploads.js"
+import type { RateLimiters } from "../middleware/rate-limit.js"
+import { requireAuth, type AuthLocals } from "../middleware/require-auth.js"
+import { requireRole } from "../middleware/require-role.js"
+
+export function documentsRouter(
+  db: Database,
+  env: Env,
+  limiters: RateLimiters,
+): Router {
+  const router = Router()
+  const auth = requireAuth(db, env)
+  const upload = createUpload(env)
+  const key = encryptionKey(env)
+
+  router.get(
+    "/documents",
+    auth,
+    requireRole("admin", "invites"),
+    asyncHandler(async (req, res) => {
+      const query = parseQuery(DocumentQuery, req.query)
+      const conditions: SQL[] = [isNull(documents.deletedAt)]
+      if (query.category) conditions.push(eq(documents.category, query.category))
+      if (query.roomId) conditions.push(eq(documents.roomId, query.roomId))
+      if (query.q) {
+        conditions.push(
+          or(
+            ilike(documents.title, `%${query.q}%`),
+            ilike(documents.originalName, `%${query.q}%`),
+          ) as SQL,
+        )
+      }
+      const cursor = decodeCursor(query.cursor)
+      if (cursor) {
+        const condition = cursorCondition(documents.createdAt, documents.id, cursor)
+        if (condition) conditions.push(condition)
+      }
+
+      const rows = await db
+        .select()
+        .from(documents)
+        .where(and(...conditions))
+        .orderBy(desc(documents.createdAt), desc(documents.id))
+        .limit(query.limit + 1)
+
+      const hasMore = rows.length > query.limit
+      const items = rows.slice(0, query.limit)
+      const last = items.at(-1)
+      res.json({
+        items: items.map(toDocument),
+        nextCursor: hasMore && last ? encodeCursor(last.createdAt, last.id) : null,
+      })
+    }),
+  )
+
+  router.post(
+    "/documents",
+    auth,
+    requireRole("admin"),
+    limiters.upload,
+    upload.single("file"),
+    asyncHandler(async (req, res) => {
+      const { user } = res.locals.auth as AuthLocals
+      if (!req.file) {
+        throw ApiError.unprocessable("Fichier manquant", { file: ["Fichier requis"] })
+      }
+      const raw = req.body as Record<string, unknown>
+      const fields = parseBody(DocumentUploadFields, {
+        ...raw,
+        roomId: raw.roomId === "" ? null : raw.roomId,
+        milestoneId: raw.milestoneId === "" ? null : raw.milestoneId,
+      })
+
+      const detected = assertMagic(req.file.buffer, DOCUMENT_MIMES)
+      const originalName = safeOriginalName(req.file.originalname)
+      const storageKey = newStorageKey("documents", detected.extension)
+      const encrypted = await writeEncrypted(env.UPLOAD_DIR, storageKey, req.file.buffer, key)
+
+      try {
+        const [created] = await db
+          .insert(documents)
+          .values({
+            title: fields.title,
+            category: fields.category,
+            mime: detected.mime,
+            sizeBytes: req.file.buffer.length,
+            originalName,
+            storageKey,
+            sha256: sha256Buffer(req.file.buffer),
+            encIv: encrypted.iv,
+            encTag: encrypted.tag,
+            magicVerified: true,
+            uploadedBy: user.id,
+            roomId: fields.roomId ?? null,
+            milestoneId: fields.milestoneId ?? null,
+            notes: fields.notes ?? null,
+          })
+          .returning()
+        if (!created) throw ApiError.internal("Enregistrement impossible", "document_failed")
+
+        await writeAudit(db, {
+          actorId: user.id,
+          action: "document.uploaded",
+          entity: "document",
+          entityId: created.id,
+          ip: req.ip ?? null,
+          userAgent: req.header("user-agent") ?? null,
+          meta: { category: created.category, size: created.sizeBytes, mime: created.mime },
+        })
+        res.status(201).json(toDocument(created))
+      } catch (error) {
+        await removeStored(env.UPLOAD_DIR, storageKey)
+        throw error
+      }
+    }),
+  )
+
+  router.patch(
+    "/documents/:id",
+    auth,
+    requireRole("admin"),
+    asyncHandler(async (req, res) => {
+      const { id } = parseParams(IdParam, req.params)
+      const input = parseBody(DocumentUpdateInput, req.body)
+      const { user } = res.locals.auth as AuthLocals
+      const [updated] = await db
+        .update(documents)
+        .set({
+          ...(input.title !== undefined ? { title: input.title } : {}),
+          ...(input.category !== undefined ? { category: input.category } : {}),
+          ...(input.roomId !== undefined ? { roomId: input.roomId } : {}),
+          ...(input.milestoneId !== undefined ? { milestoneId: input.milestoneId } : {}),
+          ...(input.notes !== undefined ? { notes: input.notes } : {}),
+        })
+        .where(and(eq(documents.id, id), isNull(documents.deletedAt)))
+        .returning()
+      if (!updated) throw ApiError.notFound("Document introuvable", "document_not_found")
+      await writeAudit(db, {
+        actorId: user.id,
+        action: "document.updated",
+        entity: "document",
+        entityId: id,
+        ip: req.ip ?? null,
+        userAgent: req.header("user-agent") ?? null,
+      })
+      res.json(toDocument(updated))
+    }),
+  )
+
+  router.delete(
+    "/documents/:id",
+    auth,
+    requireRole("admin"),
+    asyncHandler(async (req, res) => {
+      const { id } = parseParams(IdParam, req.params)
+      const { user } = res.locals.auth as AuthLocals
+      const [updated] = await db
+        .update(documents)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(documents.id, id), isNull(documents.deletedAt)))
+        .returning({ id: documents.id })
+      if (!updated) throw ApiError.notFound("Document introuvable", "document_not_found")
+      await writeAudit(db, {
+        actorId: user.id,
+        action: "document.deleted",
+        entity: "document",
+        entityId: id,
+        ip: req.ip ?? null,
+        userAgent: req.header("user-agent") ?? null,
+      })
+      res.json({ ok: true })
+    }),
+  )
+
+  router.get(
+    "/documents/:id/file",
+    auth,
+    requireRole("admin", "invites"),
+    asyncHandler(async (req, res) => {
+      const { id } = parseParams(IdParam, req.params)
+      const { user } = res.locals.auth as AuthLocals
+      const [row] = await db
+        .select()
+        .from(documents)
+        .where(and(eq(documents.id, id), isNull(documents.deletedAt)))
+        .limit(1)
+      if (!row) throw ApiError.notFound("Document introuvable", "document_not_found")
+
+      const buffer = await readEncrypted(
+        env.UPLOAD_DIR,
+        row.storageKey,
+        key,
+        row.encIv,
+        row.encTag,
+      )
+
+      await writeAudit(db, {
+        actorId: user.id,
+        action: "document.downloaded",
+        entity: "document",
+        entityId: row.id,
+        ip: req.ip ?? null,
+        userAgent: req.header("user-agent") ?? null,
+      })
+
+      const fallback = row.originalName.replace(/[^\x20-\x7e]/g, "_").replace(/"/g, "_")
+      res.setHeader("Content-Type", row.mime)
+      res.setHeader("Content-Length", String(buffer.length))
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(row.originalName)}`,
+      )
+      res.setHeader("X-Content-Type-Options", "nosniff")
+      res.setHeader("Content-Security-Policy", "sandbox")
+      res.setHeader("Cache-Control", "private, no-store")
+      res.send(buffer)
+    }),
+  )
+
+  return router
+}
