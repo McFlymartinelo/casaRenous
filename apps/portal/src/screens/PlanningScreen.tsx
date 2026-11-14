@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import type { Milestone } from "@casarenous/shared"
-import { Badge, Button, Card, Segmented, Skeleton } from "@/aura/react"
+import { Badge, Button, Card, Chip, Skeleton } from "@/aura/react"
 import { useAuth } from "@/auth/AuthProvider"
 import { CalendarIcon, PlusIcon } from "@/components/icons"
 import { CalendarSheet } from "@/features/milestones/CalendarSheet"
@@ -124,7 +124,7 @@ export function PlanningScreen() {
         </div>
       </div>
 
-      <div className="app-inline-actions">
+      <div className="app-action-row">
         <Button
           block
           size="lg"
@@ -135,6 +135,7 @@ export function PlanningScreen() {
         </Button>
         {isAdmin ? (
           <Button
+            block
             variant="outline"
             size="lg"
             icon={<CalendarIcon size={18} />}
@@ -145,12 +146,17 @@ export function PlanningScreen() {
         ) : null}
       </div>
 
-      <Segmented<Filter>
-        label="Filtrer les jalons"
-        options={FILTERS}
-        value={filter}
-        onChange={setFilter}
-      />
+      <div className="app-scroll-row" role="group" aria-label="Filtrer les jalons">
+        {FILTERS.map((item) => (
+          <Chip
+            key={item.value}
+            active={filter === item.value}
+            onClick={() => setFilter(item.value)}
+          >
+            {item.label}
+          </Chip>
+        ))}
+      </div>
 
       {groups.length === 0 ? (
         <Card variant="soft">

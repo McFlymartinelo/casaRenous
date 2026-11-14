@@ -109,7 +109,7 @@ export function BudgetScreen() {
         </div>
       </div>
 
-      <div className="app-inline-actions">
+      <div className={isAdmin ? "app-action-row" : "app-inline-actions"}>
         {isAdmin ? (
           <Button
             block

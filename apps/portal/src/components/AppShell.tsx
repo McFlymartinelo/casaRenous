@@ -16,7 +16,7 @@ import {
   CubeIcon,
   FolderIcon,
   HomeIcon,
-  SettingsIcon,
+  SlidersIcon,
   WalletIcon,
 } from "@/components/icons"
 import { PasswordSheet, SettingsSheet } from "@/components/SettingsSheet"
@@ -141,7 +141,7 @@ export function AppShell() {
               variant="ghost"
               block
               size="sm"
-              icon={<SettingsIcon size={16} />}
+              icon={<SlidersIcon size={16} />}
               onClick={() => setSettingsOpen(true)}
             >
               Réglages
@@ -167,7 +167,7 @@ export function AppShell() {
                 className="app-appbar-settings"
                 onClick={() => setSettingsOpen(true)}
               >
-                <SettingsIcon size={20} />
+                <SlidersIcon size={20} />
               </IconButton>
             }
           />

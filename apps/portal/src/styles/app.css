@@ -599,6 +599,16 @@
   gap: var(--aura-space-2);
 }
 
+.app-action-row {
+  display: flex;
+  gap: var(--aura-space-2);
+}
+
+.app-action-row > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 .app-danger-text {
   color: var(--aura-danger);
 }
