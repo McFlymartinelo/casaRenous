@@ -40,6 +40,7 @@ export function PiazzaScreen() {
   const reserves = useReserves({ status: "open" })
   const photos = usePhotos({ limit: 8 })
   const [datesOpen, setDatesOpen] = useState(false)
+  const [showAllDates, setShowAllDates] = useState(false)
   const [photoOpen, setPhotoOpen] = useState(false)
 
   const dates = [...(keyDates.data ?? [])].sort((a, b) => a.date.localeCompare(b.date))
@@ -145,7 +146,7 @@ export function PiazzaScreen() {
           ) : null}
         </div>
         <div>
-          {dates.slice(0, 6).map((item) => (
+          {(showAllDates ? dates : dates.slice(0, 6)).map((item) => (
             <div
               key={item.id}
               className={`app-date-row ${item.completedOn ? "is-done" : ""}`}
@@ -162,6 +163,18 @@ export function PiazzaScreen() {
               </div>
             </div>
           ))}
+          {dates.length > 6 ? (
+            <Button
+              block
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowAllDates((value) => !value)}
+            >
+              {showAllDates
+                ? "Réduire"
+                : `Voir les ${dates.length} dates clés du projet`}
+            </Button>
+          ) : null}
         </div>
       </Card>
 
