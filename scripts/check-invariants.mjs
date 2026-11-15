@@ -53,9 +53,20 @@ for (const file of files) {
 
   if (
     /from\s+["']three["']|from\s+["']@react-three\//.test(text) &&
-    !name.endsWith("features/viewer/HouseViewer.tsx")
+    !name.includes("features/viewer/")
   ) {
+    // La 3D reste hors du bundle initial : seul le dossier features/viewer/
+    // (atteint uniquement via le React.lazy de HouseViewer) importe three.
     problems.push(`${name} : import 3D statique (HouseViewer doit rester lazy)`)
+  }
+
+  if (
+    name.endsWith("Screen.tsx") &&
+    /^import\s+(?!type\b)(?:[^"'\n]|\n)*?from\s+["']@\/features\/viewer\/(HouseViewer|WalkRig|TouchStick)["']/m.test(
+      text,
+    )
+  ) {
+    problems.push(`${name} : la visionneuse doit être chargée via React.lazy`)
   }
 
   if (name.endsWith("Screen.tsx")) {

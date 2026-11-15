@@ -1,0 +1,7 @@
+Déposer ici les images de référence (plans RDC / étage, visuels de façade).
+
+Formats acceptés : .png, .jpg, .jpeg, .webp, .tif, .tiff
+
+Le script casa_renous.py crée automatiquement une galerie avec toutes les
+images présentes dans ce dossier (voir la section « Images de référence »
+du README).

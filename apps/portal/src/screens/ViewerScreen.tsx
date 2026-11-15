@@ -1,10 +1,16 @@
 import { Component, lazy, Suspense, useState, type ReactNode } from "react"
 import type { Room } from "@casarenous/shared"
-import { Badge, Card, Segmented, Skeleton } from "@/aura/react"
+import { Badge, Button, Card, Segmented, Skeleton, Switch } from "@/aura/react"
 import { RoomSheet } from "@/features/rooms/RoomSheet"
 import { useProject, useRooms } from "@/hooks/useApi"
 import { CubeIcon } from "@/components/icons"
-import type { ViewerLevel } from "@/features/viewer/HouseViewer"
+import type { ViewerLevel, ViewerMode } from "@/features/viewer/HouseViewer"
+import {
+  DEFAULT_SPOT_ID,
+  VIEWER_SPOTS,
+  findSpot,
+  type ViewerSpot,
+} from "@/features/viewer/spots"
 
 const HouseViewer = lazy(() => import("@/features/viewer/HouseViewer"))
 
@@ -42,6 +48,11 @@ class ViewerBoundary extends Component<
   }
 }
 
+const MODE_OPTIONS: { value: ViewerMode; label: string }[] = [
+  { value: "orbit", label: "Vue 3D" },
+  { value: "walk", label: "Visite" },
+]
+
 const LEVEL_OPTIONS: { value: ViewerLevel; label: string }[] = [
   { value: "global", label: "Global" },
   { value: "rdc", label: "RdC" },
@@ -57,7 +68,10 @@ const LEVEL_LABEL: Record<Room["level"], string> = {
 export function ViewerScreen() {
   const rooms = useRooms()
   const project = useProject()
+  const [mode, setMode] = useState<ViewerMode>("orbit")
   const [level, setLevel] = useState<ViewerLevel>("global")
+  const [showRoof, setShowRoof] = useState(true)
+  const [spotId, setSpotId] = useState(DEFAULT_SPOT_ID)
   const [selected, setSelected] = useState<Room | null>(null)
 
   const data = rooms.data ?? []
@@ -68,10 +82,16 @@ export function ViewerScreen() {
     etage: data.filter((room) => room.level === "etage"),
     exterieur: data.filter((room) => room.level === "exterieur"),
   }
+  const spot: ViewerSpot = findSpot(spotId)
 
   function selectRoom(slug: string) {
     const room = data.find((item) => item.slug === slug)
     if (room) setSelected(room)
+  }
+
+  function goToSpot(id: string) {
+    setSpotId(id)
+    setMode("walk")
   }
 
   return (
@@ -88,25 +108,82 @@ export function ViewerScreen() {
             }
           >
             <HouseViewer
+              mode={mode}
               level={level}
+              showRoof={showRoof}
+              spot={spot}
               rooms={data}
               selectedSlug={selected?.slug ?? null}
               onSelectRoom={selectRoom}
             />
           </Suspense>
         </ViewerBoundary>
-        <div className="app-viewer__overlay">
-          <CubeIcon size={15} />
-          {level === "global" ? "Maison complète" : level === "rdc" ? "Rez-de-chaussée" : "Étage"}
-        </div>
+        {mode === "orbit" ? (
+          <div className="app-viewer__overlay">
+            <CubeIcon size={15} />
+            {level === "global"
+              ? "Maison complète"
+              : level === "rdc"
+                ? "Rez-de-chaussée"
+                : "Étage"}
+          </div>
+        ) : null}
       </div>
 
-      <Segmented<ViewerLevel>
-        label="Niveau affiché"
-        options={LEVEL_OPTIONS}
-        value={level}
-        onChange={setLevel}
+      <Segmented<ViewerMode>
+        label="Mode d'exploration"
+        options={MODE_OPTIONS}
+        value={mode}
+        onChange={setMode}
       />
+
+      {mode === "orbit" ? (
+        <>
+          <Segmented<ViewerLevel>
+            label="Niveau affiché"
+            options={LEVEL_OPTIONS}
+            value={level}
+            onChange={setLevel}
+          />
+          <div className="app-toggle-row">
+            <div>
+              <p className="app-small" style={{ fontWeight: 600 }}>
+                Afficher la toiture
+              </p>
+              <p className="app-small app-muted">
+                Masque-la pour voir l'intérieur depuis le dessus.
+              </p>
+            </div>
+            <Switch
+              checked={showRoof && level === "global"}
+              onChange={setShowRoof}
+              label="Afficher la toiture"
+              disabled={level !== "global"}
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="app-scroll-row" role="group" aria-label="Points de visite">
+            {VIEWER_SPOTS.map((item) => (
+              <Button
+                key={item.id}
+                size="sm"
+                variant={item.id === spotId ? "primary" : "outline"}
+                onClick={() => setSpotId(item.id)}
+                aria-pressed={item.id === spotId}
+              >
+                {item.label}
+              </Button>
+            ))}
+          </div>
+          <p className="app-small app-muted">
+            Sur ordinateur : clique dans la vue puis ZQSD / WASD, souris pour regarder,
+            Maj pour courir, Échap pour sortir du mode visite. Sur mobile : glisse pour
+            regarder et utilise le stick pour avancer.
+          </p>
+        </>
+      )}
 
       <div className="app-stat-grid">
         <div className="aura-stat">
@@ -174,12 +251,25 @@ export function ViewerScreen() {
       )}
 
       <Card variant="soft">
-        <p className="app-kicker">Maquette 3D</p>
+        <p className="app-kicker">Visite de la maison</p>
         <p className="app-small" style={{ marginTop: 4 }}>
-          Touche une pièce dans la maquette ou dans la liste pour ouvrir ses cotes.
-          La maquette filaire est utilisée tant que le fichier <code>casarenous.glb</code>{" "}
-          n'est pas déposé.
+          La maquette 3D est chargée depuis <code>casarenous.glb</code>. En mode
+          « Vue 3D », fais tourner la maison et sélectionne un niveau ; en mode
+          « Visite », déplace-toi à l'intérieur comme dans un jeu. Touche une pièce
+          pour ouvrir ses cotes.
         </p>
+        <div className="app-chip-row" style={{ marginTop: 10 }}>
+          {VIEWER_SPOTS.slice(0, 4).map((item) => (
+            <Button
+              key={item.id}
+              size="sm"
+              variant="ghost"
+              onClick={() => goToSpot(item.id)}
+            >
+              Aller à : {item.label}
+            </Button>
+          ))}
+        </div>
       </Card>
 
       {selected ? (

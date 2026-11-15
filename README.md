@@ -68,7 +68,7 @@ La charte fournie le 13 novembre 2026 est intégrée :
 | Module | Détail |
 |---|---|
 | **La Piazza** | Héro livraison + compte à rebours, 3 stats, dates clés éditables jusqu'au 31/12/2028, dernières photos, installation PWA |
-| **3D & Plans** | `HouseViewer` R3F chargé en `React.lazy`, niveaux Global/RdC/Étage, sélection de pièce, fiche cotes + cuisine, fallback filaire si le GLB est absent |
+| **3D & Plans** | `HouseViewer` R3F chargé en `React.lazy` : vue 3D orbitale (niveaux Global/RdC/Étage, toiture), mode **Visite** à la première personne (clavier/souris ou stick tactile), points de visite, fiche cotes + cuisine, fallback filaire si le GLB est absent |
 | **Rétroplanning** | Jalons administratifs, techniques, chantier et livraison ; filtres ; export `.ics` avec alarmes J-7/J-1 ; flux calendrier privé révocable |
 | **Docs & Chantier** | Coffre-fort (PDF, DOCX, XLSX, images), catégories personnalisées, lecture locale des factures PDF (fournisseur, échéance, montants, rappel), journal photo géolocalisé, notes, réserves, file d'attente hors-ligne, exports CSV et ZIP |
 | **Budget** | Appels de fonds CCMI, avenants +/- et factures d'achat avec échéancier (incluses dans le total de la maison) ; montants en centimes entiers ; totaux serveur ; export CSV |
@@ -488,40 +488,45 @@ Le portail charge `apps/portal/public/models/casarenous.glb` en différé
 apps/portal/public/models/casarenous.glb
 ```
 
-Le modèle est **auto-calibré** : l'application calcule sa boîte englobante,
-le recentre, le pose au sol et le met à l'échelle sur ~15 unités. Aucune
-conversion d'unité n'est nécessaire.
+Le modèle est utilisé **à l'échelle réelle**, sans recalibrage : il doit être
+exporté en mètres, Y vers le haut, sol du rez-de-chaussée à `y = 0`, façade rue
+du côté `z = 0` et façade jardin vers `z = -13,60`. C'est le cas de l'export
+Blender de la maison (7,10 × 13,60 m, étage à 2,72 m). Les points de visite
+(`src/features/viewer/spots.ts`) sont exprimés dans ce même repère.
 
-Convention de nommage recommandée pour les pièces :
+### Deux modes
+
+| Mode | Usage |
+| --- | --- |
+| **Vue 3D** | caméra orbitale, sélection du niveau (`Global` / `RdC` / `Étage`), affichage de la toiture, clic sur une pièce nommée pour ouvrir sa fiche |
+| **Visite** | première personne à l'intérieur : `ZQSD` / `WASD` / flèches, souris pour regarder, `Maj` pour courir, `Échap` pour libérer la souris ; sur mobile, glisser pour regarder et stick virtuel pour avancer |
+
+Le mode Visite masque la toiture et les plafonds (lumière naturelle), conserve
+les deux niveaux (on peut monter l'escalier), gère la gravité et les collisions
+par raycast contre les murs, cloisons, garde-corps, menuiseries et meubles.
+
+### Convention de nommage (optionnelle)
+
+Les noms `RdC - …` / `Etage - …` / `Toiture - …` / `Site - …` pilotent la coupe
+par niveau, le masquage de la toiture et les collisions. Les pièces cliquables
+suivent le motif `Room_<slug>` (slugs de `ROOM_PROGRAM`), par exemple :
 
 ```text
 Room_piece-de-vie
 Room_entree
-Room_cellier
-Room_garage
-Room_chambre-1
-Room_salle-d-eau-rdc
-Room_degagement
 Room_chambre-parentale
-Room_dressing
-Room_salle-d-eau-privative
-Room_chambre-2
-Room_chambre-3
-Room_chambre-4
 Room_salle-de-bain
-Room_wc
 Room_terrasse-bois
 ```
 
-- Un clic sur un mesh nommé ouvre la fiche pièce.
-- Les noms contenant `rdc` / `etage` pilotent la coupe par niveau.
-- Les plafonds (`ceiling`, `plafond`, `roof`, `toit`) sont masqués.
-- **Fallback** : tant que le GLB est absent, une maquette filaire est générée
-  depuis les surfaces seedées. L'application reste utilisable.
+- Un clic sur un mesh nommé ouvre la fiche pièce (mode Vue 3D).
+- Les plafonds (`plafond`, `ceiling`) et la toiture sont masqués à la demande.
+- **Fallback** : si le GLB est absent ou illisible, une maquette filaire est
+  générée depuis les surfaces seedées. L'application reste utilisable.
 
 Briques reprises d'Orion : chargement `useGLTF`, caméra auto, `OrbitControls`,
-boundary avec fallback, sélection de pièce. Adaptées à Aura (pas de Tailwind,
-couleurs issues des tokens OKLCH).
+boundary avec fallback. Adaptées à Aura (pas de Tailwind, couleurs issues des
+tokens OKLCH), complétées par le mode visite maison (`WalkRig`, `TouchStick`).
 
 ---
 

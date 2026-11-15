@@ -1,22 +1,34 @@
 import {
   Component,
   Suspense,
+  useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
   type ReactNode,
 } from "react"
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber"
-import { Edges, Html, OrbitControls, useGLTF, useProgress } from "@react-three/drei"
+import { Edges, OrbitControls, useGLTF, useProgress } from "@react-three/drei"
 import * as THREE from "three"
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
 import type { Room, RoomLevel } from "@casarenous/shared"
 import { ROOM_PROGRAM } from "@casarenous/shared"
 import { readTokenColor } from "@/lib/oklch"
+import { TouchStick } from "./TouchStick"
+import { WalkRig, type WalkMeshes } from "./WalkRig"
+import { createWalkInput } from "./walk"
+import type { ViewerMode, ViewerSpot } from "./spots"
 
 export type ViewerLevel = "global" | "rdc" | "etage"
+export type { ViewerMode, ViewerSpot }
 
 const MODEL_URL = "/models/casarenous.glb"
-const TARGET_SPAN = 15
+
+/** Repère du modèle : maison de x 0 → 7,10, z 0 → -13,60, sols à y 0 et 2,72. */
+const HOUSE_CENTER: [number, number, number] = [3.55, 1.4, -6.8]
+const OVERVIEW: [number, number, number] = [17.5, 12, 9.5]
 
 const ROOM_MATCH =
   /(piece-de-vie|entree|cellier|garage|chambre-parentale|chambre-[1-4]|dressing|salle-d-eau[a-z-]*|salle-de-bain|degagement|wc|terrasse-bois)/i
@@ -26,91 +38,139 @@ function roomSlugFromName(name: string): string | null {
   return match ? match[1]!.toLowerCase() : null
 }
 
-function isCeiling(name: string): boolean {
-  return /ceiling|plafond|roof|toit|charpente/i.test(name)
+type MeshCategory = "rdc" | "upper" | "roof" | "ceiling" | "site" | "other"
+
+function categorize(name: string): MeshCategory {
+  if (/^site/i.test(name)) return "site"
+  if (/plafond/i.test(name)) return "ceiling"
+  if (/^toiture/i.test(name)) return "roof"
+  if (/^etage/i.test(name)) return "upper"
+  if (/^rdc/i.test(name)) return "rdc"
+  return "other"
+}
+
+/** Murs, cloisons, garde-corps, encadrements, mobilier : autant d'obstacles. */
+function isWallMesh(name: string): boolean {
+  if (/(Murs|Cloisons|Escalier|Garde_corps|Mobilier|Encadrements)/i.test(name)) return true
+  return /menuiseries/i.test(name) && !/vitrage|porte_entree/i.test(name)
+}
+
+/** Surfaces sur lesquelles on peut marcher (le plafond de toiture est exclu). */
+function isFloorMesh(name: string): boolean {
+  return (
+    /(Dalles|Fondations|Escalier|herbe|pave|bois_terrasse)/i.test(name) &&
+    !/plafond/i.test(name)
+  )
 }
 
 interface Prepared {
   root: THREE.Object3D
-  scale: number
-  center: THREE.Vector3
-  minY: number
-  maxY: number
+  meshes: WalkMeshes
 }
 
 function prepareModel(scene: THREE.Object3D): Prepared {
   const root = scene.clone(true)
-  root.updateMatrixWorld(true)
-  const box = new THREE.Box3().setFromObject(root)
-  const center = box.getCenter(new THREE.Vector3())
-  const size = box.getSize(new THREE.Vector3())
-  const maxSpan = Math.max(size.x, size.y, size.z)
-  const scale = maxSpan > 0 ? TARGET_SPAN / maxSpan : 1
+  const meshes: WalkMeshes = { rdcWalls: [], upperWalls: [], floors: [] }
+  const seenMaterials = new Set<THREE.Material>()
 
-  root.position.set(-center.x, -box.min.y, -center.z)
   root.updateMatrixWorld(true)
-
   root.traverse((child) => {
     const mesh = child as THREE.Mesh
     if (!mesh.isMesh) return
-    mesh.castShadow = false
-    mesh.receiveShadow = false
-    const slug = roomSlugFromName(mesh.name)
+    const name = mesh.name || ""
+    const category = categorize(name)
+    mesh.userData.category = category
+
+    const slug = roomSlugFromName(name)
     if (slug) mesh.userData.roomSlug = slug
-    if (isCeiling(mesh.name)) mesh.visible = false
-    const material = mesh.material
-    if (material && !Array.isArray(material) && "envMapIntensity" in material) {
-      ;(material as THREE.MeshStandardMaterial).envMapIntensity = 0.6
+
+    mesh.castShadow = category !== "site" && !/vitrage/i.test(name)
+    mesh.receiveShadow = category === "rdc" || category === "upper" || category === "site"
+
+    if (isWallMesh(name)) {
+      ;(category === "upper" ? meshes.upperWalls : meshes.rdcWalls).push(mesh)
+    }
+    if (isFloorMesh(name)) meshes.floors.push(mesh)
+
+    if (category === "roof" || category === "ceiling") mesh.visible = false
+
+    const material = mesh.material as THREE.Material | THREE.Material[] | undefined
+    const list = Array.isArray(material) ? material : material ? [material] : []
+    for (const item of list) {
+      if (!item || seenMaterials.has(item)) continue
+      seenMaterials.add(item)
+      const standard = item as THREE.MeshStandardMaterial
+      if ("envMapIntensity" in standard) {
+        standard.envMapIntensity = standard.transparent
+          ? 1.2
+          : 0.35 + 0.65 * (standard.metalness ?? 0)
+      }
+      if (standard.transparent) standard.depthWrite = false
     }
   })
 
-  return { root, scale, center, minY: box.min.y, maxY: box.max.y }
+  return { root, meshes }
+}
+
+function applyVisibility(
+  prepared: Prepared,
+  level: ViewerLevel,
+  mode: ViewerMode,
+  showRoof: boolean,
+) {
+  const roofVisible = mode === "walk" ? false : showRoof
+  prepared.root.traverse((child) => {
+    const mesh = child as THREE.Mesh
+    if (!mesh.isMesh) return
+    const category = (child.userData.category as MeshCategory | undefined) ?? "other"
+    switch (category) {
+      case "ceiling":
+        mesh.visible = false
+        break
+      case "roof":
+        mesh.visible = roofVisible
+        break
+      case "site":
+        mesh.visible = true
+        break
+      case "rdc":
+        mesh.visible = mode === "walk" || level !== "etage"
+        break
+      case "upper":
+        mesh.visible = mode === "walk" || level !== "rdc"
+        break
+      default:
+        mesh.visible = true
+    }
+  })
 }
 
 function ModelScene({
   level,
+  mode,
+  showRoof,
   onSelectRoom,
+  meshesRef,
 }: {
   level: ViewerLevel
+  mode: ViewerMode
+  showRoof: boolean
   onSelectRoom: (slug: string) => void
+  meshesRef: React.RefObject<WalkMeshes>
 }) {
   const { scene } = useGLTF(MODEL_URL)
   const prepared = useMemo(() => prepareModel(scene), [scene])
-  const groupRef = useRef<THREE.Group>(null)
 
   useLayoutEffect(() => {
-    const root = prepared.root
-    root.updateMatrixWorld(true)
-    const box = new THREE.Box3().setFromObject(root)
-    const mid = (box.min.y + box.max.y) / 2
-    root.traverse((child) => {
-      const mesh = child as THREE.Mesh
-      if (!mesh.isMesh) return
-      const name = child.name.toLowerCase()
-      if (isCeiling(name)) {
-        child.visible = false
-        return
-      }
-      if (level === "global") {
-        child.visible = true
-        return
-      }
-      const namedLevel = /rdc|rez/.test(name)
-        ? "rdc"
-        : /etage|étage|upper|floor[_-]?2/.test(name)
-          ? "etage"
-          : null
-      if (namedLevel) {
-        child.visible = namedLevel === level
-        return
-      }
-      const meshBox = new THREE.Box3().setFromObject(child)
-      const y = (meshBox.min.y + meshBox.max.y) / 2
-      child.visible = level === "rdc" ? y <= mid : y >= mid
-    })
-  }, [prepared, level])
+    meshesRef.current = prepared.meshes
+  }, [prepared, meshesRef])
+
+  useLayoutEffect(() => {
+    applyVisibility(prepared, level, mode, showRoof)
+  }, [prepared, level, mode, showRoof])
 
   function handlePointer(event: ThreeEvent<PointerEvent>) {
+    if (mode !== "orbit") return
     event.stopPropagation()
     let node: THREE.Object3D | null = event.object
     while (node) {
@@ -126,11 +186,9 @@ function ModelScene({
 
   return (
     <group
-      ref={groupRef}
-      scale={prepared.scale}
       onPointerDown={handlePointer}
       onPointerOver={() => {
-        document.body.style.cursor = "pointer"
+        if (mode === "orbit") document.body.style.cursor = "pointer"
       }}
       onPointerOut={() => {
         document.body.style.cursor = "auto"
@@ -230,7 +288,7 @@ function WireHouse({
   onSelectRoom: (slug: string) => void
 }) {
   return (
-    <group>
+    <group position={[HOUSE_CENTER[0], 0, HOUSE_CENTER[2]]}>
       {level !== "etage" ? (
         <WireLevel
           level="rdc"
@@ -274,101 +332,198 @@ class ModelBoundary extends Component<
   }
 }
 
-function FitCamera() {
-  const camera = useThree((state) => state.camera)
+function CameraDirector({ mode }: { mode: ViewerMode }) {
+  const camera = useThree((state) => state.camera) as THREE.PerspectiveCamera
   const controls = useThree((state) => state.controls) as
     | { target: THREE.Vector3; update: () => void }
     | null
-  const done = useRef(false)
 
   useLayoutEffect(() => {
-    if (done.current) return
-    const distance = Math.max(18, TARGET_SPAN * 1.25)
-    camera.position.set(distance * 0.7, distance * 0.55, distance * 0.7)
-    camera.near = 0.1
-    camera.far = 200
-    camera.lookAt(0, 3, 0)
+    if (mode !== "orbit") return
+    camera.position.set(...OVERVIEW)
+    camera.near = 0.05
+    camera.far = 300
     camera.updateProjectionMatrix()
     if (controls) {
-      controls.target.set(0, 3, 0)
+      controls.target.set(...HOUSE_CENTER)
       controls.update()
     }
-    done.current = true
-  }, [camera, controls])
+  }, [mode, camera, controls])
 
   return null
 }
 
-function Loader() {
-  const { progress, active } = useProgress()
-  if (!active && progress >= 100) return null
-  return (
-    <Html center>
-      <div className="app-viewer__overlay" style={{ position: "static" }}>
-        Chargement du modèle · {Math.round(progress)} %
-      </div>
-    </Html>
-  )
+function SceneEnvironment() {
+  const gl = useThree((state) => state.gl)
+  const scene = useThree((state) => state.scene)
+
+  useEffect(() => {
+    const generator = new THREE.PMREMGenerator(gl)
+    const texture = generator.fromScene(new RoomEnvironment(), 0.04).texture
+    scene.environment = texture
+    scene.environmentIntensity = 0.3
+    generator.dispose()
+    return () => {
+      scene.environment = null
+      texture.dispose()
+    }
+  }, [gl, scene])
+
+  return null
+}
+
+function DebugBridge() {
+  const gl = useThree((state) => state.gl)
+  const scene = useThree((state) => state.scene)
+  const camera = useThree((state) => state.camera)
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    const scope = window as unknown as Record<string, unknown>
+    scope.__casaViewer = { gl, scene, camera }
+    document.documentElement.dataset.viewerDebug = "on"
+    return () => {
+      delete scope.__casaViewer
+      delete document.documentElement.dataset.viewerDebug
+    }
+  }, [gl, scene, camera])
+
+  return null
 }
 
 export default function HouseViewer({
+  mode,
   level,
+  showRoof,
+  spot,
   rooms,
   selectedSlug,
   onSelectRoom,
 }: {
+  mode: ViewerMode
   level: ViewerLevel
+  showRoof: boolean
+  spot: ViewerSpot
   rooms: Room[]
   selectedSlug?: string | null
   onSelectRoom: (slug: string) => void
 }) {
   const background = readTokenColor("--aura-surface-3", "oklch(92.6% 0.018 78)")
+  const skyTint = readTokenColor("--aura-ink-3", "oklch(68% 0.012 250)")
+  const groundTint = readTokenColor("--aura-surface-3", "oklch(92.6% 0.018 78)")
+  const sunTint = readTokenColor("--aura-accent-soft", "oklch(95.5% 0.028 45)")
+  const { active: loadingModel, progress } = useProgress()
+  const input = useMemo(() => createWalkInput(), [])
+  const meshesRef = useRef<WalkMeshes>({ rdcWalls: [], upperWalls: [], floors: [] })
+  const [locked, setLocked] = useState(false)
+  const coarsePointer = useMemo(
+    () => typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches,
+    [],
+  )
+  const handleLock = useCallback((value: boolean) => setLocked(value), [])
+  const lightTarget = useMemo(() => {
+    const target = new THREE.Object3D()
+    target.position.set(...HOUSE_CENTER)
+    return target
+  }, [])
 
   return (
-    <Canvas
-      dpr={[1, 1.6]}
-      frameloop="demand"
-      camera={{ fov: 42, near: 0.1, far: 200, position: [14, 12, 14] }}
-      gl={{ antialias: true, powerPreference: "low-power" }}
-      style={{ background }}
-    >
-      <color attach="background" args={[background]} />
-      <ambientLight intensity={0.75} />
-      <hemisphereLight args={[background, background, 0.6]} />
-      <directionalLight position={[8, 14, 6]} intensity={1.1} />
-      <directionalLight position={[-8, 6, -8]} intensity={0.35} />
-
-      <ModelBoundary
-        fallback={
-          <WireHouse
-            level={level}
-            rooms={rooms}
-            selectedSlug={selectedSlug}
-            onSelectRoom={onSelectRoom}
-          />
-        }
+    <>
+      <Canvas
+        dpr={[1, 1.75]}
+        shadows
+        frameloop={mode === "walk" ? "always" : "demand"}
+        camera={{ fov: 45, near: 0.05, far: 300, position: OVERVIEW }}
+        gl={{ antialias: true, powerPreference: "high-performance" }}
+        style={{ background }}
       >
-        <Suspense fallback={<Loader />}>
-          <ModelScene level={level} onSelectRoom={onSelectRoom} />
-        </Suspense>
-      </ModelBoundary>
+        <color attach="background" args={[background]} />
+        <SceneEnvironment />
+        <hemisphereLight args={[skyTint, groundTint, 0.28]} />
+        <ambientLight intensity={0.04} />
+        <primitive object={lightTarget} />
+        <directionalLight
+          target={lightTarget}
+          position={[HOUSE_CENTER[0] + 14, 20, HOUSE_CENTER[2] + 12]}
+          intensity={3.1}
+          color={sunTint}
+          castShadow
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
+          shadow-camera-left={-18}
+          shadow-camera-right={18}
+          shadow-camera-top={18}
+          shadow-camera-bottom={-18}
+          shadow-camera-near={1}
+          shadow-camera-far={80}
+          shadow-bias={-0.0004}
+          shadow-normalBias={0.02}
+        />
 
-      <FitCamera />
-      <OrbitControls
-        makeDefault
-        enablePan
-        enableDamping
-        dampingFactor={0.08}
-        minPolarAngle={Math.PI / 8}
-        maxPolarAngle={Math.PI / 2.1}
-        minDistance={6}
-        maxDistance={60}
-        target={[0, 3, 0]}
-      />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, 0]}>
-        <planeGeometry args={[80, 80]} />
-        <meshStandardMaterial color={background} roughness={1} />
-      </mesh>
-    </Canvas>
+        <ModelBoundary
+          fallback={
+            <WireHouse
+              level={level}
+              rooms={rooms}
+              selectedSlug={selectedSlug}
+              onSelectRoom={onSelectRoom}
+            />
+          }
+        >
+          <Suspense fallback={null}>
+            <ModelScene
+              level={level}
+              mode={mode}
+              showRoof={showRoof}
+              onSelectRoom={onSelectRoom}
+              meshesRef={meshesRef}
+            />
+          </Suspense>
+        </ModelBoundary>
+
+        <WalkRig
+          active={mode === "walk"}
+          spot={spot}
+          meshes={meshesRef}
+          input={input}
+          onLockChange={handleLock}
+        />
+        <CameraDirector mode={mode} />
+        <DebugBridge />
+        {mode === "orbit" ? (
+          <OrbitControls
+            makeDefault
+            enablePan
+            enableDamping
+            dampingFactor={0.08}
+            minPolarAngle={Math.PI / 12}
+            maxPolarAngle={Math.PI / 2.05}
+            minDistance={5}
+            maxDistance={70}
+            target={HOUSE_CENTER}
+          />
+        ) : null}
+      </Canvas>
+
+      {loadingModel ? (
+        <div className="app-viewer__loading">
+          Chargement du modèle — {Math.round(progress)} %
+        </div>
+      ) : null}
+
+      {mode === "walk" ? (
+        <>
+          <TouchStick input={input} />
+          <div className="app-viewer__hint">
+            {coarsePointer
+              ? "Glisse pour regarder autour • stick en bas à gauche pour avancer"
+              : locked
+                ? "ZQSD / WASD pour marcher • Maj pour courir • Échap pour libérer la souris"
+                : "Clique dans la vue pour regarder autour • ZQSD / WASD pour marcher"}
+          </div>
+          {locked ? <div className="app-viewer__cross" aria-hidden="true" /> : null}
+        </>
+      ) : null}
+    </>
   )
 }

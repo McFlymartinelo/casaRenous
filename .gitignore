@@ -14,5 +14,11 @@ Thumbs.db
 apps/portal/dev-dist/
 apps/portal/public/models/*.glb
 !apps/portal/public/models/.gitkeep
+!apps/portal/public/models/casarenous.glb
 certs/
 certbot-webroot/
+
+# Blender
+blender/*.blend
+blender/*.blend1
+blender/renders/
