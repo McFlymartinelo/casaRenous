@@ -1,6 +1,7 @@
 import type { ZodType, z } from "zod"
 import {
   AuthSessionResponse,
+  BudgetBulkResponse,
   BudgetItemSchema,
   BudgetResponse,
   CalendarFeedResponse,
@@ -136,8 +137,12 @@ async function parseError(response: Response): Promise<ApiClientError> {
   }
   const fallback =
     response.status === 404
-      ? "API introuvable (404) — vérifie que le backend est démarré et que /api est bien proxifié par nginx."
-      : `Erreur ${response.status}`
+      ? import.meta.env.DEV
+        ? "Service introuvable (404) : vérifie que le backend tourne et que /api est proxifié."
+        : "Cette page n'existe plus. Recharge l'application."
+      : response.status >= 500
+        ? "Le service est momentanément indisponible. Réessaie dans un instant."
+        : `La demande n'a pas abouti (erreur ${response.status}).`
   return new ApiClientError(response.status, body, fallback)
 }
 
@@ -499,6 +504,11 @@ export const api = {
       request("/api/budget/items", BudgetItemSchema, {
         method: "POST",
         body: JSON.stringify(input),
+      }),
+    createMany: (items: BudgetCreate[]): Promise<z.infer<typeof BudgetBulkResponse>> =>
+      request("/api/budget/items/bulk", BudgetBulkResponse, {
+        method: "POST",
+        body: JSON.stringify({ items }),
       }),
     update: (id: string, input: BudgetUpdateInput): Promise<z.infer<typeof BudgetItemSchema>> =>
       request(`/api/budget/items/${id}`, BudgetItemSchema, {

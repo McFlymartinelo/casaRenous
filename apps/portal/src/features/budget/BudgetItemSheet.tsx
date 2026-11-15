@@ -1,6 +1,6 @@
 import { useState } from "react"
 import type { BudgetItem } from "@casarenous/shared"
-import { centsToInput, parseEuroToCents } from "@casarenous/shared"
+import { centsToInput, formatCents, parseEuroToCents } from "@casarenous/shared"
 import { Badge, Button, Input, Select, Sheet, Textarea } from "@/aura/react"
 import {
   useCreateBudgetItem,
@@ -38,7 +38,7 @@ function draftFrom(item: BudgetItem | null): Draft {
     kind: item.kind,
     label: item.label,
     reference: item.reference ?? "",
-    amount: centsToInput(item.amountCents),
+    amount: item.amountCents === null ? "" : centsToInput(item.amountCents),
     dueDate: item.dueDate ?? "",
     paidAt: item.paidAt ?? "",
     status: item.status,
@@ -63,7 +63,8 @@ export function BudgetItemSheet({
   const update = useUpdateBudgetItem()
   const remove = useDeleteBudgetItem()
 
-  const cents = parseEuroToCents(draft.amount)
+  const blankAmount = draft.amount.trim().length === 0
+  const cents = blankAmount ? null : parseEuroToCents(draft.amount)
 
   async function save() {
     setError(null)
@@ -71,19 +72,19 @@ export function BudgetItemSheet({
       setError("Le libellé doit contenir au moins 2 caractères.")
       return
     }
-    if (cents === null) {
+    if (!blankAmount && cents === null) {
       setError("Montant invalide. Exemple : 1 234,56 € ou -500,00 €.")
       return
     }
     if (cents === 0) {
-      setError("Le montant ne peut pas être nul.")
+      setError("Le montant ne peut pas être nul. Laisse le champ vide pour « à compléter ».")
       return
     }
-    if (draft.kind === "ccmi_call" && cents < 0) {
+    if (draft.kind === "ccmi_call" && cents !== null && cents < 0) {
       setError("Un appel de fonds CCMI est toujours positif.")
       return
     }
-    if (draft.kind === "invoice" && cents < 0) {
+    if (draft.kind === "invoice" && cents !== null && cents < 0) {
       setError("Une facture d'achat est toujours positive.")
       return
     }
@@ -135,7 +136,7 @@ export function BudgetItemSheet({
       open={open}
       onClose={onClose}
       title={isNew ? "Nouveau mouvement" : "Modifier le mouvement"}
-      description="Les montants sont stockés en centimes entiers, sans flottant."
+      description="Tu peux enregistrer une ligne sans montant et le saisir plus tard."
       footer={
         <div className="aura-stack" style={{ gap: 8 }}>
           <Button block loading={create.isPending || update.isPending} onClick={() => void save()}>
@@ -198,9 +199,11 @@ export function BudgetItemSheet({
           value={draft.amount}
           onChange={(event) => setDraft({ ...draft, amount: event.target.value })}
           hint={
-            cents === null
-              ? "Saisie libre : 1 234,56 €. Les avenants peuvent être négatifs."
-              : `${cents.toLocaleString("fr-FR")} centimes`
+            blankAmount
+              ? "Laisse vide pour enregistrer la ligne « à compléter »."
+              : cents === null
+                ? "Saisie libre : 1 234,56 €. Les avenants peuvent être négatifs."
+                : formatCents(cents)
           }
           placeholder="12 500,00"
         />

@@ -4,8 +4,17 @@ import { formatCents } from "@casarenous/shared"
 import { Badge, Button, Card, ListRow, Skeleton } from "@/aura/react"
 import { useNotify } from "@/aura/notify/react"
 import { useAuth } from "@/auth/AuthProvider"
-import { DownloadIcon, PlusIcon, WalletIcon } from "@/components/icons"
+import {
+  CalendarCheckIcon,
+  DownloadIcon,
+  PlusIcon,
+  TableIcon,
+  WalletIcon,
+} from "@/components/icons"
 import { BudgetItemSheet } from "@/features/budget/BudgetItemSheet"
+import { CemiScheduleSheet } from "@/features/budget/CcmiScheduleSheet"
+import { PasteBudgetSheet } from "@/features/budget/PasteBudgetSheet"
+import { RoleNotice } from "@/components/RoleNotice"
 import { useBudget } from "@/hooks/useApi"
 import { api } from "@/lib/api-client"
 import { formatDate } from "@/lib/dates"
@@ -25,8 +34,13 @@ export function BudgetScreen() {
   const budget = useBudget()
   const [selected, setSelected] = useState<BudgetItem | null>(null)
   const [creating, setCreating] = useState(false)
+  const [scheduleOpen, setScheduleOpen] = useState(false)
+  const [pasteOpen, setPasteOpen] = useState(false)
 
   const summary = budget.data?.summary
+  const items = budget.data?.items ?? []
+  const existingCcmiCount = items.filter((item) => item.kind === "ccmi_call").length
+  const pendingCount = summary?.pendingCount ?? 0
   const ratio =
     summary && summary.totalCents > 0
       ? Math.max(0, Math.min(100, Math.round((summary.paidCents / summary.totalCents) * 100)))
@@ -67,6 +81,13 @@ export function BudgetScreen() {
             ? `${formatCents(summary.paidCents)} payés · ${formatCents(summary.remainingCents)} restants`
             : "Aucun mouvement enregistré."}
         </p>
+        {pendingCount > 0 ? (
+          <p className="app-small app-pending-note" style={{ marginTop: 6 }}>
+            {pendingCount} ligne{pendingCount > 1 ? "s" : ""} sans montant —{" "}
+            {pendingCount > 1 ? "elles ne sont" : "elle n'est"} pas comptée
+            {pendingCount > 1 ? "s" : ""} dans le total.
+          </p>
+        ) : null}
         <div style={{ marginTop: 16 }}>
           <div className="aura-row-flex" style={{ justifyContent: "space-between", marginBottom: 6 }}>
             <span className="aura-hero__meta">Avancement des paiements</span>
@@ -109,8 +130,13 @@ export function BudgetScreen() {
         </div>
       </div>
 
-      <div className={isAdmin ? "app-action-row" : "app-inline-actions"}>
-        {isAdmin ? (
+      <RoleNotice>
+        Le budget est tenu par l'admin. Tu peux ajouter des photos, des notes et
+        signaler des réserves depuis l'onglet Chantier.
+      </RoleNotice>
+
+      {isAdmin ? (
+        <div className="app-entry-actions">
           <Button
             block
             size="lg"
@@ -119,25 +145,34 @@ export function BudgetScreen() {
           >
             Ajouter un mouvement
           </Button>
-        ) : (
-          <Card variant="soft" style={{ width: "100%" }}>
-            <p className="app-small">
-              Le budget est en lecture seule pour les invités. Les montants sont tenus par
-              l'admin.
-            </p>
-          </Card>
-        )}
-        {isAdmin ? (
+          <div className="app-entry-actions__pair">
+            <Button
+              variant="outline"
+              size="lg"
+              icon={<CalendarCheckIcon size={18} />}
+              onClick={() => setScheduleOpen(true)}
+            >
+              Échéancier CCMI
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              icon={<TableIcon size={18} />}
+              onClick={() => setPasteOpen(true)}
+            >
+              Coller un tableau
+            </Button>
+          </div>
           <Button
-            variant="outline"
-            size="lg"
+            variant="ghost"
+            size="sm"
             icon={<DownloadIcon size={18} />}
             onClick={() => void exportCsv()}
           >
             Export CSV
           </Button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {budget.data?.items.length ? (
         <Card flush>
@@ -149,11 +184,17 @@ export function BudgetScreen() {
                 title={
                   <span className="aura-row-flex" style={{ justifyContent: "space-between", gap: 8 }}>
                     <span>{item.label}</span>
-                    <span
-                      className={`app-budget-row__amount ${item.amountCents < 0 ? "app-budget-row__amount--negative" : ""}`}
-                    >
-                      {formatCents(item.amountCents)}
-                    </span>
+                    {item.amountCents === null ? (
+                      <span className="app-budget-row__amount app-budget-row__amount--pending">
+                        À compléter
+                      </span>
+                    ) : (
+                      <span
+                        className={`app-budget-row__amount ${item.amountCents < 0 ? "app-budget-row__amount--negative" : ""}`}
+                      >
+                        {formatCents(item.amountCents)}
+                      </span>
+                    )}
                   </span>
                 }
                 subtitle={`${item.kind === "ccmi_call" ? "Appel CCMI" : item.kind === "invoice" ? "Facture" : "Avenant"}${item.reference ? ` · ${item.reference}` : ""}${item.dueDate ? ` · ${formatDate(item.dueDate)}` : ""}`}
@@ -165,18 +206,31 @@ export function BudgetScreen() {
         </Card>
       ) : (
         <Card variant="soft">
-          <p className="aura-h3">Budget vide</p>
+          <p className="aura-h3">Rien à suivre pour l'instant</p>
           <p className="app-small" style={{ marginTop: 4 }}>
             {isAdmin
-              ? "Ajoute le premier appel de fonds CCMI ou un avenant pour démarrer le suivi."
+              ? "Le plus rapide : saisis le montant total du CCMI, l'app crée les appels de fonds. Tu peux aussi coller l'échéancier de ton constructeur."
               : "L'admin n'a pas encore saisi les appels de fonds."}
           </p>
+          {isAdmin ? (
+            <div className="app-chip-row" style={{ marginTop: 10 }}>
+              <Button size="sm" variant="soft" onClick={() => setScheduleOpen(true)}>
+                Créer l'échéancier CCMI
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setPasteOpen(true)}>
+                Coller un tableau
+              </Button>
+            </div>
+          ) : null}
         </Card>
       )}
 
-      <p className="app-tiny">
-        Montants stockés en centimes entiers et calculés côté serveur. Aucun flottant.
-      </p>
+      {isAdmin ? (
+        <p className="app-tiny">
+          Laisse un montant vide pour enregistrer une ligne « à compléter » : elle reste
+          visible sans fausser les totaux.
+        </p>
+      ) : null}
 
       {creating ? (
         <BudgetItemSheet
@@ -196,6 +250,12 @@ export function BudgetScreen() {
           isNew={false}
         />
       ) : null}
+      <CemiScheduleSheet
+        open={scheduleOpen}
+        onClose={() => setScheduleOpen(false)}
+        existingCcmiCount={existingCcmiCount}
+      />
+      <PasteBudgetSheet open={pasteOpen} onClose={() => setPasteOpen(false)} />
     </div>
   )
 }

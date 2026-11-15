@@ -43,6 +43,13 @@
       "when": 1794674608205,
       "tag": "0005_quick_lord_tyger",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794782547068,
+      "tag": "0006_budget_optional_amounts",
+      "breakpoints": true
     }
   ]
 }

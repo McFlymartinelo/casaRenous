@@ -71,7 +71,7 @@ La charte fournie le 13 novembre 2026 est intégrée :
 | **3D & Plans** | `HouseViewer` R3F chargé en `React.lazy` : vue 3D orbitale (niveaux Global/RdC/Étage, toiture), mode **Visite** à la première personne (clavier/souris ou stick tactile), points de visite, fiche cotes + cuisine, fallback filaire si le GLB est absent |
 | **Rétroplanning** | Jalons administratifs, techniques, chantier et livraison ; filtres ; export `.ics` avec alarmes J-7/J-1 ; flux calendrier privé révocable |
 | **Docs & Chantier** | Coffre-fort (PDF, DOCX, XLSX, images), catégories personnalisées, lecture locale des factures PDF (fournisseur, échéance, montants, rappel), journal photo géolocalisé, notes, réserves, file d'attente hors-ligne, exports CSV et ZIP |
-| **Budget** | Appels de fonds CCMI, avenants +/- et factures d'achat avec échéancier (incluses dans le total de la maison) ; montants en centimes entiers ; totaux serveur ; export CSV |
+| **Budget** | Appels de fonds CCMI, avenants +/- et factures d'achat avec échéancier (incluses dans le total de la maison) ; montants en centimes entiers ; totaux serveur ; export CSV ; **échéancier CCMI généré depuis le total**, **import par collage Excel**, **lignes « à compléter » sans montant** |
 | **Réglages** | Thème Paper clair/sombre/auto, push, calendrier, sessions, invitations, changement de mot de passe |
 
 ---
@@ -306,6 +306,29 @@ stockage.
 - v0 : **PDF uniquement**. DOCX, XLSX et photos (OCR) renvoient un message
   explicite ; aucune donnée ne sort du serveur.
 
+### Saisie du budget
+
+Le budget se remplit par trois chemins, du plus rapide au plus fin :
+
+1. **Échéancier CCMI** — un seul montant saisi (le prix de la maison). L'app
+   répartit les appels de fonds selon l'échéancier légal type d'un CCMI avec
+   plan (30 % signature, 25 % fondations, 40 % hors d'eau, 5 % livraison),
+   parts et dates modifiables, ligne par ligne. La répartition est exacte au
+   centime : le reste d'arrondi est absorbé par la plus grosse ligne.
+2. **Coller un tableau** — copie de cellules depuis Excel, Numbers ou Google
+   Sheets. Séparateurs tabulation, point-virgule ou barre verticale ; en-tête
+   détecté (`Libellé`, `Montant`, `Échéance`, `Référence`) ; montants français
+   (`1 234,56 €`), anglo-saxons (`1,234.56`), négatifs (`(500)`), dates
+   `01/12/2026` ou `2026-12-01`. Un aperçu liste les lignes prêtes, les lignes
+   ignorées et leur motif avant validation. Un seul appel
+   `POST /budget/items/bulk` (60 lignes max), idempotent par `clientId`.
+3. **Ligne par ligne** — un mouvement à la fois. **Le montant peut rester
+   vide** : la ligne existe en « à compléter », reste modifiable, n'entre dans
+   aucun total et ne casse pas les statistiques (`pendingCount`).
+
+Le total des appels CCMI est la somme des montants saisis, jamais un montant
+déclaré à part : pas de risque d'écart entre l'échéancier et le budget.
+
 ### Hors-ligne
 
 - Cache TanStack Query persisté dans IndexedDB, **vidé à la déconnexion**.
@@ -432,6 +455,7 @@ GET    /reserves/export.csv        auth
 
 GET    /budget                     auth
 POST   /budget/items               admin
+POST   /budget/items/bulk          admin, 1 à 60 lignes, idempotent par clientId
 PATCH  /budget/items/:id           admin
 DELETE /budget/items/:id           admin
 GET    /budget/export.csv          admin
@@ -763,7 +787,10 @@ reserves, budget_items, push_subscriptions, push_deliveries
 
 Points clés :
 
-- `budget_items.amount_cents` : `integer`, jamais de `float` ;
+- `budget_items.amount_cents` : `integer` **nullable**, jamais de `float` ;
+  `NULL` = ligne « à compléter », exclue des totaux, comptée dans
+  `summary.pendingCount` ; `CHECK (<> 0)` toujours appliqué aux valeurs
+  renseignées ;
 - `document_categories.name` : unique insensible à la casse (`lower(name)`) ;
 - `document_analyses.document_id` : unique, une ligne par document, upsert à
   chaque ré-analyse ; l'extraction est stockée en `jsonb` ;
@@ -805,7 +832,10 @@ migrations SQL que la production, sans serveur externe. Elle couvre :
 - catégories de documents : création/renommage/suppression, doublons
   insensibles à la casse, classement et filtrage d'un document, détachement à
   la suppression, rôles admin/invités ;
-- budget : facture d'achat comptée dans le total de la maison ;
+- budget : facture d'achat comptée dans le total de la maison ; ligne sans
+  montant (créée, exclue des totaux, renseignée puis remise à vide) ; import
+  en masse idempotent, refus des lots vides, nuls, négatifs ou > 60 lignes ;
+  écriture et import réservés à l'admin ;
 - devises et libellés étrangers : facture allemande (montant de la facture,
   taxe de vente, somme nette), IBAN et artefacts PDF ignorés ;
 - journal qualité : agrégats, champs fragiles, corrections manuelles
@@ -815,7 +845,7 @@ La suite portail couvre le parseur euro→centimes, le formatage, les dates du
 projet, la conversion OKLCH→sRGB pour WebGL et le contrat de réponse de
 `api-client` (Zod partagé).
 
-**106 tests** au total : 6 shared, 87 backend, 13 portail.
+**140 tests** au total : 6 shared, 96 backend, 38 portail.
 
 Vérifications effectuées lors de la livraison :
 
@@ -872,6 +902,12 @@ Composants Aura étendus (dans le kit source et dans le projet) :
   DOCX/XLSX et les photos ne sont pas lus : l'app l'indique et propose le
   téléchargement. Une couche IA locale (Ollama, modèle ≤ 3B, job asynchrone)
   pourra compléter les cas « incertain », sans jamais calculer les montants.
+- **Échéancier CCMI** : les pourcentages proposés (30 / 25 / 40 / 5) sont
+  l'échéancier légal type d'un CCMI avec plan. Ils sont indicatifs et
+  modifiables : le contrat fait foi.
+- **Import par collage** : plafonné à 60 lignes par envoi, formats de date et
+  de montant français et anglo-saxons uniquement. Les fichiers `.xlsx` ne sont
+  pas lus directement (copier les cellules).
 - **PWA** : le chunk Three.js (~1 Mo) est précaché pour permettre la 3D
   hors-ligne ; il n'est **exécuté** qu'à l'ouverture de l'onglet 3D.
 

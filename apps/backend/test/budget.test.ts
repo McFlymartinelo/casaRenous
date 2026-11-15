@@ -62,6 +62,7 @@ describe("budget en centimes entiers", () => {
       paidCents: 0,
       remainingCents: 125_000,
       count: 2,
+      pendingCount: 0,
     })
   })
 
@@ -155,11 +156,143 @@ describe("budget en centimes entiers", () => {
     expect(forbidden.status).toBe(403)
     expect((await context.agent.get("/api/budget/export.csv")).status).toBe(403)
 
+    const bulkForbidden = await context.agent
+      .post("/api/budget/items/bulk")
+      .set("Origin", origin(context))
+      .send({
+        items: [{ kind: "ccmi_call", label: "Interdit", amountCents: 100, clientId: randomUUID() }],
+      })
+    expect(bulkForbidden.status).toBe(403)
+
     await signIn(context, "admin@test.local", "Admin-Test-Password-2026!")
     const csv = await context.agent.get("/api/budget/export.csv")
     expect(csv.status).toBe(200)
     expect(csv.headers["content-type"]).toContain("text/csv")
     expect(csv.text).toContain("Appel de fonds n°1")
     expect(csv.text).toContain("150000")
+  })
+
+  it("accepte une ligne sans montant et l'exclut des totaux", async () => {
+    await signIn(context, "admin@test.local", "Admin-Test-Password-2026!")
+    const before = await context.agent.get("/api/budget").expect(200)
+
+    const created = await context.agent
+      .post("/api/budget/items")
+      .set("Origin", origin(context))
+      .send({
+        kind: "change_order",
+        label: "Porte d'entrée — à chiffrer",
+        clientId: randomUUID(),
+      })
+    expect(created.status).toBe(201)
+    expect(created.body.amountCents).toBeNull()
+
+    const after = await context.agent.get("/api/budget").expect(200)
+    expect(after.body.summary.pendingCount).toBe(before.body.summary.pendingCount + 1)
+    expect(after.body.summary.totalCents).toBe(before.body.summary.totalCents)
+    expect(after.body.summary.count).toBe(before.body.summary.count + 1)
+
+    // Le montant peut être renseigné plus tard.
+    const filled = await context.agent
+      .patch(`/api/budget/items/${created.body.id}`)
+      .set("Origin", origin(context))
+      .send({ amountCents: 89_000 })
+    expect(filled.status).toBe(200)
+    expect(filled.body.amountCents).toBe(89_000)
+
+    const final = await context.agent.get("/api/budget").expect(200)
+    expect(final.body.summary.pendingCount).toBe(before.body.summary.pendingCount)
+    expect(final.body.summary.totalCents).toBe(before.body.summary.totalCents + 89_000)
+
+    // Et redevenir « à compléter ».
+    await context.agent
+      .patch(`/api/budget/items/${created.body.id}`)
+      .set("Origin", origin(context))
+      .send({ amountCents: null })
+      .expect(200)
+    const cleared = await context.agent.get("/api/budget").expect(200)
+    expect(cleared.body.summary.totalCents).toBe(before.body.summary.totalCents)
+  })
+
+  it("importe un échéancier en une requête, sans doublon", async () => {
+    await signIn(context, "admin@test.local", "Admin-Test-Password-2026!")
+    const before = await context.agent.get("/api/budget").expect(200)
+
+    const clientIds = [randomUUID(), randomUUID(), randomUUID(), randomUUID()]
+    const amounts = [8_550_000, 7_125_000, 11_400_000, 1_425_000]
+    const items = clientIds.map((clientId, index) => ({
+      kind: "ccmi_call" as const,
+      label: `Appel de fonds n°${index + 1}`,
+      reference: `CCMI-0${index + 1}`,
+      amountCents: amounts[index],
+      dueDate: "2027-01-0" + (index + 1),
+      clientId,
+    }))
+
+    const bulk = await context.agent
+      .post("/api/budget/items/bulk")
+      .set("Origin", origin(context))
+      .send({ items })
+    expect(bulk.status).toBe(201)
+    expect(bulk.body.items).toHaveLength(4)
+    expect(bulk.body.items[0].amountCents).toBe(8_550_000)
+
+    const after = await context.agent.get("/api/budget").expect(200)
+    const total = amounts.reduce((sum, value) => sum + value, 0)
+    expect(after.body.summary.totalCents).toBe(before.body.summary.totalCents + total)
+    expect(after.body.summary.count).toBe(before.body.summary.count + 4)
+
+    // Rejouer le même import ne crée rien de plus.
+    const replay = await context.agent
+      .post("/api/budget/items/bulk")
+      .set("Origin", origin(context))
+      .send({ items })
+    expect(replay.status).toBe(200)
+    expect(replay.body.items).toHaveLength(4)
+    expect(replay.body.items.map((item: { id: string }) => item.id)).toEqual(
+      bulk.body.items.map((item: { id: string }) => item.id),
+    )
+
+    const unchanged = await context.agent.get("/api/budget").expect(200)
+    expect(unchanged.body.summary.count).toBe(after.body.summary.count)
+  })
+
+  it("refuse un import invalide", async () => {
+    await signIn(context, "admin@test.local", "Admin-Test-Password-2026!")
+
+    const empty = await context.agent
+      .post("/api/budget/items/bulk")
+      .set("Origin", origin(context))
+      .send({ items: [] })
+    expect(empty.status).toBe(422)
+
+    const zero = await context.agent
+      .post("/api/budget/items/bulk")
+      .set("Origin", origin(context))
+      .send({
+        items: [{ kind: "ccmi_call", label: "Zéro", amountCents: 0, clientId: randomUUID() }],
+      })
+    expect(zero.status).toBe(422)
+
+    const negativeCall = await context.agent
+      .post("/api/budget/items/bulk")
+      .set("Origin", origin(context))
+      .send({
+        items: [{ kind: "ccmi_call", label: "Négatif", amountCents: -1, clientId: randomUUID() }],
+      })
+    expect(negativeCall.status).toBe(422)
+
+    const tooMany = await context.agent
+      .post("/api/budget/items/bulk")
+      .set("Origin", origin(context))
+      .send({
+        items: Array.from({ length: 61 }, (_, index) => ({
+          kind: "change_order",
+          label: `Ligne ${index}`,
+          amountCents: 100,
+          clientId: randomUUID(),
+        })),
+      })
+    expect(tooMany.status).toBe(422)
   })
 })

@@ -1,9 +1,11 @@
 import { Router } from "express"
-import { and, desc, eq, isNull } from "drizzle-orm"
+import { and, desc, eq, inArray, isNull } from "drizzle-orm"
 import {
+  BudgetBulkCreateInput,
   BudgetCreateInput,
   BudgetUpdateInput,
   IdParam,
+  type BudgetBulkResponse,
   type BudgetResponse,
   type Env,
 } from "@casarenous/shared"
@@ -26,7 +28,13 @@ function summary(rows: Awaited<ReturnType<typeof loadBudgetRows>>) {
   let changeOrdersCents = 0
   let invoiceCents = 0
   let paidCents = 0
+  let pendingCount = 0
   for (const row of rows) {
+    // Une ligne sans montant reste visible mais ne fausse aucun total.
+    if (row.amountCents === null) {
+      if (row.status !== "cancelled") pendingCount += 1
+      continue
+    }
     if (row.kind === "ccmi_call") ccmiCents += row.amountCents
     else if (row.kind === "invoice") invoiceCents += row.amountCents
     else changeOrdersCents += row.amountCents
@@ -41,6 +49,7 @@ function summary(rows: Awaited<ReturnType<typeof loadBudgetRows>>) {
     paidCents,
     remainingCents: totalCents - paidCents,
     count: rows.length,
+    pendingCount,
   }
 }
 
@@ -50,6 +59,22 @@ async function loadBudgetRows(db: Database) {
     .from(budgetItems)
     .where(isNull(budgetItems.deletedAt))
     .orderBy(desc(budgetItems.createdAt))
+}
+
+function insertValues(input: BudgetCreateInput, createdBy: string) {
+  return {
+    kind: input.kind,
+    label: input.label,
+    reference: input.reference ?? null,
+    amountCents: input.amountCents ?? null,
+    dueDate: input.dueDate ?? null,
+    paidAt: input.paidAt ?? null,
+    status: input.status,
+    attachmentDocumentId: input.attachmentDocumentId ?? null,
+    notes: input.notes ?? null,
+    createdBy,
+    clientId: input.clientId,
+  }
 }
 
 export function budgetRouter(db: Database, env: Env): Router {
@@ -89,19 +114,7 @@ export function budgetRouter(db: Database, env: Env): Router {
 
       const [created] = await db
         .insert(budgetItems)
-        .values({
-          kind: input.kind,
-          label: input.label,
-          reference: input.reference ?? null,
-          amountCents: input.amountCents,
-          dueDate: input.dueDate ?? null,
-          paidAt: input.paidAt ?? null,
-          status: input.status,
-          attachmentDocumentId: input.attachmentDocumentId ?? null,
-          notes: input.notes ?? null,
-          createdBy: user.id,
-          clientId: input.clientId,
-        })
+        .values(insertValues(input, user.id))
         .returning()
       if (!created) throw ApiError.internal("Enregistrement impossible", "budget_failed")
 
@@ -115,6 +128,66 @@ export function budgetRouter(db: Database, env: Env): Router {
         meta: { kind: created.kind, amountCents: created.amountCents },
       })
       res.status(201).json(toBudgetItem(created))
+    }),
+  )
+
+  // Import en masse : échéancier CCMI généré ou tableau collé depuis un tableur.
+  // Idempotent par clientId, comme la création unitaire.
+  router.post(
+    "/budget/items/bulk",
+    auth,
+    requireRole("admin"),
+    asyncHandler(async (req, res) => {
+      const input = parseBody(BudgetBulkCreateInput, req.body)
+      const { user } = res.locals.auth as AuthLocals
+
+      const byClientId = new Map<string, BudgetCreateInput>()
+      for (const item of input.items) {
+        if (!byClientId.has(item.clientId)) byClientId.set(item.clientId, item)
+      }
+      const clientIds = [...byClientId.keys()]
+
+      const existing = await db
+        .select()
+        .from(budgetItems)
+        .where(inArray(budgetItems.clientId, clientIds))
+      const found = new Map(existing.map((row) => [row.clientId, row]))
+
+      const missing = clientIds
+        .filter((clientId) => !found.has(clientId))
+        .map((clientId) => byClientId.get(clientId))
+        .filter((item): item is BudgetCreateInput => Boolean(item))
+
+      const inserted = missing.length
+        ? await db
+            .insert(budgetItems)
+            .values(missing.map((item) => insertValues(item, user.id)))
+            .returning()
+        : []
+
+      if (inserted.length) {
+        await writeAudit(db, {
+          actorId: user.id,
+          action: "budget.bulk_created",
+          entity: "budget_item",
+          entityId: null,
+          ip: req.ip ?? null,
+          userAgent: req.header("user-agent") ?? null,
+          meta: {
+            count: inserted.length,
+            skipped: clientIds.length - inserted.length,
+            totalCents: inserted.reduce((sum, row) => sum + (row.amountCents ?? 0), 0),
+          },
+        })
+      }
+
+      const payload: BudgetBulkResponse = {
+        items: clientIds.flatMap((clientId) => {
+          const row = found.get(clientId) ?? inserted.find((item) => item.clientId === clientId)
+          return row ? [toBudgetItem(row)] : []
+        }),
+      }
+      res.status(inserted.length ? 201 : 200).json(payload)
     }),
   )
 
@@ -133,13 +206,14 @@ export function budgetRouter(db: Database, env: Env): Router {
         .limit(1)
       if (!existing) throw ApiError.notFound("Mouvement introuvable", "budget_not_found")
 
-      if (input.amountCents !== undefined) {
-        if (input.amountCents === 0) {
+      if (input.amountCents !== undefined && input.amountCents !== null) {
+        const amount = input.amountCents
+        if (amount === 0) {
           throw ApiError.unprocessable("Le montant ne peut pas être nul", {
             amountCents: ["Montant nul interdit"],
           })
         }
-        if (existing.kind === "ccmi_call" && input.amountCents < 0) {
+        if (existing.kind === "ccmi_call" && amount < 0) {
           throw ApiError.unprocessable("Un appel de fonds est toujours positif", {
             amountCents: ["Montant négatif interdit pour un appel de fonds"],
           })
@@ -232,8 +306,10 @@ export function budgetRouter(db: Database, env: Env): Router {
             KIND_LABEL[row.kind],
             row.label,
             row.reference,
-            row.amountCents,
-            (row.amountCents / 100).toFixed(2).replace(".", ","),
+            row.amountCents ?? "",
+            row.amountCents === null
+              ? ""
+              : (row.amountCents / 100).toFixed(2).replace(".", ","),
             row.dueDate,
             row.paidAt,
             row.status,

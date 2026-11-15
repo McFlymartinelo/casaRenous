@@ -1135,7 +1135,8 @@ export const BudgetItemSchema = z.object({
   kind: BudgetKind,
   label: z.string(),
   reference: z.string().nullable(),
-  amountCents: MoneyCents,
+  /** `null` = ligne créée sans montant, à compléter plus tard. */
+  amountCents: MoneyCents.nullable(),
   dueDate: IsoDate.nullable(),
   paidAt: IsoDate.nullable(),
   status: BudgetStatus,
@@ -1151,7 +1152,7 @@ export const BudgetCreateInput = z
     kind: BudgetKind,
     label: z.string().trim().min(2).max(180),
     reference: z.string().max(120).nullable().optional(),
-    amountCents: MoneyCents,
+    amountCents: MoneyCents.nullable().optional(),
     dueDate: IsoDate.nullable().optional(),
     paidAt: IsoDate.nullable().optional(),
     status: BudgetStatus.default("planned"),
@@ -1159,24 +1160,40 @@ export const BudgetCreateInput = z
     notes: z.string().max(2000).nullable().optional(),
     clientId: Uuid,
   })
-  .refine((value) => value.amountCents !== 0, {
+  .refine((value) => value.amountCents == null || value.amountCents !== 0, {
     message: "Le montant ne peut pas être nul",
     path: ["amountCents"],
   })
-  .refine((value) => value.kind !== "ccmi_call" || value.amountCents > 0, {
+  .refine((value) => value.kind !== "ccmi_call" || value.amountCents == null || value.amountCents > 0, {
     message: "Un appel de fonds est toujours positif",
     path: ["amountCents"],
   })
-  .refine((value) => value.kind !== "invoice" || value.amountCents > 0, {
+  .refine((value) => value.kind !== "invoice" || value.amountCents == null || value.amountCents > 0, {
     message: "Une facture d'achat est toujours positive",
     path: ["amountCents"],
   })
 export type BudgetCreateInput = z.infer<typeof BudgetCreateInput>
 
+/** Import en masse : échéancier CCMI ou tableau collé depuis un tableur. */
+export const MAX_BULK_BUDGET_ITEMS = 60
+
+export const BudgetBulkCreateInput = z.object({
+  items: z
+    .array(BudgetCreateInput)
+    .min(1, "Aucune ligne à importer")
+    .max(MAX_BULK_BUDGET_ITEMS, `Maximum ${MAX_BULK_BUDGET_ITEMS} lignes par import`),
+})
+export type BudgetBulkCreateInput = z.infer<typeof BudgetBulkCreateInput>
+
+export const BudgetBulkResponse = z.object({
+  items: z.array(BudgetItemSchema),
+})
+export type BudgetBulkResponse = z.infer<typeof BudgetBulkResponse>
+
 export const BudgetUpdateInput = z.object({
   label: z.string().trim().min(2).max(180).optional(),
   reference: z.string().max(120).nullable().optional(),
-  amountCents: MoneyCents.optional(),
+  amountCents: MoneyCents.nullable().optional(),
   dueDate: IsoDate.nullable().optional(),
   paidAt: IsoDate.nullable().optional(),
   status: BudgetStatus.optional(),
@@ -1193,6 +1210,8 @@ export const BudgetSummary = z.object({
   paidCents: z.number().int(),
   remainingCents: z.number().int(),
   count: z.number().int(),
+  /** Lignes sans montant, exclues des totaux. */
+  pendingCount: z.number().int(),
 })
 export type BudgetSummary = z.infer<typeof BudgetSummary>
 

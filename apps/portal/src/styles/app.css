@@ -404,6 +404,101 @@
   color: var(--aura-success);
 }
 
+.app-budget-row__amount--pending {
+  color: var(--aura-ink-3);
+  font-style: italic;
+  font-weight: 500;
+}
+
+.app-pending-note {
+  color: var(--aura-accent-strong);
+}
+
+.app-ccmi-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aura-space-3);
+}
+
+.app-ccmi-row {
+  border: 1px solid var(--aura-line);
+  border-radius: var(--aura-r-md);
+  padding: var(--aura-space-3);
+  background: var(--aura-surface-2);
+}
+
+.app-ccmi-row__head {
+  display: flex;
+  align-items: center;
+  gap: var(--aura-space-2);
+  margin-bottom: 8px;
+}
+
+.app-ccmi-row__index {
+  display: grid;
+  place-items: center;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--aura-accent-soft);
+  color: var(--aura-accent-strong);
+  font-size: var(--aura-text-xs);
+  font-weight: 600;
+}
+
+.app-ccmi-row__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-ccmi-row__amount {
+  white-space: nowrap;
+  font-size: var(--aura-text-sm);
+  font-weight: 600;
+}
+
+.app-import-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aura-space-2);
+  padding: 6px 0;
+}
+
+.app-import-row + .app-import-row {
+  border-top: 1px solid var(--aura-line);
+}
+
+.app-import-row__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--aura-text-sm);
+}
+
+.app-import-row__meta {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-import-issues {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: var(--aura-text-xs);
+  color: var(--aura-ink-2);
+}
+
+.app-mono-input textarea {
+  font-family: var(--aura-font-mono);
+  font-size: var(--aura-text-xs);
+}
+
 /* ── Visionneuse 3D ─────────────────────────────────────────────────────── */
 
 .app-viewer {
@@ -703,6 +798,23 @@
 .app-action-row > * {
   flex: 1 1 0;
   min-width: 0;
+}
+
+.app-entry-actions {
+  display: grid;
+  gap: var(--aura-space-2);
+}
+
+.app-entry-actions__pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--aura-space-2);
+}
+
+@media (max-width: 460px) {
+  .app-entry-actions__pair {
+    grid-template-columns: 1fr;
+  }
 }
 
 .app-danger-text {

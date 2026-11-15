@@ -72,6 +72,7 @@ describe("client API et schémas Zod partagés", () => {
         paidCents: 0,
         remainingCents: 150000,
         count: 1,
+        pendingCount: 0,
       },
     }
 
@@ -84,6 +85,24 @@ describe("client API et schémas Zod partagés", () => {
     vi.stubGlobal("fetch", fetchMock)
     const result = await api.budget.get()
     expect(result.summary.totalCents).toBe(150000)
+
+    // Une ligne sans montant reste valide : elle est « à compléter », pas zéro.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            ...payload,
+            items: [{ ...payload.items[0], amountCents: null }],
+            summary: { ...payload.summary, totalCents: 0, pendingCount: 1 },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      ),
+    )
+    const pending = await api.budget.get()
+    expect(pending.items[0]?.amountCents).toBeNull()
+    expect(pending.summary.pendingCount).toBe(1)
 
     vi.stubGlobal(
       "fetch",

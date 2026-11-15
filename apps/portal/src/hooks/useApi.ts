@@ -354,6 +354,14 @@ export function useCreateBudgetItem() {
   })
 }
 
+export function useCreateBudgetItems() {
+  const invalidate = useInvalidate(keys.budget)
+  return useMutation({
+    mutationFn: (items: BudgetCreateInput[]) => api.budget.createMany(items),
+    onSuccess: invalidate,
+  })
+}
+
 export function useUpdateBudgetItem() {
   const invalidate = useInvalidate(keys.budget)
   return useMutation({

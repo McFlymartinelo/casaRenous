@@ -487,7 +487,7 @@ export const budgetItems = pgTable(
     kind: budgetKindEnum("kind").notNull(),
     label: text("label").notNull(),
     reference: text("reference"),
-    amountCents: integer("amount_cents").notNull(),
+    amountCents: integer("amount_cents"),
     dueDate: date("due_date", { mode: "string" }),
     paidAt: date("paid_at", { mode: "string" }),
     status: budgetStatusEnum("status").notNull().default("planned"),

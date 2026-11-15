@@ -56,6 +56,25 @@ export function CalendarIcon(props: IconProps) {
   )
 }
 
+export function CalendarCheckIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+      <path d="M7.5 3v4M16.5 3v4M3.5 9.5h17" />
+      <path d="m8.5 14.8 2.2 2.2 4.4-4.4" />
+    </Icon>
+  )
+}
+
+export function TableIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+      <path d="M3.5 9.5h17M3.5 14.5h17M9.5 4.5v15" />
+    </Icon>
+  )
+}
+
 export function FolderIcon(props: IconProps) {
   return (
     <Icon {...props}>

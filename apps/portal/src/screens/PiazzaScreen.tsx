@@ -110,7 +110,13 @@ export function PiazzaScreen() {
         <Stat
           label="Budget engagé"
           value={summary ? formatCents(summary.totalCents) : "—"}
-          hint={summary ? `${summary.count} mouvement(s)` : "CCMI + avenants"}
+          hint={
+            summary
+              ? summary.pendingCount > 0
+                ? `${summary.count} mouvement(s) · ${summary.pendingCount} à compléter`
+                : `${summary.count} mouvement(s)`
+              : "CCMI + avenants"
+          }
         />
         <Stat
           label="Prochain jalon"
@@ -240,8 +246,8 @@ export function PiazzaScreen() {
       />
 
       <p className="app-tiny" style={{ textAlign: "center" }}>
-        Dernière ouverture : {formatDate(todayIso(), { weekday: "long" })} ·{" "}
-        {online ? "connecté" : "hors ligne"}
+        {formatDate(todayIso(), { weekday: "long" })} ·{" "}
+        {online ? "connecté au carnet" : "hors ligne, dernière version en cache"}
       </p>
 
       {datesOpen ? (
