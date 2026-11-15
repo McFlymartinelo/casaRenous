@@ -14,6 +14,7 @@ import {
 import { useNotify } from "@/aura/notify/react"
 import { useAuth } from "@/auth/AuthProvider"
 import { AuthenticatedImage } from "@/components/AuthenticatedImage"
+import { RoleNotice } from "@/components/RoleNotice"
 import {
   CameraIcon,
   ClockIcon,
@@ -208,6 +209,11 @@ export function ChantierScreen() {
 
       <Segmented<Mode> label="Section du chantier" options={MODES} value={mode} onChange={setMode} />
 
+      <RoleNotice>
+        Tu peux ajouter des photos, écrire des notes et signaler des réserves. Les
+        documents du coffre-fort sont déposés par l'admin.
+      </RoleNotice>
+
       {primary}
 
       {mode === "documents" ? (
@@ -307,12 +313,34 @@ export function ChantierScreen() {
             </Card>
           ) : (
             <Card variant="soft">
-              <p className="aura-h3">Coffre-fort vide</p>
-              <p className="app-small" style={{ marginTop: 4 }}>
-                {isAdmin
-                  ? "Dépose le CCMI, les plans et les factures pour les retrouver sur le chantier."
-                  : "Les documents déposés par l'admin apparaîtront ici."}
-              </p>
+              {query.trim() || filter !== "all" ? (
+                <>
+                  <p className="aura-h3">Aucun document ne correspond</p>
+                  <p className="app-small" style={{ marginTop: 4 }}>
+                    Essaie un autre mot-clé ou retire le filtre de catégorie.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="soft"
+                    style={{ marginTop: 10 }}
+                    onClick={() => {
+                      setQuery("")
+                      setFilter("all")
+                    }}
+                  >
+                    Tout afficher
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="aura-h3">Coffre-fort vide</p>
+                  <p className="app-small" style={{ marginTop: 4 }}>
+                    {isAdmin
+                      ? "Dépose le CCMI, les plans et les factures pour les retrouver sur le chantier."
+                      : "Les documents déposés par l'admin apparaîtront ici."}
+                  </p>
+                </>
+              )}
             </Card>
           )}
         </div>

@@ -34,7 +34,7 @@ function badgeFor(status: PushStatus | null): {
 function enableFailureLabel(result: PushEnableResult): string {
   switch (result.reason) {
     case "vapid":
-      return "Serveur push non configuré : clés VAPID manquantes."
+      return "Les notifications ne sont pas encore disponibles ici."
     case "denied":
       return "Permission refusée. Autorise les notifications dans les réglages du système."
     case "insecure":

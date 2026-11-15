@@ -38,8 +38,8 @@ class ViewerBoundary extends Component<
           <CubeIcon size={32} />
           <p className="aura-h3">Vue 3D indisponible sur cet appareil</p>
           <p className="app-small">
-            Le plan et les fiches pièces restent accessibles. Essaie de recharger ou
-            d'utiliser un navigateur plus récent.
+            Les fiches pièces restent accessibles ci-dessous. Recharge la page ou
+            essaie un navigateur plus récent.
           </p>
         </div>
       )
@@ -182,6 +182,10 @@ export function ViewerScreen() {
             Maj pour courir, Échap pour sortir du mode visite. Sur mobile : glisse pour
             regarder et utilise le stick pour avancer.
           </p>
+          <p className="app-small app-muted">
+            <Badge tone="neutral">Bêta</Badge>{" "}
+            La visite libre est encore expérimentale, surtout sur téléphone.
+          </p>
         </>
       )}
 
@@ -253,10 +257,9 @@ export function ViewerScreen() {
       <Card variant="soft">
         <p className="app-kicker">Visite de la maison</p>
         <p className="app-small" style={{ marginTop: 4 }}>
-          La maquette 3D est chargée depuis <code>casarenous.glb</code>. En mode
-          « Vue 3D », fais tourner la maison et sélectionne un niveau ; en mode
-          « Visite », déplace-toi à l'intérieur comme dans un jeu. Touche une pièce
-          pour ouvrir ses cotes.
+          Fais tourner la maison et choisis un niveau pour voir l'intérieur. En mode
+          Visite, déplace-toi comme dans un jeu et touche une pièce pour ouvrir sa
+          fiche.
         </p>
         <div className="app-chip-row" style={{ marginTop: 10 }}>
           {VIEWER_SPOTS.slice(0, 4).map((item) => (

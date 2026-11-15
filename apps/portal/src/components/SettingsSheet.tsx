@@ -339,8 +339,8 @@ export function SettingsSheet({
         <Section title="À propos">
           <BrandLogo variant="horizontal" width={160} />
           <p className="aura-hint">
-            CasaRenous 1.0 · PWA offline-first · hébergée sur Oracle Cloud Infrastructure.
-            Les données du chantier restent privées.
+            CasaRenous 1.0 — ton carnet de chantier privé. Une fois installé sur
+            l'écran d'accueil, il s'ouvre même sans réseau.
           </p>
           <Button
             variant="ghost"
@@ -388,7 +388,7 @@ export function PasswordSheet({
       open={open}
       onClose={onClose}
       title="Nouveau mot de passe"
-      description="Toutes les sessions seront révoquées. Tu te reconnecteras avec un code OTP."
+      description="Toutes les sessions seront révoquées. Tu te reconnecteras avec un code de vérification."
       footer={
         <Button block loading={busy} onClick={() => void submit()}>
           Enregistrer

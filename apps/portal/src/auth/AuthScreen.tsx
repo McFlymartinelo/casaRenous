@@ -336,7 +336,7 @@ export function AuthScreen() {
           <div className="app-auth__footer">
             <p className="aura-row-flex" style={{ justifyContent: "center", gap: 6 }}>
               <LockIcon size={13} />
-              Accès privé · OTP obligatoire · session sécurisée
+              Accès privé · code de vérification · session sécurisée
             </p>
             <p style={{ marginTop: 6 }}>Hébergé sur Oracle Cloud · casarenous.martylab.fr</p>
           </div>

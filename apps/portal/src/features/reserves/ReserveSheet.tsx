@@ -80,7 +80,7 @@ export function ReserveSheet({
       await enqueueReserve(payload)
       notify({
         title: "Réserve mise en attente",
-        message: "Le serveur est injoignable : elle sera renvoyée automatiquement.",
+        message: "Tu es hors ligne : elle partira dès le retour du réseau.",
         tone: "warn",
       })
       onClose()

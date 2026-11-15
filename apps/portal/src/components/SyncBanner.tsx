@@ -17,7 +17,7 @@ export function SyncBanner() {
         {!online
           ? "Hors ligne — photos, notes et réserves sont conservées sur cet appareil."
           : errors > 0
-            ? `${errors} élément(s) refusé(s) par le serveur. Ouvre le journal pour corriger.`
+            ? `${errors} élément(s) n'ont pas pu être envoyés. Ouvre le journal pour voir pourquoi.`
             : `${pending} élément(s) en attente de synchronisation.`}
       </span>
       {online && pending > 0 ? (

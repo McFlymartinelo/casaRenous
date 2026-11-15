@@ -68,7 +68,7 @@ export function NoteSheet({
       await enqueueNote(payload)
       notify({
         title: "Note mise en attente",
-        message: "Le serveur est injoignable : elle sera renvoyée automatiquement.",
+        message: "Tu es hors ligne : elle partira dès le retour du réseau.",
         tone: "warn",
       })
       onClose()

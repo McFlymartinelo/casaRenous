@@ -109,7 +109,7 @@ export function PhotoSheet({
         await enqueuePhoto(blob, fields)
         notify({
           title: "Photo mise en attente",
-          message: "Le serveur est injoignable : elle sera renvoyée automatiquement.",
+          message: "Tu es hors ligne : elle partira dès le retour du réseau.",
           tone: "warn",
         })
         onClose()
@@ -126,7 +126,7 @@ export function PhotoSheet({
       open={open}
       onClose={onClose}
       title="Ajouter une photo"
-      description="Géolocalisée, compressée et stockée chiffrée côté serveur."
+      description="Le lieu et la date sont enregistrés avec la photo."
       footer={
         <Button block loading={busy} disabled={!blob} onClick={() => void submit()}>
           {online ? "Ajouter au journal" : "Conserver hors ligne"}

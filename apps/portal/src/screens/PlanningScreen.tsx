@@ -5,6 +5,7 @@ import { useAuth } from "@/auth/AuthProvider"
 import { CalendarIcon, PlusIcon } from "@/components/icons"
 import { CalendarSheet } from "@/features/milestones/CalendarSheet"
 import { MilestoneSheet } from "@/features/milestones/MilestoneSheet"
+import { RoleNotice } from "@/components/RoleNotice"
 import { useMilestones } from "@/hooks/useApi"
 import { countdown, formatDate, isWithinNextDays, quarterKey, todayIso } from "@/lib/dates"
 
@@ -124,6 +125,11 @@ export function PlanningScreen() {
         </div>
       </div>
 
+      <RoleNotice>
+        Le rétroplanning est tenu par l'admin. Tu peux l'abonner à ton agenda, et
+        signaler des réserves depuis l'onglet Chantier.
+      </RoleNotice>
+
       <div className="app-action-row">
         <Button
           block
@@ -131,7 +137,7 @@ export function PlanningScreen() {
           icon={isAdmin ? <PlusIcon size={18} /> : <CalendarIcon size={18} />}
           onClick={() => (isAdmin ? setCreating(true) : setCalendarOpen(true))}
         >
-          {isAdmin ? "Ajouter un jalon" : "Synchroniser l'agenda"}
+          {isAdmin ? "Ajouter un jalon" : "Abonner mon agenda"}
         </Button>
         {isAdmin ? (
           <Button
@@ -160,9 +166,17 @@ export function PlanningScreen() {
 
       {groups.length === 0 ? (
         <Card variant="soft">
-          <p className="aura-h3">Aucun jalon dans ce filtre</p>
+          <p className="aura-h3">
+            {totals.length === 0
+              ? "Le rétroplanning est vide"
+              : "Aucun jalon dans ce filtre"}
+          </p>
           <p className="app-small" style={{ marginTop: 4 }}>
-            Change de catégorie ou ajoute un jalon pour compléter le rétroplanning.
+            {totals.length === 0
+              ? isAdmin
+                ? "Ajoute les grandes étapes : dépôt du permis, démarrage du chantier, livraison."
+                : "L'admin n'a pas encore saisi les jalons du chantier."
+              : "Change de catégorie pour voir les autres jalons."}
           </p>
         </Card>
       ) : (

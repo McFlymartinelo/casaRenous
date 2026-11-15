@@ -74,10 +74,8 @@ function Field({
 
 function ExtractionView({
   extraction,
-  document,
 }: {
   extraction: InvoiceExtraction
-  document: Document
 }) {
   return (
     <div className="app-stack">
@@ -166,8 +164,8 @@ function ExtractionView({
       ) : null}
 
       <p className="app-tiny">
-        Lecture locale et déterministe ({document.originalName}) — aucun modèle externe, aucune
-        donnée envoyée hors du serveur. Vérifie les montants avant de créer un rappel.
+        Lecture faite sur place, sans envoyer le document à un service externe.
+        Vérifie les montants avant de créer un rappel.
       </p>
     </div>
   )
@@ -510,7 +508,7 @@ export function InvoiceAnalysisSheet({
           </Button>
         </div>
       ) : data && extraction ? (
-        <ExtractionView extraction={extraction} document={document} />
+        <ExtractionView extraction={extraction} />
       ) : (
         <div className="app-stack">
           <Card variant="soft">
