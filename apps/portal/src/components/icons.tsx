@@ -47,6 +47,16 @@ export function CubeIcon(props: IconProps) {
   )
 }
 
+export function SofaIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M5 11V8.5A1.5 1.5 0 0 1 6.5 7h11A1.5 1.5 0 0 1 19 8.5V11" />
+      <path d="M5 11a2 2 0 0 0-2 2v5h18v-5a2 2 0 0 0-4 0v1H7v-1a2 2 0 0 0-2-2Z" />
+      <path d="M7 18v2M17 18v2" />
+    </Icon>
+  )
+}
+
 export function CalendarIcon(props: IconProps) {
   return (
     <Icon {...props}>

@@ -5,6 +5,7 @@ import { Skeleton, ThemeProvider } from "@/aura/react"
 import { AuthProvider, useAuth } from "@/auth/AuthProvider"
 import { AuthScreen } from "@/auth/AuthScreen"
 import { AppShell } from "@/components/AppShell"
+import { AmenagementScreen } from "@/screens/AmenagementScreen"
 import { persistOptions, queryClient } from "@/lib/query-client"
 import { BudgetScreen } from "@/screens/BudgetScreen"
 import { ChantierScreen } from "@/screens/ChantierScreen"
@@ -38,6 +39,7 @@ function Gate() {
 
   return (
     <Routes>
+      <Route path="amenagement" element={<AmenagementScreen />} />
       <Route element={<AppShell />}>
         <Route index element={<PiazzaScreen />} />
         <Route path="3d" element={<ViewerScreen />} />

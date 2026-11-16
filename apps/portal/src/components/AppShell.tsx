@@ -17,6 +17,7 @@ import {
   FolderIcon,
   HomeIcon,
   SlidersIcon,
+  SofaIcon,
   WalletIcon,
 } from "@/components/icons"
 import { PasswordSheet, SettingsSheet } from "@/components/SettingsSheet"
@@ -27,6 +28,7 @@ import { SyncBanner } from "@/components/SyncBanner"
 
 const TABS: TabItem[] = [
   { id: "piazza", label: "Piazza", icon: <HomeIcon size={21} /> },
+  { id: "amenagement", label: "Aménager", icon: <SofaIcon size={21} /> },
   { id: "3d", label: "3D", icon: <CubeIcon size={21} /> },
   { id: "planning", label: "Planning", icon: <CalendarIcon size={21} /> },
   { id: "chantier", label: "Chantier", icon: <FolderIcon size={21} /> },
@@ -35,6 +37,7 @@ const TABS: TabItem[] = [
 
 const TAB_PATH: Record<string, string> = {
   piazza: "/",
+  amenagement: "/amenagement",
   "3d": "/3d",
   planning: "/planning",
   chantier: "/chantier",
@@ -47,6 +50,12 @@ const DESKTOP_NAV = [
     label: "La Piazza",
     description: "Tableau de bord",
     icon: <HomeIcon size={20} />,
+  },
+  {
+    id: "amenagement",
+    label: "Aménagement",
+    description: "Meubles à l'échelle réelle",
+    icon: <SofaIcon size={20} />,
   },
   {
     id: "3d",
@@ -78,6 +87,10 @@ const DEFAULT_META = { title: "La Piazza", subtitle: "Maison Sévin–Renous" }
 
 const SCREEN_META: Record<string, { title: string; subtitle: string }> = {
   "/": DEFAULT_META,
+  "/amenagement": {
+    title: "Aménagement",
+    subtitle: "Meubles et ambiances à l'échelle réelle",
+  },
   "/3d": { title: "3D & Plans", subtitle: "La maison, pièce par pièce" },
   "/planning": { title: "Rétroplanning", subtitle: "Livraison prévue en juin 2028" },
   "/chantier": { title: "Docs & Chantier", subtitle: "Preuves, photos et réserves" },
@@ -85,6 +98,7 @@ const SCREEN_META: Record<string, { title: string; subtitle: string }> = {
 }
 
 function tabForPath(pathname: string): string {
+  if (pathname.startsWith("/amenagement")) return "amenagement"
   if (pathname.startsWith("/3d")) return "3d"
   if (pathname.startsWith("/planning")) return "planning"
   if (pathname.startsWith("/chantier")) return "chantier"
@@ -107,6 +121,13 @@ export function AppShell() {
   function go(id: string) {
     const path = TAB_PATH[id] ?? "/"
     if (path === location.pathname) return
+    if (path === "/amenagement") {
+      try {
+        window.sessionStorage.setItem("casarenous:from", location.pathname)
+      } catch {
+        /* stockage indisponible */
+      }
+    }
     withViewTransition(() => navigate(path))
   }
 

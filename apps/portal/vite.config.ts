@@ -53,7 +53,7 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,svg,png,woff2,webmanifest}"],
         globIgnores: ["**/models/**"],
         navigateFallback: "/index.html",
-        navigateFallbackDenylist: [/^\/api\//, /^\/models\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/models\//, /^\/amenagement-app\//],
         cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         importScripts: ["push-sw.js"],
@@ -71,6 +71,30 @@ export default defineConfig({
               cacheableResponse: { statuses: [0, 200] },
             },
           },
+          {
+            urlPattern: ({ url, request }) =>
+              request.mode === "navigate" &&
+              (url.pathname === "/amenagement-app/" ||
+                url.pathname === "/amenagement-app/index.html"),
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "casarenous-amenagement-v1",
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 2, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: ({ url }) =>
+              url.pathname.startsWith("/amenagement-app/models/") ||
+              url.pathname.startsWith("/amenagement-app/textures/"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "casarenous-amenagement-assets-v1",
+              expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
         ],
       },
       devOptions: { enabled: false },
@@ -84,6 +108,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    strictPort: true,
     proxy: {
       "/api": {
         target: API_TARGET,
@@ -93,6 +118,7 @@ export default defineConfig({
   },
   preview: {
     port: 4173,
+    strictPort: true,
     proxy: {
       "/api": {
         target: API_TARGET,
