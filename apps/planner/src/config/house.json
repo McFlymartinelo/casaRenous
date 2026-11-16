@@ -1,0 +1,885 @@
+{
+  "meta": {
+    "name": "Maison Sévigné–Renous",
+    "version": "1.0.0",
+    "updatedAt": "2026-11-15",
+    "unit": "m",
+    "origin": "angle sud-ouest du RdC, façade avant à z = 0",
+    "axes": "x vers l'est, z vers le nord, y vers le haut"
+  },
+  "envelope": {
+    "width": 7.0,
+    "depth": 13.8,
+    "wallThickness": 0.38,
+    "ceilingHeight": 2.5,
+    "floorThickness": 0.22,
+    "roofPitch": 30,
+    "ridgeAxis": "z"
+  },
+  "materials": {
+    "plaster": {
+      "name": "Enduit chaux blanc cassé",
+      "color": "#e9e4da",
+      "roughness": 0.93,
+      "metalness": 0,
+      "texture": "plaster",
+      "textureScale": 1.6,
+      "bump": 0.012
+    },
+    "planWall": {
+      "name": "Trait de coupe",
+      "color": "#596057",
+      "roughness": 0.92,
+      "metalness": 0
+    },
+    "plasterWarm": {
+      "name": "Enduit argile",
+      "color": "#e3d9c9",
+      "roughness": 0.95,
+      "metalness": 0,
+      "texture": "plaster",
+      "textureScale": 1.4,
+      "bump": 0.014
+    },
+    "oakFloor": {
+      "name": "Chêne huilé",
+      "color": "#b98a58",
+      "roughness": 0.68,
+      "metalness": 0,
+      "texture": "wood",
+      "textureScale": 1.15,
+      "bump": 0.02
+    },
+    "oak": {
+      "name": "Chêne clair",
+      "color": "#a97a4e",
+      "roughness": 0.52,
+      "metalness": 0,
+      "texture": "wood",
+      "textureScale": 0.9,
+      "bump": 0.012
+    },
+    "walnut": {
+      "name": "Noyer",
+      "color": "#6f4b34",
+      "roughness": 0.48,
+      "metalness": 0,
+      "texture": "wood",
+      "textureScale": 0.8,
+      "bump": 0.014
+    },
+    "tile": {
+      "name": "Grès cérame sable",
+      "color": "#d8d2c7",
+      "roughness": 0.3,
+      "metalness": 0.02,
+      "texture": "tile",
+      "textureScale": 0.62,
+      "bump": 0.008,
+      "clearcoat": 0.18,
+      "clearcoatRoughness": 0.3
+    },
+    "tileDark": {
+      "name": "Grès anthracite",
+      "color": "#8d8d89",
+      "roughness": 0.38,
+      "metalness": 0.03,
+      "texture": "tile",
+      "textureScale": 0.62,
+      "bump": 0.008,
+      "clearcoat": 0.12
+    },
+    "stone": {
+      "name": "Pierre de Bourgogne",
+      "color": "#d6cbb9",
+      "roughness": 0.42,
+      "metalness": 0,
+      "texture": "stone",
+      "textureScale": 1.3,
+      "bump": 0.01
+    },
+    "worktop": {
+      "name": "Quartz minéral",
+      "color": "#ded9cf",
+      "roughness": 0.26,
+      "metalness": 0.05,
+      "texture": "stone",
+      "textureScale": 1.8,
+      "clearcoat": 0.25
+    },
+    "concrete": {
+      "name": "Béton ciré",
+      "color": "#92918c",
+      "roughness": 0.88,
+      "metalness": 0,
+      "texture": "concrete",
+      "textureScale": 1.8,
+      "bump": 0.012
+    },
+    "fabric": {
+      "name": "Tissu lin",
+      "color": "#c5b6a2",
+      "roughness": 0.92,
+      "metalness": 0,
+      "texture": "fabric",
+      "textureScale": 0.45,
+      "bump": 0.01,
+      "sheen": 0.35
+    },
+    "linen": {
+      "name": "Lin lavé",
+      "color": "#e6ddcf",
+      "roughness": 0.94,
+      "metalness": 0,
+      "texture": "fabric",
+      "textureScale": 0.5,
+      "bump": 0.008,
+      "sheen": 0.3
+    },
+    "metal": {
+      "name": "Acier brossé",
+      "color": "#b7b8b3",
+      "roughness": 0.3,
+      "metalness": 0.92
+    },
+    "blackMetal": {
+      "name": "Métal noir mat",
+      "color": "#252623",
+      "roughness": 0.44,
+      "metalness": 0.72
+    },
+    "brass": {
+      "name": "Laiton patiné",
+      "color": "#a9864f",
+      "roughness": 0.36,
+      "metalness": 0.9
+    },
+    "glass": {
+      "name": "Vitrage",
+      "color": "#d3e3e6",
+      "roughness": 0.05,
+      "metalness": 0.12,
+      "opacity": 0.26,
+      "transparent": true,
+      "side": "double",
+      "clearcoat": 1,
+      "clearcoatRoughness": 0.04
+    },
+    "glassFrosted": {
+      "name": "Verre dépoli",
+      "color": "#dce6e4",
+      "roughness": 0.35,
+      "metalness": 0.02,
+      "opacity": 0.42,
+      "transparent": true,
+      "side": "double"
+    },
+    "whitePaint": {
+      "name": "Peinture blanc mat",
+      "color": "#f2efe8",
+      "roughness": 0.62,
+      "metalness": 0
+    },
+    "doorPaint": {
+      "name": "Menuiserie blanc cassé",
+      "color": "#e7e3da",
+      "roughness": 0.55,
+      "metalness": 0
+    },
+    "entryDoor": {
+      "name": "Porte d'entrée anthracite",
+      "color": "#323430",
+      "roughness": 0.42,
+      "metalness": 0.18
+    },
+    "garageDoor": {
+      "name": "Porte de garage",
+      "color": "#d4d1c8",
+      "roughness": 0.58,
+      "metalness": 0.08
+    },
+    "screen": {
+      "name": "Écran",
+      "color": "#0b0d0c",
+      "roughness": 0.16,
+      "metalness": 0.35,
+      "clearcoat": 0.8
+    },
+    "roofTile": {
+      "name": "Tuile terre cuite",
+      "color": "#8e4d38",
+      "roughness": 0.74,
+      "metalness": 0,
+      "texture": "tile",
+      "textureScale": 0.34,
+      "bump": 0.018
+    },
+    "ridge": {
+      "name": "Faîtière",
+      "color": "#77412f",
+      "roughness": 0.72,
+      "metalness": 0
+    },
+    "zinc": {
+      "name": "Zinc",
+      "color": "#868a86",
+      "roughness": 0.4,
+      "metalness": 0.75
+    },
+    "deck": {
+      "name": "Terrasse bois",
+      "color": "#8e6842",
+      "roughness": 0.66,
+      "metalness": 0,
+      "texture": "wood",
+      "textureScale": 0.7,
+      "bump": 0.014
+    },
+    "grass": {
+      "name": "Pelouse",
+      "color": "#7d8c62",
+      "roughness": 1,
+      "metalness": 0,
+      "texture": "grass",
+      "textureScale": 1.3,
+      "bump": 0.025
+    },
+    "asphalt": {
+      "name": "Enrobé",
+      "color": "#5d5e5a",
+      "roughness": 0.92,
+      "metalness": 0,
+      "texture": "concrete",
+      "textureScale": 2.2,
+      "bump": 0.008
+    },
+    "hedge": {
+      "name": "Haie",
+      "color": "#4f6549",
+      "roughness": 0.95,
+      "metalness": 0
+    },
+    "trunk": {
+      "name": "Tronc",
+      "color": "#5e4a36",
+      "roughness": 0.9,
+      "metalness": 0
+    }
+  },
+  "levels": [
+    {
+      "id": "rdc",
+      "name": "Rez-de-chaussée",
+      "shortName": "RdC",
+      "elevation": 0,
+      "ceilingHeight": 2.5,
+      "slabThickness": 0.22,
+      "floorMaterial": "oakFloor"
+    },
+    {
+      "id": "etage",
+      "name": "Étage",
+      "shortName": "Étage",
+      "elevation": 2.72,
+      "ceilingHeight": 2.5,
+      "slabThickness": 0.22,
+      "floorMaterial": "oakFloor",
+      "floorRects": [
+        [0.38, 0.38, 3.92, 13.42],
+        [3.92, 0.38, 6.62, 7.35],
+        [3.92, 8.1, 6.62, 13.42]
+      ],
+      "provisional": true
+    }
+  ],
+  "rooms": [
+    {
+      "id": "cuisine",
+      "name": "Cuisine ouverte",
+      "level": "rdc",
+      "rect": [0.38, 5.5, 3.84, 6.95],
+      "floor": "oakFloor",
+      "labelAt": [2.0, 6.18],
+      "program": "Cuisine"
+    },
+    {
+      "id": "sejour-ouest",
+      "name": "Séjour",
+      "level": "rdc",
+      "rect": [0.38, 6.95, 3.84, 13.42],
+      "floor": "oakFloor",
+      "labelAt": [2.0, 11.6],
+      "program": "Séjour"
+    },
+    {
+      "id": "sejour-est",
+      "name": "Séjour",
+      "level": "rdc",
+      "rect": [3.84, 9.27, 6.62, 13.42],
+      "floor": "oakFloor",
+      "labelAt": [5.4, 11.6],
+      "program": "Séjour"
+    },
+    {
+      "id": "entree",
+      "name": "Entrée",
+      "level": "rdc",
+      "rect": [4.62, 8.1, 6.62, 9.19],
+      "floor": "tile",
+      "labelAt": [5.62, 8.62],
+      "program": "Entrée"
+    },
+    {
+      "id": "escalier",
+      "name": "Escalier",
+      "level": "rdc",
+      "rect": [3.92, 7.2, 6.62, 8.1],
+      "floor": "oakFloor",
+      "labelAt": [5.2, 7.65],
+      "program": "Circulation"
+    },
+    {
+      "id": "cellier",
+      "name": "Cellier",
+      "level": "rdc",
+      "rect": [3.92, 5.52, 6.62, 7.12],
+      "floor": "tile",
+      "labelAt": [5.25, 6.32],
+      "program": "Cellier"
+    },
+    {
+      "id": "garage",
+      "name": "Garage",
+      "level": "rdc",
+      "rect": [3.98, 0.38, 6.62, 5.37],
+      "floor": "concrete",
+      "labelAt": [5.3, 2.9],
+      "program": "Garage"
+    },
+    {
+      "id": "degagement",
+      "name": "Dégagement",
+      "level": "rdc",
+      "rect": [2.95, 3.34, 3.84, 5.5],
+      "floor": "oakFloor",
+      "labelAt": [3.4, 4.5],
+      "program": "Circulation"
+    },
+    {
+      "id": "wc",
+      "name": "WC",
+      "level": "rdc",
+      "rect": [2.09, 3.34, 2.87, 4.77],
+      "floor": "tile",
+      "labelAt": [2.48, 4.05],
+      "program": "WC"
+    },
+    {
+      "id": "sde",
+      "name": "Salle d'eau",
+      "level": "rdc",
+      "rect": [0.38, 3.34, 2.01, 4.77],
+      "floor": "tile",
+      "labelAt": [1.2, 4.05],
+      "program": "Salle d'eau"
+    },
+    {
+      "id": "chambre1",
+      "name": "Chambre 1",
+      "level": "rdc",
+      "rect": [0.38, 0.38, 3.84, 3.26],
+      "floor": "oakFloor",
+      "labelAt": [2.1, 1.82],
+      "program": "Chambre"
+    },
+    {
+      "id": "chambre-parentale",
+      "name": "Chambre parentale",
+      "level": "etage",
+      "rect": [0.38, 10.1, 4.3, 13.42],
+      "floor": "oakFloor",
+      "labelAt": [2.3, 11.8],
+      "program": "Chambre",
+      "provisional": true
+    },
+    {
+      "id": "dressing",
+      "name": "Dressing",
+      "level": "etage",
+      "rect": [4.53, 10.1, 6.62, 11.89],
+      "floor": "oakFloor",
+      "labelAt": [5.58, 11.0],
+      "program": "Dressing",
+      "provisional": true
+    },
+    {
+      "id": "sde-etage",
+      "name": "Salle d'eau",
+      "level": "etage",
+      "rect": [4.53, 11.99, 6.62, 13.42],
+      "floor": "tile",
+      "labelAt": [5.58, 12.7],
+      "program": "Salle d'eau",
+      "provisional": true
+    },
+    {
+      "id": "degagement-etage",
+      "name": "Dégagement",
+      "level": "etage",
+      "rect": [2.95, 7.35, 4.75, 10.0],
+      "floor": "oakFloor",
+      "labelAt": [3.75, 8.7],
+      "program": "Circulation",
+      "provisional": true
+    },
+    {
+      "id": "chambre4",
+      "name": "Chambre 4",
+      "level": "etage",
+      "rect": [0.38, 4.75, 3.9, 7.25],
+      "floor": "oakFloor",
+      "labelAt": [1.9, 6.0],
+      "program": "Chambre",
+      "provisional": true
+    },
+    {
+      "id": "chambre3",
+      "name": "Chambre 3",
+      "level": "etage",
+      "rect": [0.38, 0.38, 3.9, 4.65],
+      "floor": "oakFloor",
+      "labelAt": [1.9, 2.3],
+      "program": "Chambre",
+      "provisional": true
+    },
+    {
+      "id": "chambre2",
+      "name": "Chambre 2",
+      "level": "etage",
+      "rect": [4.85, 0.38, 6.62, 4.65],
+      "floor": "oakFloor",
+      "labelAt": [5.65, 2.3],
+      "program": "Chambre",
+      "provisional": true
+    },
+    {
+      "id": "sdb-etage",
+      "name": "Salle de bain",
+      "level": "etage",
+      "rect": [4.85, 4.75, 6.62, 7.25],
+      "floor": "tile",
+      "labelAt": [5.65, 6.0],
+      "program": "Salle de bain",
+      "provisional": true
+    },
+    {
+      "id": "wc-etage",
+      "name": "WC",
+      "level": "etage",
+      "rect": [4.3, 5.7, 4.75, 7.25],
+      "floor": "tile",
+      "labelAt": [4.52, 6.45],
+      "program": "WC",
+      "provisional": true
+    }
+  ],
+  "walls": [
+    {
+      "id": "ext-sud",
+      "level": "rdc",
+      "from": [0, 0.19],
+      "to": [7, 0.19],
+      "thickness": 0.38,
+      "material": "plaster",
+      "exterior": true,
+      "baseboard": "auto",
+      "openings": [
+        { "from": 0.9, "to": 2.3, "sill": 1.1, "top": 2.15, "type": "window", "divisions": 2 },
+        { "from": 4.2, "to": 6.6, "sill": 0, "top": 2.0, "type": "garage" }
+      ]
+    },
+    {
+      "id": "ext-nord",
+      "level": "rdc",
+      "from": [0, 13.61],
+      "to": [7, 13.61],
+      "thickness": 0.38,
+      "material": "plaster",
+      "exterior": true,
+      "baseboard": "auto",
+      "openings": [
+        { "from": 1.75, "to": 5.25, "sill": 0, "top": 2.15, "type": "bay", "divisions": 3 }
+      ]
+    },
+    {
+      "id": "ext-ouest",
+      "level": "rdc",
+      "from": [0.19, 0.38],
+      "to": [0.19, 13.42],
+      "thickness": 0.38,
+      "material": "plaster",
+      "exterior": true,
+      "baseboard": "auto",
+      "openings": [
+        { "from": 3.45, "to": 4.05, "sill": 1.1, "top": 2.15, "type": "window", "divisions": 1 },
+        { "from": 5.55, "to": 6.95, "sill": 1.1, "top": 2.15, "type": "window", "divisions": 2 },
+        { "from": 10.7, "to": 12.5, "sill": 0, "top": 2.15, "type": "bay", "divisions": 2 }
+      ]
+    },
+    {
+      "id": "ext-est",
+      "level": "rdc",
+      "from": [6.81, 0.38],
+      "to": [6.81, 13.42],
+      "thickness": 0.38,
+      "material": "plaster",
+      "exterior": true,
+      "baseboard": "auto",
+      "openings": [
+        { "from": 5.63, "to": 6.23, "sill": 1.1, "top": 2.15, "type": "window", "divisions": 1 },
+        { "from": 8.2, "to": 9.1, "sill": 0, "top": 2.15, "type": "door", "divisions": 1 },
+        { "from": 10.7, "to": 12.5, "sill": 0, "top": 2.15, "type": "bay", "divisions": 2 }
+      ]
+    },
+    {
+      "id": "garage-ouest",
+      "level": "rdc",
+      "from": [3.91, 0.38],
+      "to": [3.91, 5.52],
+      "thickness": 0.14,
+      "material": "plaster",
+      "baseboard": "both",
+      "openings": [
+        { "from": 4.32, "to": 5.05, "sill": 0, "top": 2.04, "type": "door", "hinge": "end", "swing": -1 }
+      ]
+    },
+    {
+      "id": "garage-nord",
+      "level": "rdc",
+      "from": [3.98, 5.445],
+      "to": [6.62, 5.445],
+      "thickness": 0.15,
+      "material": "plaster",
+      "baseboard": "none"
+    },
+    {
+      "id": "cellier-ouest",
+      "level": "rdc",
+      "from": [3.88, 5.52],
+      "to": [3.88, 7.2],
+      "thickness": 0.08,
+      "material": "plaster",
+      "baseboard": "both",
+      "openings": [
+        { "from": 5.58, "to": 6.38, "sill": 0, "top": 2.04, "type": "door", "hinge": "start", "swing": -1 }
+      ]
+    },
+    {
+      "id": "cellier-nord",
+      "level": "rdc",
+      "from": [3.92, 7.16],
+      "to": [6.62, 7.16],
+      "thickness": 0.08,
+      "material": "plaster",
+      "baseboard": "both"
+    },
+    {
+      "id": "escalier-ouest",
+      "level": "rdc",
+      "from": [3.88, 7.2],
+      "to": [3.88, 8.1],
+      "thickness": 0.08,
+      "material": "plaster",
+      "baseboard": "both"
+    },
+    {
+      "id": "placard-facade",
+      "level": "rdc",
+      "from": [3.92, 8.08],
+      "to": [4.9, 8.08],
+      "thickness": 0.04,
+      "material": "doorPaint",
+      "baseboard": "none",
+      "openings": [
+        { "from": 4.05, "to": 4.78, "sill": 0, "top": 2.04, "type": "door", "hinge": "start", "swing": 1 }
+      ]
+    },
+    {
+      "id": "entree-nord",
+      "level": "rdc",
+      "from": [4.62, 9.23],
+      "to": [6.62, 9.23],
+      "thickness": 0.08,
+      "material": "plaster",
+      "baseboard": "both"
+    },
+    {
+      "id": "sde-nord",
+      "level": "rdc",
+      "from": [0.38, 4.81],
+      "to": [2.95, 4.81],
+      "thickness": 0.08,
+      "material": "plaster",
+      "baseboard": "both"
+    },
+    {
+      "id": "sde-wc",
+      "level": "rdc",
+      "from": [2.05, 3.34],
+      "to": [2.05, 4.77],
+      "thickness": 0.08,
+      "material": "plaster",
+      "baseboard": "both"
+    },
+    {
+      "id": "chambre-nord",
+      "level": "rdc",
+      "from": [0.38, 3.3],
+      "to": [3.84, 3.3],
+      "thickness": 0.08,
+      "material": "plaster",
+      "baseboard": "both",
+      "openings": [
+        { "from": 0.45, "to": 1.26, "sill": 0, "top": 2.04, "type": "door", "hinge": "start", "swing": -1 },
+        { "from": 3.04, "to": 3.84, "sill": 0, "top": 2.04, "type": "door", "hinge": "end", "swing": 1 }
+      ]
+    },
+    {
+      "id": "wc-est",
+      "level": "rdc",
+      "from": [2.91, 3.34],
+      "to": [2.91, 5.5],
+      "thickness": 0.08,
+      "material": "plaster",
+      "baseboard": "both",
+      "openings": [
+        { "from": 3.4, "to": 4.18, "sill": 0, "top": 2.04, "type": "door", "hinge": "start", "swing": -1 }
+      ]
+    },
+    {
+      "id": "poteau-entree",
+      "level": "rdc",
+      "from": [4.755, 9.21],
+      "to": [4.755, 9.48],
+      "thickness": 0.26,
+      "material": "walnut",
+      "baseboard": "none"
+    },
+    {
+      "id": "up-ext-sud",
+      "level": "etage",
+      "from": [0, 0.19],
+      "to": [7, 0.19],
+      "thickness": 0.38,
+      "height": 2.5,
+      "material": "plaster",
+      "exterior": true,
+      "baseboard": "auto",
+      "openings": [
+        { "from": 1.0, "to": 2.2, "sill": 1.2, "top": 2.15, "type": "window", "divisions": 1 },
+        { "from": 4.9, "to": 6.1, "sill": 1.2, "top": 2.15, "type": "window", "divisions": 1 }
+      ]
+    },
+    {
+      "id": "up-ext-nord",
+      "level": "etage",
+      "from": [0, 13.61],
+      "to": [7, 13.61],
+      "thickness": 0.38,
+      "height": 2.5,
+      "material": "plaster",
+      "exterior": true,
+      "baseboard": "auto",
+      "openings": [
+        { "from": 1.8, "to": 3.0, "sill": 1.2, "top": 2.15, "type": "window", "divisions": 1 },
+        { "from": 4.7, "to": 5.3, "sill": 1.2, "top": 2.15, "type": "window", "divisions": 1 }
+      ]
+    },
+    {
+      "id": "up-ext-ouest",
+      "level": "etage",
+      "from": [0.19, 0.38],
+      "to": [0.19, 13.42],
+      "thickness": 0.38,
+      "height": 2.5,
+      "material": "plaster",
+      "exterior": true,
+      "baseboard": "auto",
+      "openings": [
+        { "from": 5.5, "to": 6.7, "sill": 1.2, "top": 2.15, "type": "window", "divisions": 1 }
+      ]
+    },
+    {
+      "id": "up-ext-est",
+      "level": "etage",
+      "from": [6.81, 0.38],
+      "to": [6.81, 13.42],
+      "thickness": 0.38,
+      "height": 2.5,
+      "material": "plaster",
+      "exterior": true,
+      "baseboard": "auto",
+      "openings": [
+        { "from": 5.59, "to": 6.19, "sill": 1.2, "top": 2.15, "type": "window", "divisions": 1 }
+      ]
+    },
+    {
+      "id": "up-chambres-milieu",
+      "level": "etage",
+      "from": [0.38, 4.7],
+      "to": [6.62, 4.7],
+      "thickness": 0.1,
+      "material": "plaster",
+      "baseboard": "both",
+      "openings": [
+        { "from": 1.9, "to": 2.73, "sill": 0, "top": 2.04, "type": "door", "hinge": "start", "swing": -1 },
+        { "from": 3.72, "to": 4.55, "sill": 0, "top": 2.04, "type": "door", "hinge": "end", "swing": 1 }
+      ]
+    },
+    {
+      "id": "up-chambre3-est",
+      "level": "etage",
+      "from": [3.545, 0.38],
+      "to": [3.545, 4.65],
+      "thickness": 0.23,
+      "material": "plaster",
+      "baseboard": "both"
+    },
+    {
+      "id": "up-degagement-ouest",
+      "level": "etage",
+      "from": [2.875, 4.75],
+      "to": [2.875, 10.0],
+      "thickness": 0.15,
+      "material": "plaster",
+      "baseboard": "both",
+      "openings": [
+        { "from": 5.0, "to": 5.83, "sill": 0, "top": 2.04, "type": "door", "hinge": "start", "swing": -1 }
+      ]
+    },
+    {
+      "id": "up-degagement-nord",
+      "level": "etage",
+      "from": [0.38, 10.05],
+      "to": [6.62, 10.05],
+      "thickness": 0.1,
+      "material": "plaster",
+      "baseboard": "both",
+      "openings": [
+        { "from": 3.0, "to": 3.83, "sill": 0, "top": 2.04, "type": "door", "hinge": "end", "swing": -1 }
+      ]
+    },
+    {
+      "id": "up-parentale-est",
+      "level": "etage",
+      "from": [4.415, 10.1],
+      "to": [4.415, 13.42],
+      "thickness": 0.23,
+      "material": "plaster",
+      "baseboard": "both",
+      "openings": [
+        { "from": 10.4, "to": 11.23, "sill": 0, "top": 2.04, "type": "door", "hinge": "start", "swing": 1 },
+        { "from": 12.3, "to": 13.13, "sill": 0, "top": 2.04, "type": "door", "hinge": "end", "swing": -1 }
+      ]
+    },
+    {
+      "id": "up-dressing-sde",
+      "level": "etage",
+      "from": [4.53, 11.94],
+      "to": [6.62, 11.94],
+      "thickness": 0.1,
+      "material": "plaster",
+      "baseboard": "both"
+    },
+    {
+      "id": "up-sdb-ouest",
+      "level": "etage",
+      "from": [3.95, 5.6],
+      "to": [3.95, 7.35],
+      "thickness": 0.1,
+      "material": "plaster",
+      "baseboard": "both",
+      "openings": [
+        { "from": 6.0, "to": 6.83, "sill": 0, "top": 2.04, "type": "door", "hinge": "start", "swing": 1 }
+      ]
+    },
+    {
+      "id": "up-wc-nord",
+      "level": "etage",
+      "from": [3.9, 5.65],
+      "to": [4.85, 5.65],
+      "thickness": 0.1,
+      "material": "plaster",
+      "baseboard": "both"
+    },
+    {
+      "id": "up-wc-est",
+      "level": "etage",
+      "from": [4.8, 4.75],
+      "to": [4.8, 7.35],
+      "thickness": 0.1,
+      "material": "plaster",
+      "baseboard": "both",
+      "openings": [
+        { "from": 4.8, "to": 5.55, "sill": 0, "top": 2.04, "type": "door", "hinge": "end", "swing": -1 }
+      ]
+    },
+    {
+      "id": "up-sdb-nord",
+      "level": "etage",
+      "from": [3.9, 7.3],
+      "to": [6.62, 7.3],
+      "thickness": 0.1,
+      "material": "plaster",
+      "baseboard": "both"
+    }
+  ],
+  "stairs": {
+    "level": "rdc",
+    "rect": [3.92, 7.2, 6.62, 8.1],
+    "steps": 13,
+    "material": "concrete",
+    "treadMaterial": "oak",
+    "riserMaterial": "whitePaint",
+    "railing": true
+  },
+  "roof": {
+    "pitch": 30,
+    "overhangSide": 0.4,
+    "overhangGable": 0.2,
+    "thickness": 0.14,
+    "material": "roofTile",
+    "ridgeMaterial": "ridge",
+    "gutterMaterial": "zinc"
+  },
+  "site": {
+    "grass": "grass",
+    "terrace": { "rect": [3.1, 13.8, 7.4, 16.8], "material": "deck" },
+    "driveway": { "rect": [3.55, -5.6, 7.35, 0.25], "material": "asphalt" },
+    "path": { "rect": [0.1, -4.2, 2.2, 0.25], "material": "stone" },
+    "trees": [
+      { "at": [10.2, 12.4], "height": 3.8, "radius": 1.2 },
+      { "at": [-5.8, 12.0], "height": 4.4, "radius": 1.35 },
+      { "at": [10.6, 2.2], "height": 3.2, "radius": 1.0 }
+    ]
+  },
+  "ambience": {
+    "hour": 16,
+    "latitude": 47.2,
+    "dayOfYear": 172,
+    "exposure": 0.94,
+    "softShadows": true,
+    "textures": true,
+    "ambientOcclusion": true,
+    "details": true,
+    "cutaway": true,
+    "roof": false,
+    "grid": false
+  },
+  "camera": {
+    "position": [11.8, 9.4, 4.4],
+    "target": [3.45, 0.9, -6.7],
+    "fov": 38,
+    "planZoom": 46
+  }
+}

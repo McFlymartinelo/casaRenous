@@ -22,6 +22,7 @@ Stack : **React 19 + Vite + Aura**, **Express + Drizzle + PostgreSQL 17**,
 casaRenous/
 ├─ apps/
 │  ├─ backend/              API Express, Drizzle, auth OTP, uploads, push
+│  ├─ planner/              planificateur d'aménagement 3D statique (Vite + R3F)
 │  └─ portal/               PWA React sous Aura, nginx, 3D, offline
 ├─ packages/shared/         source unique des schémas Zod et des types
 ├─ scripts/                 invariants Aura, génération
@@ -125,6 +126,33 @@ npm run dev
 - Portail : `http://localhost:5173`
 - API : `http://localhost:3000/api/health`
 - Le proxy Vite redirige `/api` vers le backend.
+
+### Planificateur d'aménagement 3D
+
+Application **100 % front**, indépendante du backend, pour poser et déplacer
+les meubles à l'échelle réelle. Elle est accessible dans le carnet via
+**Aménagement**, entre **Piazza** et **3D** : la page `/amenagement` ouvre un
+workspace plein écran, avec un lien de retour vers le carnet.
+
+`npm run dev` démarre désormais le portail et le planificateur ensemble. Pour
+le lancer seul :
+
+```bash
+# depuis la racine du dépôt (après npm install)
+npm run dev:planner
+
+# ou depuis le dossier de l'app
+cd apps/planner
+npm install
+npm run dev
+```
+
+- Planificateur autonome : `http://localhost:5180`
+- Page intégrée : `http://localhost:5173/amenagement`
+- Build statique autonome : `npm run build:planner` → `apps/planner/dist`
+- Build intégré : `npm run build` (copie aussi le planificateur dans le portail)
+- Documentation complète (cotes, catalogue, GLB, textures, export, intégration) :
+  [`apps/planner/README.md`](apps/planner/README.md)
 
 ### Variante : backend dans Docker + Vite sur l'hôte
 

@@ -11,12 +11,15 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "npm run build -w @casarenous/shared && concurrently -n shared,api,web -c cyan,green,magenta \"npm:dev:shared\" \"npm:dev:backend\" \"npm:dev:portal\"",
+    "dev": "npm run build -w @casarenous/shared && concurrently -n shared,api,web,planner -c cyan,green,magenta,yellow \"npm:dev:shared\" \"npm:dev:backend\" \"npm:dev:portal\" \"npm:dev:planner\"",
     "dev:shared": "npm run dev -w @casarenous/shared",
     "dev:backend": "npm run dev -w @casarenous/backend",
     "dev:portal": "npm run dev -w @casarenous/portal",
-    "build": "npm run build -w @casarenous/shared && npm run build -w @casarenous/backend && npm run build -w @casarenous/portal",
-    "typecheck": "npm run build -w @casarenous/shared && npm run typecheck -w @casarenous/backend && npm run typecheck -w @casarenous/portal",
+    "dev:planner": "npm run dev -w @casarenous/planner",
+    "build:planner": "npm run build -w @casarenous/planner",
+    "build:planner:embed": "npm run build:embed -w @casarenous/planner",
+    "build": "npm run build -w @casarenous/shared && npm run build -w @casarenous/backend && npm run build:embed -w @casarenous/planner && npm run build -w @casarenous/portal",
+    "typecheck": "npm run build -w @casarenous/shared && npm run typecheck -w @casarenous/backend && npm run typecheck -w @casarenous/planner && npm run typecheck -w @casarenous/portal",
     "lint": "eslint .",
     "lint:aura": "node scripts/check-invariants.mjs",
     "test": "npm run test -w @casarenous/shared && npm run test -w @casarenous/backend && npm run test -w @casarenous/portal",

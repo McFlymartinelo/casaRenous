@@ -1,0 +1,709 @@
+# Maison · Planificateur d'aménagement 3D
+
+Application web **100 % front** pour aménager la maison à l'échelle réelle :
+poser, déplacer, pivoter et mesurer des meubles, puis visualiser le résultat
+dans une scène 3D éclairée par le soleil, en plan 2D ou en visite à la première
+personne.
+
+Le projet est volontairement séparé du portail CasaRenous : aucun backend, aucune
+base de données, aucun identifiant. Il se déploie comme un site statique.
+
+![Aperçu du planificateur](docs/preview.png)
+
+---
+
+## 1. Démarrage
+
+### Depuis le dépôt
+
+```bash
+npm install
+npm run dev:planner
+```
+
+→ <http://localhost:5180>
+
+### Depuis le dossier de l'application
+
+C'est le mode « projet autonome » : `apps/planner` a son propre `package.json`.
+
+```bash
+cd apps/planner
+npm install
+npm run dev
+```
+
+### Build de production
+
+```bash
+npm run build:planner
+# ou
+cd apps/planner && npm run build
+```
+
+Le résultat est dans `apps/planner/dist`. Le `base` Vite vaut `./` : le dossier
+fonctionne à la racine d'un domaine **ou** dans un sous-dossier statique. Les GLB
+sont copiés depuis `public/models`.
+
+### Vérifications
+
+```bash
+npm run typecheck -w @casarenous/planner
+```
+
+### Intégration au carnet CasaRenous
+
+Le portail expose une entrée **Aménagement** dans la navigation, entre
+**Piazza** et **3D**. La page `/amenagement` ouvre le planificateur en
+**workspace plein écran** : le portail reste la porte d'entrée, puis le
+planificateur affiche son propre en-tête avec un lien **Retour** vers le carnet.
+
+L'intégration utilise un **iframe isolé** pour deux raisons :
+
+- le CSS, le canvas WebGL et les raccourcis clavier du planificateur ne
+  perturbent pas la PWA Aura ;
+- le planificateur reste une application statique autonome, réutilisable telle
+  quelle.
+
+En développement, le portail charge `http://<hôte>:5180/`. Le script racine
+`npm run dev` démarre le portail **et** le planificateur. Pour lancer les deux
+séparément :
+
+```bash
+npm run dev:portal
+npm run dev:planner
+```
+
+Les ports de développement sont **stricts** (5173 pour le portail, 5180 pour le
+planificateur) pour éviter qu'un serveur bascule silencieusement sur 5181 et que
+l'iframe pointe vers une mauvaise instance. Si un port est déjà occupé, arrêtez
+l'ancien serveur (ou utilisez `VITE_PLANNER_URL`).
+
+En production, `npm run build` compile le planificateur avec le base
+`/amenagement-app/` et le copie dans `apps/portal/public/amenagement-app` avant
+le build du portail. Nginx sert ce sous-dossier avec des en-têtes autorisant le
+cadre de même origine. Le Dockerfile du portail fait la même opération.
+
+Variables utiles :
+
+```bash
+# forcer une autre URL de planificateur (dev ou déploiement séparé)
+VITE_PLANNER_URL=http://localhost:5180/
+```
+
+---
+
+## 2. Stack
+
+- **React 19 + Vite 7 + TypeScript**
+- **Tailwind CSS 4** (via `@tailwindcss/vite`) et design system CSS dans
+  `src/index.css`
+- **@react-three/fiber 9 + @react-three/drei**
+- **Three.js 0.177**
+- **zustand** pour l'état, `persist` pour `localStorage`
+- **Polices** Inter Variable et Fraunces Variable (OFL, via `@fontsource`)
+
+Post-traitement : `SSAOPass` + `OutputPass` de Three.js, avec **tone mapping AgX**
+et exposition réglable. Les ombres douces utilisent `SoftShadows` (PCSS) de drei.
+
+---
+
+## 3. Vue d'ensemble des fichiers
+
+```text
+apps/planner/
+├─ public/
+│  ├─ favicon.svg
+│  └─ models/
+│     └─ vase-sculptural.glb      # modèle GLB de démonstration (généré)
+├─ scripts/
+│  └─ generate-demo-glb.mjs       # régénère le GLB de démonstration
+├─ src/
+│  ├─ App.tsx                     # layout 3 colonnes, raccourcis, autosave
+│  ├─ index.css                   # tokens, panneaux, toolbar, responsive
+│  ├─ config/
+│  │  ├─ house.json               # TOUTES les cotes de la maison
+│  │  └─ example.ts               # aménagement d'exemple
+│  ├─ types.ts                    # types de la config, du catalogue, des meubles
+│  ├─ catalog/catalog.ts          # catalogue et variantes de matières
+│  ├─ store/planner.ts            # meubles, historique, ambiance, persistance
+│  ├─ lib/
+│  │  ├─ sun.ts                   # position du soleil selon l'heure
+│  │  ├─ textures.ts              # textures PBR procédurales (canvas)
+│  │  ├─ placement.ts             # grille 5 cm, collisions, accroche murs
+│  │  └─ place.ts                 # helpers de placement liés au store
+│  ├─ components/                 # TopBar, catalogue, inspecteur, toolbar, HUD
+│  └─ scene/
+│     ├─ HouseScene.tsx           # composition de la scène
+│     ├─ Walls.tsx                # murs, ouvertures, portes, plinthes, coupe
+│     ├─ Floors.tsx               # sols, dalles, seuils, plafond de visite
+│     ├─ Lighting.tsx             # soleil, ciel, IBL, lampes
+│     ├─ Effects.tsx              # SSAO + tone mapping
+│     ├─ Roof.tsx / Stairs.tsx / Site.tsx
+│     ├─ Furniture.tsx            # placement, drag, sélection, mesure
+│     └─ furniture/
+│        ├─ models.tsx            # meubles paramétriques + branche GLB
+│        └─ palette.ts            # matières PBR des variantes
+```
+
+---
+
+## 4. Modifier les cotes de la maison
+
+### 4.1 Fichier unique
+
+Tout est dans **`src/config/house.json`**. Aucune cote de la maison n'est en dur
+dans les composants. Après modification, rechargez la page : Vite fait le HMR.
+
+Le fichier est découpé en :
+
+| Section | Rôle |
+| --- | --- |
+| `meta` | nom, version, unité, repère |
+| `envelope` | emprise, épaisseur des murs, hauteur, plancher, pente de toit |
+| `materials` | matières PBR de l'architecture (couleur, rugosité, textures) |
+| `levels` | RdC et étage : altitude, hauteur, dalle, sol |
+| `rooms` | rectangles de pièces, sol, libellé, surface |
+| `walls` | murs, épaisseurs, hauteurs et ouvertures |
+| `stairs`, `roof`, `site` | escalier, toiture, extérieurs |
+| `ambience` | heure, exposition, options de rendu |
+| `camera` | caméra 3D initiale (coordonnées three) |
+
+### 4.2 Repère
+
+- `walls`, `rooms`, `stairs`, `site` utilisent le **repère du plan** :
+  `x` vers l'est, `y` vers le nord, origine en bas à gauche du RdC, façade avant
+  à `y = 0`.
+- À l'écran, le plan est affiché avec le nord en haut et l'est à droite.
+- Three.js utilise `y` pour la hauteur et `z` vers le sud : la conversion
+  `z_three = -y_plan` est faite au rendu (`worldZ`, `wallRenderTransform`).
+- La section `camera` est l'exception : elle est directement en coordonnées
+  three (x est, y haut, z sud), car c'est une caméra et non une cote de plan.
+
+### 4.3 Murs et ouvertures
+
+Un mur est un segment de centreline, avec une épaisseur et une hauteur :
+
+```json
+{
+  "id": "ext-sud",
+  "level": "rdc",
+  "from": [0, 0.19],
+  "to": [7, 0.19],
+  "thickness": 0.38,
+  "material": "plaster",
+  "exterior": true,
+  "baseboard": "auto",
+  "openings": [
+    { "from": 0.9, "to": 2.3, "sill": 1.10, "top": 2.15, "type": "window", "divisions": 2 },
+    { "from": 4.2, "to": 6.6, "sill": 0, "top": 2.0, "type": "garage" }
+  ]
+}
+```
+
+- `from` / `to` du mur : points du plan. Un mur horizontal court selon `x`, un
+  mur vertical court selon `y`.
+- `from` / `to` d'une ouverture : **coordonnées absolues le long de l'axe du
+  mur** (x pour un mur est-ouest, y pour un mur nord-sud). Elles doivent être
+  comprises entre les extrémités du mur.
+- `sill` : allège, en mètres au-dessus du sol du niveau.
+- `top` : hauteur du haut de l'ouverture.
+- `type` : `window`, `door`, `garage`, `bay` ou `passage`.
+- `divisions` : nombre de vantaux/travées vitrées.
+- `hinge` / `swing` : sens d'ouverture des portes intérieures.
+- `baseboard` : `auto` (côté intérieur), `both`, `none`.
+- `exterior` : active la coupe et l'accroche de façade.
+
+Les murs sont découpés en segments autour des ouvertures (pas de CSG) :
+
+- montants latéraux ;
+- allège sous la fenêtre ;
+- linteau au-dessus ;
+- cadre, vitrage, appui intérieur et extérieur ;
+- porte intérieure avec chambranle et vantail ouvrant ;
+- porte d'entrée pleine ;
+- porte de garage sectionnelle avec rainures ;
+- plinthes et seuils.
+
+Pour ajouter un mur, dupliquez un bloc et changez `id`, `from`, `to`,
+`thickness` et `material`. Pour ajouter une ouverture, ajoutez un élément dans
+`openings`.
+
+### 4.4 Pièces et sols
+
+```json
+{
+  "id": "sejour",
+  "name": "Séjour",
+  "level": "rdc",
+  "rect": [0.38, 6.95, 3.84, 13.42],
+  "floor": "oakFloor",
+  "labelAt": [2.0, 11.6],
+  "program": "Séjour"
+}
+```
+
+`rect` est `[x0, y0, x1, y1]` en plan. Le sol de base du niveau est défini par
+`levels[].floorMaterial` ; une pièce dont `floor` diffère reçoit une surcouche
+(tuile, béton…). Les libellés du plan 2D utilisent `labelAt` (ou le centre).
+
+Les surfaces affichées sont calculées à partir des rectangles. Si une pièce est
+en L, découpez-la en deux rectangles (comme le séjour dans le fichier actuel) ou
+ajoutez un polygone plus tard.
+
+### 4.5 Niveaux et étage
+
+Le RdC est à `elevation: 0`. L'étage est à `2.72` (2,50 m de hauteur + 0,22 m de
+dalle) et sa hauteur sous plafond est de 2,50 m.
+
+L'étage est aujourd'hui une **esquisse** issue du script Blender : les cloisons,
+ouvertures et pièces sont dans le JSON avec `provisional: true`, mais les cotes
+définitives ne sont pas encore fournies. Pour les remplacer :
+
+1. modifiez `levels[1].elevation`, `ceilingHeight`, `slabThickness` ;
+2. remplacez les murs `up-*` dans `walls` ;
+3. remplacez les pièces `level: "etage"` dans `rooms` ;
+4. ajustez `floorRects` si la trémie d'escalier change.
+
+### 4.6 Toiture, escalier, extérieurs
+
+- `roof.pitch` : pente en degrés ; le faîtage court selon `y` (axe `z` en three).
+- `roof.overhangSide` / `overhangGable` : débords.
+- `stairs.steps` : 13 contremarches, avec marches balancées et volée droite.
+- `site` : terrasse, allée, chemin, arbres et haies. Les rectangles sont en plan.
+
+### 4.7 Matières et textures
+
+Les matières d'architecture sont dans `materials` :
+
+```json
+"oakFloor": {
+  "name": "Chêne huilé",
+  "color": "#a97445",
+  "roughness": 0.68,
+  "metalness": 0,
+  "texture": "wood",
+  "textureScale": 1.15,
+  "bump": 0.02
+}
+```
+
+- `texture` : générateur procédural (`wood`, `tile`, `plaster`, `concrete`,
+  `stone`, `fabric`, `grass`).
+- `textureScale` : taille physique d'un motif en mètres. Le `repeat` est calculé
+  à partir de la taille réelle de la surface.
+- `bump` : force de la normal map.
+- `clearcoat`, `sheen`, `emissive` sont optionnels.
+- Pour utiliser des images externes, ajoutez `textures` :
+
+```json
+"textures": {
+  "map": "/textures/chene/albedo.jpg",
+  "normalMap": "/textures/chene/normal.jpg",
+  "roughnessMap": "/textures/chene/roughness.jpg"
+}
+```
+
+Placez les fichiers dans `apps/planner/public/textures/...`. Les chemins sont
+relatifs à `public`. Si un fichier manque, la matière retombe proprement sur sa
+couleur et/ou sa texture procédurale.
+
+Le toggle **Textures PBR** de l'inspecteur désactive les maps pour comparer.
+
+---
+
+## 5. Ajouter un meuble au catalogue
+
+Le catalogue est dans **`src/catalog/catalog.ts`**. Chaque entrée est un
+`CatalogItem` :
+
+```ts
+{
+  id: "mon-canape",
+  name: "Mon canapé",
+  category: "Salon",
+  kind: "sofa",                 // modèle paramétrique de repli
+  w: 2.10, d: 0.95, h: 0.82,    // mètres
+  variants: FABRICS,            // au moins une variante
+  defaultVariant: "lin-sable",
+  elevation: 0,                 // surélévation éventuelle
+  allowOverlap: false,          // tapis, tableaux, suspensions…
+  keywords: "canapé tissu",
+  model: { url: "/models/mon-canape.glb", rotation: 0 }
+}
+```
+
+### 5.1 Dimensions et collisions
+
+`w`, `d`, `h` sont en **mètres** et servent à :
+
+- l'emprise de collision (rectangle orienté) ;
+- l'accroche aux murs ;
+- le calibrage d'un GLB ;
+- l'affichage dans le catalogue et l'inspecteur.
+
+Pour un meuble mural ou posé sur un autre meuble, utilisez `elevation` et
+`allowOverlap: true` (tableau, miroir, hotte, lampe de table…). Les tapis
+utilisent `allowOverlap: true` et une hauteur quasi nulle.
+
+### 5.1 bis Redimensionner une instance
+
+Chaque meuble **posé** peut avoir ses propres cotes, sans modifier le catalogue.
+Dans l'inspecteur, la section **Dimensions** expose :
+
+- **Largeur** (cm) ;
+- **Profondeur** (cm) ;
+- **Hauteur** (cm).
+
+La modification est immédiate et s'applique à :
+
+- la géométrie du meuble (mise à l'échelle) ;
+- l'emprise de collision et l'accroche aux murs ;
+- la sélection, le plan et l'étiquette de dimensions ;
+- les collisions de la visite à la première personne ;
+- la duplication et l'export JSON.
+
+Ces cotes sont stockées dans l'instance :
+
+```json
+"size": { "w": 2.8, "d": 2.0, "h": 0.86 }
+```
+
+Si `size` est absent, le meuble reprend les cotes du catalogue. Le bouton
+**Revenir aux cotes catalogue** supprime la personnalisation ; l'opération est
+annulable avec `Ctrl+Z`.
+
+Une modification de taille peut provoquer une collision (badge **Collision**) :
+déplacez ensuite le meuble, ou réduisez-le. Les cotes de la **maison** (murs,
+pièces, ouvertures) ne sont pas modifiées par ce panneau : elles restent dans
+`house.json`.
+
+### 5.2 Ajouter un GLB
+
+1. Déposez le fichier dans `public/models/`, par exemple
+   `public/models/mon-canape.glb`.
+2. Ajoutez `model: { url: "/models/mon-canape.glb", rotation: 0 }` à l'entrée.
+3. Le modèle est automatiquement :
+   - copié dans la scène ;
+   - centré en X/Z ;
+   - posé sur le sol (le bas du GLB est aligné sur `y = 0`) ;
+   - mis à l'échelle pour tenir dans `w × d × h` ;
+   - configuré pour projeter et recevoir les ombres.
+4. `rotation` est en **degrés** autour de Y (utile si le modèle est orienté
+   autrement que le catalogue).
+5. Si le fichier est absent ou invalide, le rendu procédural `kind` est utilisé
+   automatiquement (un avertissement est écrit dans la console, le meuble reste
+   manipulable).
+
+Le **vase sculptural** du catalogue est un exemple réel :
+`public/models/vase-sculptural.glb`, généré par
+`scripts/generate-demo-glb.mjs` (`node apps/planner/scripts/generate-demo-glb.mjs`).
+Vous pouvez le remplacer par n'importe quel GLB libre de droits.
+
+> Les variantes de matière du catalogue ne recolorent pas un GLB : celui-ci
+> conserve ses matériaux. Pour des variantes sur un modèle 3D, préparez plusieurs
+> GLB ou étendez `GlbModel` dans `src/scene/furniture/models.tsx`.
+
+### 5.3 Ajouter un modèle paramétrique
+
+Si vous ne fournissez pas de GLB, le meuble est construit par le composant
+`ProceduralModel` dans `src/scene/furniture/models.tsx`. Le champ `kind` choisit
+la forme : `sofa`, `sofaCorner`, `armchair`, `pouf`, `coffeeTable`, `roundTable`,
+`tvUnit`, `tv`, `rug`, `plant`, `floorLamp`, `shelf`, `kitchenIsland`, `counter`,
+`fridge`, `hood`, `diningTable`, `diningChair`, `pendant`, `bed`, `nightstand`,
+`wardrobe`, `desk`, `officeChair`, `shower`, `vanity`, `toilet`, `bathtub`,
+`radiator`, `mirror`, `art`, `curtain`, `vase`, `tableLamp`, `cushion`,
+`kitchenOvenBank`, `kitchenBase`, `wineFridge`, `marbleTop`, `blackSink`,
+`blackTap`, `inductionHob`, `angledHood`, `marbleIsland`, `wireStool`,
+`smokedGlobePendant`, `floatingShelf`, `bookStack`, `trailingPlant`,
+`botanicalArt`, `cuttingBoard`, `coffeeMachine`, `marbleBacksplash`,
+`kitchenUpper`, `stoneFloor`.
+
+Pour un nouveau type :
+
+1. créez un composant qui reçoit `{ item, palette }` ;
+2. ajoutez un `case` dans le `switch (item.kind)` ;
+3. utilisez `RBox`, `Box`, `Cyl` et `SurfaceMaterial` pour rester dans le même
+   langage de matières et d'ombres.
+
+Les variantes sont générées par `variantPalette()` dans
+`src/scene/furniture/palette.ts`. Une variante contient `primary`, `secondary`,
+`wood`, `metal` et `stone` ; les composants piochent dedans.
+
+Les meubles de cuisine paramétriques (`kitchenOvenBank`, `kitchenBase`,
+`marbleIsland`, etc.) sont listés dans `PARAMETRIC_KINDS`. Leur géométrie est
+**reconstruite** à partir de `size` (largeur, profondeur, hauteur de
+l'instance) au lieu d'être simplement mise à l'échelle. Une armoire de 60 cm
+peut donc devenir un linéaire de 1,20 m avec deux portes, sans déformer les
+appareils.
+
+### 5.4 La cuisine de référence
+
+`EXAMPLE_RDC` contient un aménagement de cuisine calé sur la photo du
+cuisiniste, dans la continuité du plan du RdC :
+
+- linéaire bas le long du mur ouest (`x 0,40 → 1,02`) ;
+- colonne four double sur le mur sud, avec deux fours noirs encastrés ;
+- plan de travail et crédence en **marbre Calacatta** (`texture: "marble"`) ;
+- évier noir sous la fenêtre, robinet noir, plaque à induction noire ;
+- cave à vin vitrée en bout de linéaire ;
+- îlot parallèle avec plan marbre, panneau chêne au nord et débord côté
+  tabourets ;
+- trois tabourets filaires blancs, trois suspensions globe fumé ;
+- hotte inclinée noire, étagères chêne, livres, pothos retombant, cadre
+  botanique, machine à café et planches à découper ;
+- sol pierre claire en deux plaques (le seuil du séjour reste sur le parquet).
+
+Les cotes du bâti (murs, fenêtre, pièces) restent dans `house.json`. Les cotes
+de la cuisine sont dans `EXAMPLE_RDC`, item par item, et restent modifiables
+dans l'inspecteur. Au premier lancement — ou si la sauvegarde locale est vide —
+l'exemple est chargé automatiquement : la cuisine est donc visible sans
+manipulation. **Charger l'exemple** recharge cet aménagement et remplace le
+projet en cours (une confirmation est demandée).
+
+Repères de rotation utiles pour ce preset :
+
+| `rotation` | Façade du meuble |
+| --- | --- |
+| `0` | nord |
+| `90` | est |
+| `180` | sud |
+| `270` | ouest |
+
+Les meubles sont posés à **2 cm** des murs finis, car le moteur de collision
+utilise cette marge (`WALL_GAP`) pour l'accroche murale.
+
+> Une seule photo ne donne pas les cotes cachées. Les largeurs de façades,
+> hauteurs d'appareils et positions ont été déduites de la photo, du plan et du
+> rendu Blender. Pour un dossier d'exécution « au millimètre », il faut le plan
+> du cuisiniste avec les cotes de ses meubles : le preset sert alors de base à
+> ajuster.
+
+### 5.5 Portes et tiroirs des meubles
+
+L’outil **Portes** de la barre d’outils rend les façades des meubles interactives :
+
+- un clic sur une porte ou un tiroir l’ouvre, un second clic le ferme ;
+- l’ouverture est animée par une charnière ou un tiroir coulissant ;
+- les caissons sont évidés et équipés de **tablettes simples** ; la cave à vin
+  laisse voir ses bouteilles à travers sa porte vitrée ;
+- on revient sur **Déplacer** pour déplacer les meubles normalement.
+
+Sont couverts : la cuisine (meubles bas, colonne-four, îlot, meuble haut, cave à
+vin), le réfrigérateur, l’armoire, le meuble TV, le meuble vasque (portes
+basses) et la table de nuit (tiroir). Les fours et appareils, les parois de
+douche, les abattants de WC et les meubles ouverts (étagères, tables) ne sont
+pas des portes de meubles.
+
+L’état ouvert/fermé est **visuel et non persistant** : il n’est pas dans
+l’export JSON et ne modifie pas les collisions, qui restent celles du meuble
+fermé.
+
+![Portes des meubles](docs/cabinet-doors-preview.png)
+
+### 5.6 Portes de la maison
+
+Les vraies portes de la maison, déjà présentes dans `house.json`, sont aussi
+interactives avec l’outil **Portes** :
+
+- **porte d’entrée** à l’est et portes intérieures du garage, du cellier, du
+  placard, des chambres et du WC ;
+- toutes les portes sont **fermées par défaut** ; un clic les ouvre, un second
+  les ferme, avec la même animation de charnière que les meubles ;
+- l’état est **visuel et non sauvegardé** ; il ne modifie pas les collisions de
+  la visite, qui utilisent les passages de portes du bâti ;
+- chaque ouverture est décalée pour qu’aucun mur perpendiculaire ne la traverse
+  (murs de refend des chambres, du WC et de la salle de bain) ;
+- la **porte de garage** (grand rideau) reste fixe.
+
+![Porte d’entrée ouverte](docs/house-doors-preview.png)
+
+---
+
+## 6. Interactions
+
+| Action | Résultat |
+| --- | --- |
+| Clic sur un meuble | sélection, propriétés à droite |
+| Glisser un meuble | déplacement avec accroche grille 5 cm et murs |
+| Glisser depuis le catalogue | dépôt à l'endroit du curseur |
+| Clic sur une carte catalogue | pose dans une zone libre de la pièce cible |
+| Double-clic sur un meuble | rotation de 90° |
+| Champs **Dimensions** | largeur, profondeur et hauteur de l’instance |
+| Outil **Portes** + clic | ouvre ou ferme une porte, un tiroir |
+| Outil **Pivoter** + glisser | rotation par pas de 15° ou 90° |
+| Outil **Mesurer** | deux clics → distance au sol |
+| Outil **Grille** | affiche/masque le repère de 50 cm |
+| Molette | zoom |
+| Clic droit + glisser | orbite (vue 3D) |
+| Visite | clic pour verrouiller la souris, ZQSD/WASD, Maj pour courir, Échap |
+| 1 / 2 / 3 | Vue 3D / Plan 2D / Visite |
+| G | grille |
+| / | recherche du catalogue |
+| Ctrl/⌘ + Z | annuler |
+| Ctrl/⌘ + Maj + Z ou Ctrl/⌘ + Y | rétablir |
+| Ctrl/⌘ + D | dupliquer |
+| Suppr | supprimer |
+
+La rotation et le déplacement sont validés par collision :
+
+- rectangle orienté (OBB) contre les murs et les autres meubles ;
+- les tapis et objets muraux (`allowOverlap`) ne bloquent pas ;
+- en cas de collision, le déplacement glisse sur un axe, puis reste sur la
+  dernière position valide ;
+- une rotation près d'un mur peut déclencher un petit recentrage (max. 40 cm)
+  pour trouver une position valide.
+
+En **visite**, les collisions utilisent les murs avec les passages de portes et
+les meubles au sol (rayon joueur de 24 cm). L'escalier n'est pas grimpable : on
+visite le niveau sélectionné (RdC ou étage).
+
+---
+
+## 7. Sauvegarde, import/export
+
+### 7.1 Sauvegarde automatique
+
+L'état est persisté dans `localStorage` sous la clé **`casa-planner-v1`** :
+
+- meubles ;
+- niveau courant ;
+- vue ;
+- outil ;
+- pas de rotation ;
+- ambiance.
+
+L'indicateur « Enregistré » se met à jour 700 ms après la dernière modification.
+Un rechargement de page restaure l'aménagement.
+
+### 7.2 Export / import JSON
+
+Le menu projet (icône ⤓ dans la barre du haut) permet de :
+
+- **Exporter le projet JSON** ;
+- **Importer un projet** ;
+- **Charger l'exemple** d'aménagement ;
+- **Nouvel aménagement**.
+
+Format exporté :
+
+```json
+{
+  "app": "casa-planner",
+  "version": 1,
+  "savedAt": "2026-11-16T12:00:00.000Z",
+  "house": { "name": "Maison Sévigné–Renous", "version": "1.0.0" },
+  "level": "rdc",
+  "furniture": [
+    {
+      "id": "uuid",
+      "catalogId": "canape-angle",
+      "level": "rdc",
+      "x": 2.0,
+      "z": 12.35,
+      "rotation": 0,
+      "variantId": "laine-argile",
+      "elevation": 0,
+      "size": { "w": 2.8, "d": 2.0, "h": 0.86 }
+    }
+  ],
+  "ambience": {
+    "hour": 16,
+    "latitude": 47.2,
+    "dayOfYear": 172,
+    "exposure": 0.94,
+    "softShadows": true,
+    "textures": true,
+    "ambientOcclusion": true,
+    "details": true,
+    "cutaway": true,
+    "roof": false,
+    "grid": false
+  }
+}
+```
+
+L'import filtre les entrées dont le `catalogId` n'existe pas et remet
+l'historique à zéro.
+
+### 7.3 Export PNG
+
+Le bouton appareil photo de la barre du haut :
+
+1. masque la sélection, la grille et les aides de mesure ;
+2. attend trois images ;
+3. capture le canvas WebGL **sans l'interface DOM** ;
+4. télécharge un PNG à la taille du viewport 3D.
+
+Le rendu utilise AgX et la qualité réglée dans l'inspecteur. Le PNG peut donc
+être utilisé comme image de présentation.
+
+---
+
+## 8. Réalisme
+
+- **Soleil** : `lib/sun.ts` calcule une position solaire approchée à partir de
+  l'heure, de la latitude (47,2° par défaut) et du jour de l'année. Le ciel drei
+  `<Sky>` et la lumière directionnelle suivent cette position.
+- **Ciel / IBL** : un environnement est généré à partir de lightformers (ciel,
+  sol, soleil) et renvoyé dans `scene.environment` via drei `<Environment>`.
+  Un HDRI peut être fourni dans `ambience.environmentHdri` (chemin sous
+  `public/`) ; sinon l'environnement est généré, donc aucune connexion réseau
+  n'est nécessaire.
+- **Ombres** : lumière directionnelle avec shadow map 2048², biais réglés,
+  `SoftShadows` (PCSS) activable. En mode coupe, les murs extérieurs qui font
+  face à la caméra ne projettent plus d'ombre, pour laisser entrer la lumière.
+- **Occlusion ambiante** : `SSAOPass` (Three.js) composé avec `OutputPass`.
+  Désactivé en plan et en visite pour rester fluide.
+- **Tone mapping** : AgX (`THREE.AgXToneMapping`) et exposition configurable.
+  Pour passer à ACES, remplacez la constante dans `src/components/SceneCanvas.tsx`.
+- **Matières PBR** : couleurs, rugosité, métal, clearcoat, sheen, normal maps et
+  textures procédurales à l'échelle physique. Les vitrages sont des matériaux
+  physiques transparents avec reflets.
+- **Coupe** : les murs extérieurs entre la caméra et la maison deviennent
+  translucides (5 % d'opacité) ; les cloisons intérieures restent lisibles.
+- **Finitions** : plinthes, chambranles, appuis, seuils, linteaux, portes,
+  garde-corps, gouttières, terrasses et plantations. Le toggle « Plinthes &
+  détails » les masque.
+- **Plan 2D** : caméra orthographique, murs avec chape sombre (poché), libellés
+  de pièces et surfaces, grille de repérage. Le plan est lisible avec le nord en
+  haut, l'est à droite, la façade avant en bas.
+
+### Performance
+
+- `dpr` limité à 1,5 ;
+- SSAO désactivé en plan et en visite ;
+- ombres douces désactivables ;
+- textures désactivables ;
+- les meubles sont des composants paramétriques légers, pas des modèles lourds ;
+- le GLB n'est chargé que si l'entrée catalogue le référence.
+
+Sur mobile, les panneaux catalogue et propriétés deviennent des tiroirs et la
+barre d'outils passe en icônes. La caméra d'ensemble recule automatiquement en
+portrait.
+
+---
+
+## 9. Limites connues
+
+- L'**étage** est une esquisse (`provisional`) en attendant les cotes définitives.
+- Les **escaliers** ne sont pas grimpables en visite ; on change de niveau avec
+  la bascule RdC / Étage.
+- Les **portes ouvertes** sont visuelles et ne participent pas aux collisions
+  (le passage de l'ouverture, lui, est bien praticable).
+- Les **variantes de matière** ne recolorent pas un GLB.
+- Le **toit** est masqué en plan et en visite ; il sert à la vue extérieure.
+- Pas de **prix, budget ou devis** : ce n'est pas le périmètre de l'outil.
+- L'export PNG capture le canvas à la taille de l'écran, pas en 4K.
+
+---
+
+## 10. Crédits
+
+- Cotes de la maison : plans fournis + script Blender `maison_blender_v4.py`
+  (murs, ouvertures, escalier, étage provisoire).
+- Three.js, React Three Fiber, drei, zustand, Tailwind CSS.
+- Polices Inter et Fraunces (SIL Open Font License).
+- Textures : générées procéduralement dans le navigateur.
+- GLB de démonstration : généré par le script du dépôt, libre d'utilisation.
+- Projet privé CasaRenous.
