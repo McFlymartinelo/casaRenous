@@ -363,6 +363,50 @@ export function FurnitureThumb({
         </>
       )
       break
+    case "carport":
+      content = (
+        <>
+          <ellipse cx={cx} cy={baseline + 3} rx="25" ry="4" fill="rgba(25,30,24,0.1)" />
+          {[-18, 0, 18].map((offset) => (
+            <g key={offset} stroke={darken(wood, 0.3)} strokeWidth="1.8" strokeLinecap="round">
+              <line x1={cx + offset - 9} y1={baseline - 2} x2={cx + offset - 9} y2={baseline - 21} />
+              <line x1={cx + offset + 9} y1={baseline - 2} x2={cx + offset + 9} y2={baseline - 21} />
+            </g>
+          ))}
+          <polygon
+            points={`${cx - 27},${baseline - 19} ${cx + 27},${baseline - 19} ${cx + 19},${baseline - 29} ${cx - 19},${baseline - 29}`}
+            fill={lighten(metal, 0.2)}
+            stroke={darken(metal, 0.28)}
+            strokeWidth="0.7"
+          />
+          <line x1={cx - 27} y1={baseline - 19} x2={cx + 27} y2={baseline - 19} stroke={darken(metal, 0.32)} strokeWidth="1" />
+        </>
+      )
+      break
+    case "porsche996":
+      content = (
+        <>
+          <ellipse cx={cx} cy={baseline + 3} rx="23" ry="3" fill="rgba(25,30,24,0.14)" />
+          {/* profil 911 : pont arrière à gauche, capot plongeant à droite */}
+          <path
+            d={`M${cx - 21} ${baseline - 2} L${cx - 20} ${baseline - 9} L${cx - 13} ${baseline - 12} L${cx - 3} ${baseline - 21} L${cx + 7} ${baseline - 21} L${cx + 15} ${baseline - 12} L${cx + 21} ${baseline - 10} L${cx + 22} ${baseline - 2} Z`}
+            fill={primary}
+            stroke={darken(primary, 0.28)}
+            strokeWidth="0.6"
+          />
+          <path d={`M${cx - 3} ${baseline - 21} L${cx + 2} ${baseline - 26} L${cx + 8} ${baseline - 26} L${cx + 13} ${baseline - 21} Z`} fill="#27343a" opacity="0.88" />
+          <line x1={cx - 20} y1={baseline - 12} x2={cx - 14} y2={baseline - 12} stroke={darken(primary, 0.3)} strokeWidth="1.6" />
+          <ellipse cx={cx + 19} cy={baseline - 11} rx="2.6" ry="1.8" fill="#e8eee2" opacity="0.9" />
+          {[-12, 13].map((offset) => (
+            <g key={offset}>
+              <circle cx={cx + offset} cy={baseline - 1} r="5.4" fill="#17191a" />
+              <circle cx={cx + offset} cy={baseline - 1} r="3" fill={metal} />
+              <circle cx={cx + offset} cy={baseline - 1} r="0.9" fill={darken(metal, 0.2)} />
+            </g>
+          ))}
+        </>
+      )
+      break
     default:
       content = (
         <>

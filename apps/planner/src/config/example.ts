@@ -81,4 +81,24 @@ export const EXAMPLE_RDC: ExamplePlacement[] = [
 
   { catalogId: "etagere", x: 5.2, z: 6.75, rotation: 0, variant: "chene-clair" },
   { catalogId: "plante", x: 6.2, z: 8.86, rotation: 0, variant: "sauge" },
+
+  // Garage — 996 garée au centre, nez vers la porte sud (rotation 180).
+  { catalogId: "porsche-996", x: 5.3, z: 2.88, rotation: 180, variant: "noir" },
+
+  // Enrobée — les deux places 2,50 × 5,00 m du plan de masse, orientées est-ouest.
+  { catalogId: "vw-amarok", x: -1.15, z: -2.88, rotation: 90, variant: "noir" },
+  { catalogId: "peugeot-3008", x: -1.15, z: -5.36, rotation: 90, variant: "noir" },
+
+  // Carport centré au-dessus des deux véhicules : longueur ramenée à 6,00 m
+  // (18,08 m dans le catalogue) et hauteur à 2,80 m (3,44 m au catalogue).
+  // Pivoté de 90° : le bord bas du toit (local +Z) passe à l'ouest, au niveau
+  // de l'arrière des voitures ; la pente suit ainsi leur longueur.
+  {
+    catalogId: "carport",
+    x: -1.15,
+    z: -4.12,
+    rotation: 90,
+    variant: "chene-clair",
+    size: { w: 6.00, d: 6.04, h: 2.80 },
+  },
 ]

@@ -119,6 +119,37 @@ function buildExampleFurniture(): FurnitureItem[] {
   return items
 }
 
+/** Eléments de l'exemple à injecter dans les projets sauvegardés plus anciens. */
+function exampleItems(catalogIds: string[]): FurnitureItem[] {
+  const items: FurnitureItem[] = []
+  for (const catalogId of catalogIds) {
+    const placement = EXAMPLE_RDC.find((entry) => entry.catalogId === catalogId)
+    if (!placement) continue
+    try {
+      const catalog = getCatalogItem(placement.catalogId)
+      const variantId =
+        catalog.variants.find((entry) => entry.id === placement.variant)?.id ??
+        catalog.defaultVariant ??
+        catalog.variants[0]?.id
+      if (!variantId) continue
+      items.push({
+        id: createId(),
+        catalogId: placement.catalogId,
+        level: placement.level ?? "rdc",
+        x: placement.x,
+        z: placement.z,
+        rotation: placement.rotation,
+        variantId,
+        elevation: placement.elevation ?? catalog.elevation ?? 0,
+        size: placement.size,
+      })
+    } catch {
+      // meuble retiré du catalogue entre deux versions
+    }
+  }
+  return items
+}
+
 const initialFurniture: FurnitureItem[] = buildExampleFurniture()
 
 export const usePlanner = create<PlannerState>()(
@@ -440,7 +471,7 @@ export const usePlanner = create<PlannerState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 4,
+      version: 11,
       migrate: (persisted, version) => {
         const incoming = (persisted ?? {}) as Partial<PlannerState>
         if (
@@ -455,7 +486,73 @@ export const usePlanner = create<PlannerState>()(
             view: "3d",
           } as PlannerState
         }
-        return persisted as PlannerState
+        // Ajout des véhicules aux projets sauvegardés avant leur arrivée.
+        if (Array.isArray(incoming.furniture) && version < 7) {
+          const vehicules = ["porsche-996", "vw-amarok", "peugeot-3008"]
+          const manquants = vehicules.filter(
+            (id) => !incoming.furniture?.some((item) => item.catalogId === id),
+          )
+          const ajoutes = exampleItems(manquants)
+          if (ajoutes.length) {
+            incoming.furniture = [...incoming.furniture, ...ajoutes]
+          }
+        }
+        // Replace only the original example parking positions; keep any
+        // vehicles the user has already moved by hand.
+        if (Array.isArray(incoming.furniture) && version < 9) {
+          const anciens: Record<string, { x: number; z: number; rotation: number }[]> = {
+            "vw-amarok": [
+              { x: 2.0, z: -2.85, rotation: 180 },
+              { x: -2.75, z: -5.0, rotation: 180 },
+            ],
+            "peugeot-3008": [
+              { x: 5.35, z: -3.25, rotation: 0 },
+              { x: -0.25, z: -5.0, rotation: 0 },
+            ],
+          }
+          const placements = new Map(
+            EXAMPLE_RDC.filter((item) => item.catalogId in anciens)
+              .map((item) => [item.catalogId, item]),
+          )
+          incoming.furniture = incoming.furniture.map((item) => {
+            const nouveau = placements.get(item.catalogId)
+            const exemple = anciens[item.catalogId]?.some(
+              (ancien) => item.x === ancien.x && item.z === ancien.z && item.rotation === ancien.rotation,
+            )
+            if (!nouveau || !exemple) return item
+            return { ...item, x: nouveau.x, z: nouveau.z, rotation: nouveau.rotation }
+          })
+        }
+        // Ajout du carport au-dessus des deux places de stationnement, sans
+        // écraser un carport que l'utilisateur aurait déjà placé lui-même.
+        if (
+          Array.isArray(incoming.furniture) &&
+          version < 10 &&
+          !incoming.furniture.some((item) => item.catalogId === "carport")
+        ) {
+          const ajoutes = exampleItems(["carport"])
+          if (ajoutes.length) {
+            incoming.furniture = [...incoming.furniture, ...ajoutes]
+          }
+        }
+        // Réorientation du carport d'exemple : la pente descend désormais vers
+        // l'arrière des véhicules. On ne touche qu'un carport resté au placement
+        // d'origine, pour préserver les éventuels réglages de l'utilisateur.
+        if (Array.isArray(incoming.furniture) && version < 11) {
+          const nouveau = EXAMPLE_RDC.find((item) => item.catalogId === "carport")
+          if (nouveau) {
+            incoming.furniture = incoming.furniture.map((item) => {
+              const exemple =
+                item.catalogId === "carport" &&
+                item.x === -1.15 &&
+                item.z === -4.12 &&
+                item.rotation === 0
+              if (!exemple) return item
+              return { ...item, rotation: nouveau.rotation, size: nouveau.size }
+            })
+          }
+        }
+        return { ...incoming } as PlannerState
       },
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({

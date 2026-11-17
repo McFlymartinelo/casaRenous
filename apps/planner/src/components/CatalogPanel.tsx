@@ -14,6 +14,10 @@ const DEFAULT_POINTS: Record<LevelId, Record<FurnitureCategory, [number, number]
     Chambre: [1.9, 1.8],
     "Salle d'eau": [1.2, 4.05],
     Déco: [5.3, 11.4],
+    Garage: [5.3, 2.88],
+    Bureau: [2.7, 0.8],
+    Enfant: [1.9, 1.8],
+    Jardin: [3.6, 15.0],
   },
   etage: {
     Salon: [2.3, 11.5],
@@ -21,6 +25,10 @@ const DEFAULT_POINTS: Record<LevelId, Record<FurnitureCategory, [number, number]
     Chambre: [2.0, 2.2],
     "Salle d'eau": [5.6, 6.0],
     Déco: [3.8, 9.0],
+    Garage: [5.3, 2.88],
+    Bureau: [1.9, 6.2],
+    Enfant: [1.9, 11.1],
+    Jardin: [3.6, 15.0],
   },
 }
 
