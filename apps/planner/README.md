@@ -247,9 +247,21 @@ Pour ajouter un mur, dupliquez un bloc et changez `id`, `from`, `to`,
 `levels[].floorMaterial` ; une pièce dont `floor` diffère reçoit une surcouche
 (tuile, béton…). Les libellés du plan 2D utilisent `labelAt` (ou le centre).
 
-Les surfaces affichées sont calculées à partir des rectangles. Si une pièce est
-en L, découpez-la en deux rectangles (comme le séjour dans le fichier actuel) ou
-ajoutez un polygone plus tard.
+Chaque pièce porte un champ `areaM2` reprenant le **tableau de surfaces
+définitif** fourni par Maisons Belles Demeures ; c'est cette valeur qui est
+affichée dans le plan 2D (`PlanLabels.tsx`). Le champ est optionnel : à défaut,
+la surface est calculée depuis le `rect`. Les `rect` restent des approximations
+géométriques — ils ne sont pas recalculés pour coller au m² officiel.
+
+La cuisine, le séjour ouest et le séjour est forment une seule **Pièce de vie**
+: une seule étiquette « Pièce de vie · 41,1 m² » est placée au centre du volume,
+les deux autres zones portent `hideLabel: true` et n'affichent plus d'étiquette.
+
+Surfaces définitives (m²) : RDC — Pièce de vie 41,11 · Entrée 2,24 · Cellier
+4,27 · Garage 14,38 · Chambre 1 9,98 · Salle d'eau 2,32 · Dégagement 1,95 · WC
+1,16 · Placard 0,61. Étage — Chambre 2 13,23 · Chambre 3 12,87 · Chambre 4 12,08
+· Chambre 5 (parentale) 12,92 · Salle d'eau 2 4,25 · Bains 4,63 · WC 2 1,27 ·
+Dressing 4,38 · Palier 10,09. Total habitable : 139,36 m².
 
 ### 4.5 Niveaux et étage
 
@@ -270,7 +282,7 @@ définitives ne sont pas encore fournies. Pour les remplacer :
 - `roof.pitch` : pente en degrés ; le faîtage court selon `y` (axe `z` en three).
 - `roof.overhangSide` / `overhangGable` : débords.
 - `stairs.steps` : 13 contremarches, avec marches balancées et volée droite.
-- `site` : terrasse, allée, chemin, arbres et haies. Les rectangles sont en plan.
+- `site` : terrasse, enrobé de l’entrée, arbres et haies. Les rectangles sont en plan.
 
 ### 4.7 Matières et textures
 
@@ -417,7 +429,16 @@ la forme : `sofa`, `sofaCorner`, `armchair`, `pouf`, `coffeeTable`, `roundTable`
 `blackTap`, `inductionHob`, `angledHood`, `marbleIsland`, `wireStool`,
 `smokedGlobePendant`, `floatingShelf`, `bookStack`, `trailingPlant`,
 `botanicalArt`, `cuttingBoard`, `coffeeMachine`, `marbleBacksplash`,
-`kitchenUpper`, `stoneFloor`.
+`kitchenUpper`, `stoneFloor`, `consoleTable`, `sideTable`, `dishwasher`,
+`microwave`, `kitchenBin`, `crib`, `chestOfDrawers`, `changingTable`,
+`filingCabinet`, `deskLamp`, `roundRug`, `candle`, `parasol`, `bbq`,
+`planter`, `gardenLight`, `bike`, `garageShelf`, `evCharger`.
+
+Les catégories du catalogue sont `Salon`, `Cuisine`, `Chambre`, `Salle d'eau`,
+`Déco`, `Garage`, `Bureau`, `Enfant` et `Jardin`. Les meubles de jardin portent
+`outdoor: true` : ils peuvent être posés sur le terrain, hors de l'emprise de la
+maison. Les palettes `KIDS` et `OUTDOOR` fournissent des teintes douces et
+résistantes pour ces deux univers.
 
 Pour un nouveau type :
 
@@ -518,6 +539,93 @@ interactives avec l’outil **Portes** :
 
 ![Porte d’entrée ouverte](docs/house-doors-preview.png)
 
+### 5.7 Véhicules : garage et enrobée
+
+Le **plan de masse PCMI 2** est calé via `house.json → site` :
+
+- `plot` : le contour de parcelle (ce n'est pas une surface enrobée).
+- `asphaltArea` : la surface enrobée, qui reprend **toute la parcelle** (même
+  contour que `plot` : autour de la maison, stationnement, allée en chevron
+  jusqu'à la voie). La maison et la terrasse sont posées par-dessus. `holes`
+  laisse des fosses en herbe de 0,70 m de rayon au pied des arbres
+  (10,2 / 12,4 en trou intérieur ; 10,6 / 2,2 en encoche, car il touche la
+  limite droite).
+- `driveway` : l'axe du ruban de 4,00 m de large, défini par trois points, dont
+  le contour est calculé avec des **jointures en onglet** (`drivewayOutline()`)
+  pour éviter le cran d'un assemblage de rectangles.
+- Les sommets sont relevés **sur le trait dessiné** du PCMI 2 (scan à
+  18,93 px/m, origine au coin bas-gauche de la maison), pour qu'une vue de
+  dessus se superpose exactement au plan. Le dessin s'écarte légèrement de ses
+  cotes (premier tronçon à 17,0° au lieu des 16,4° déduits de 16,32 / 29,78 /
+  23,18) : ruban de 4,00 m, rives mesurées 20,02 / 22,37 m (cotées 20,17 /
+  22,47) et 35,43 / 22,38 m (cotées 35,54 / 22,46). Le stationnement de deux
+  places 2,50 × 5,00 m (bloc 4,97 × 4,96 m) sous l’angle bas-gauche de la
+  maison est inclus dans `asphaltArea`.
+
+`siteBounds()`, l'herbe et les collisions des objets `outdoor` utilisent
+l'emprise de la parcelle et de l'allée.
+
+Une catégorie **Garage** regroupe un carport et trois véhicules, ces derniers
+étant présents dans l'aménagement d'exemple :
+
+| Objet | Emplacement | Cotes (cm) | Rotation |
+| --- | --- | --- | --- |
+| Porsche 911 (996) | garage, centre (`5,30 / 2,88`) | 190,5 × 443,8 × 127,9 | 180 (nez vers la porte) |
+| Volkswagen Amarok V6 | place nord du stationnement (`−1,15 / −2,88`) | 222,7 × 525,4 × 180,1 | 90 (axe est-ouest) |
+| Peugeot 3008 | place sud du stationnement (`−1,15 / −5,36`) | 209,6 × 445,0 × 162,7 | 90 (axe est-ouest) |
+
+Le **carport multi-places** (`carport.glb`, 10 Mo) est un
+[modèle Sketchfab](https://sketchfab.com/3d-models/multi-bay-carport-b686bfaf84fe44408d334053df0961ea)
+de **WholeTrees**, sous licence **CC-BY-NC-ND 4.0**. Ses cotes réelles sont
+1 808 × 604 × 344 cm (structure en bois et panneaux solaires). Sa matrice
+racine redresse déjà l'export Z-up en Y-up, aucune rotation n'est donc
+nécessaire. Il n'est pas placé dans l'aménagement d'exemple : ses 6,04 m de
+profondeur dépassent la largeur de 4,00 m de l'allée. Un repli procédural
+(poteaux + toit, `kind: "carport"`) prend le relais si le GLB manque.
+
+Les deux véhicules de l'enrobée portent `outdoor: true` dans le catalogue : le
+moteur de placement utilise alors `siteBounds()` (intérieur ∪ enrobée, voir
+`config/house.ts`) au lieu du seul plancher, afin que les collisions restent
+valides sur le driveway (`house.json → site.driveway`).
+
+### Modèles détaillés (GLB Sketchfab)
+
+Le modèle utilisé est celui de la page
+[2000 Porsche 911 Carrera (996)](https://sketchfab.com/3d-models/2000-porsche-911-carrera-996-537f06116f1f40d7bc0de28a7ab653da)
+par **Ddiaz Design**, distribué sous licence **CC-BY-NC-SA** (usage non
+commercial, avec crédit, partage des remixes sous la même licence). Le fichier
+`public/models/porsche-996.glb` (version 1k, 8 Mo) est référencé par l'entrée de
+catalogue via `model.url` avec `rotation: 180` : le moteur `GlbModel` le met à
+l'échelle (×100, échelle uniforme) et le pose au sol. L'avant pointe vers la
+porte de rue.
+
+Un **modèle procédural de repli** (`kind: "porsche996"`, présent dans
+`PARAMETRIC_KINDS`) est affiché pendant le chargement du GLB (`Suspense`) ou si
+le fichier est absent : carrosserie et habitacle générés par un maillage `Loft`
+à partir de sections transversales (`CAISSE_996`, `HABITACLE_996` dans
+`scene/furniture/models.tsx`). Il est redimensionnable dans l'inspecteur. La
+vignette SVG du catalogue est définie dans `components/FurnitureThumb.tsx`.
+
+Les deux véhicules de l'enrobée utilisent le même mécanisme :
+
+- **Volkswagen Amarok V6** — [modèle Sketchfab](https://sketchfab.com/3d-models/2017-volkswagen-amarok-v6-3272be01e2f946c4bda1c1b5ed73d3a4)
+  par **Ddiaz Design**, licence **CC-BY-NC-SA** (`Amarok-v6.glb`, 15 Mo),
+  `model.rotation: 180`.
+- **Peugeot 3008** — [modèle Sketchfab](https://sketchfab.com/3d-models/peugeot-3008-c77d95e3c0404ca6b4bac78c36a4733d)
+  par **maxime.montegnies / aimix**, licence **CC-BY-NC** (`3008.glb`, 8 Mo),
+  `model.rotation: 0`.
+
+Le GLB du 3008 contenait un plan de sol parasite de 54 × 54 unités et sa
+longueur était orientée suivant X. Le script `scripts/prepare_3008_glb.py`
+(retrouvable dans le dépôt) le nettoie, le tourne de −90° autour de Y et le
+met à l'échelle en mètres (4,45 m de long). L'original est conservé dans
+`scripts/originals/3008.original.glb` (hors du dossier publié).
+
+> Attention : les GLB gardent leurs matériaux d'origine (bleu nuit pour la
+> Porsche, bleu pour l'Amarok, etc.). Les variantes de couleur du catalogue
+> (`CAR_PAINT` : Noir, Argent GT, Rouge Guard, Bleu Océan) ne s'appliquent donc
+> qu'au modèle de repli, pas aux GLB.
+
 ---
 
 ## 6. Interactions
@@ -529,6 +637,7 @@ interactives avec l’outil **Portes** :
 | Glisser depuis le catalogue | dépôt à l'endroit du curseur |
 | Clic sur une carte catalogue | pose dans une zone libre de la pièce cible |
 | Double-clic sur un meuble | rotation de 90° |
+| **L** | verrouiller / déverrouiller l’emplacement du meuble sélectionné |
 | Champs **Dimensions** | largeur, profondeur et hauteur de l’instance |
 | Outil **Portes** + clic | ouvre ou ferme une porte, un tiroir |
 | Outil **Pivoter** + glisser | rotation par pas de 15° ou 90° |
@@ -558,6 +667,37 @@ En **visite**, les collisions utilisent les murs avec les passages de portes et
 les meubles au sol (rayon joueur de 24 cm). L'escalier n'est pas grimpable : on
 visite le niveau sélectionné (RdC ou étage).
 
+### Verrouillage de l'emplacement
+
+Chaque meuble peut être **verrouillé** pour figer sa position, sa rotation et
+ses cotes — utile une fois l'aménagement arrêté, pour éviter un déplacement
+accidentel. Trois accès au même réglage :
+
+- le bouton cadenas dans l'en-tête de l'inspecteur (icône ouverte = libre,
+  icône fermée = verrouillée) ;
+- l'interrupteur **Verrouiller l'emplacement** dans la section **Placement** ;
+- le raccourci **L** quand un meuble est sélectionné.
+
+Quand un meuble est verrouillé :
+
+- il reste **sélectionnable** et ses propriétés restent lisibles, mais il ne
+  répond plus au glisser, au double-clic ni à l'outil **Pivoter** (curseur
+  « interdit » au survol) ;
+- les champs **Position**, **Rotation** et **Dimensions** de l'inspecteur sont
+  désactivés ; le changement de matière reste possible ;
+- son contour 3D et son étiquette passent en **or** avec un pictogramme cadenas,
+  et une pastille **Verrouillé** apparaît dans l'inspecteur ;
+- la **duplication** produit une copie **déverrouillée**, donc immédiatement
+  manipulable. L'original reste verrouillé.
+
+Le verrouillage est **annulable** (`Ctrl/⌘ + Z`) et **persistant** : il est
+enregistré dans `localStorage`, dans le projet JSON et restauré à l'import. Le
+menu projet propose aussi **Verrouiller tout** / **Déverrouiller tout** (une
+seule action réversible).
+
+> Le verrou protège l'emplacement, pas la suppression : un meuble verrouillé
+> peut toujours être supprimé ou dupliqué depuis l'inspecteur.
+
 ---
 
 ## 7. Sauvegarde, import/export
@@ -566,7 +706,7 @@ visite le niveau sélectionné (RdC ou étage).
 
 L'état est persisté dans `localStorage` sous la clé **`casa-planner-v1`** :
 
-- meubles ;
+- meubles (y compris leur éventuel verrouillage) ;
 - niveau courant ;
 - vue ;
 - outil ;
@@ -604,7 +744,8 @@ Format exporté :
       "rotation": 0,
       "variantId": "laine-argile",
       "elevation": 0,
-      "size": { "w": 2.8, "d": 2.0, "h": 0.86 }
+      "size": { "w": 2.8, "d": 2.0, "h": 0.86 },
+      "locked": true
     }
   ],
   "ambience": {

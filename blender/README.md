@@ -57,6 +57,8 @@ Pour tout rendre d'un coup en ligne de commande : passer
   2,40 × 2,00, fenêtres 1,20 ou 1,80, 0,60 en sanitaires…),
 * cloisons des deux niveaux, dalles, escalier droit et sa trémie,
 * mobilier sommaire (cuisine, séjour, lits, sanitaires) pour l'échelle,
+* une Porsche 911 type 996 noire garée dans le garage, nez vers la rue
+  (silhouette stylisée : phares ovales, aileron, jantes 5 branches),
 * une étiquette par pièce avec le nom et la surface du plan,
 * terrasse bois, pavés de la rue, gazon,
 * une galerie des photos déposées dans `references/`.
@@ -71,6 +73,7 @@ Collections de la scène :
 04_Exterieur          terrain, terrasse, pavés
 05_Mobilier_RDC       meubles du rez-de-chaussée
 05_Mobilier_Etage     meubles de l'étage
+06_Voiture_Garage     Porsche 911 (996) et ses éléments
 06_Cameras_Lumieres   caméras, soleil, lumière d'appoint
 07_Etiquettes_RDC     étiquettes des pièces (nom + surface)
 07_Etiquettes_Etage   étiquettes de l'étage
@@ -108,6 +111,21 @@ Chaque mur est une entrée de `MURS_RDC` / `MURS_ETAGE` :
 est une hauteur de mur spécifique (utilisé pour le mur bas sous l'escalier).
 
 Le script prévient dans la console si une ouverture dépasse la longueur de son mur.
+
+## La Porsche du garage
+
+La 996 est construite par `build_porsche_996()` avec les cotes réelles du
+modèle (4,43 × 1,77 × 1,31 m). Elle est garée au centre du garage
+(`cx = 5,44`, pare-chocs arrière à `y = 8,385`), le nez tourné vers la porte de
+rue : il reste ~0,40 m devant, ~0,50 m derrière et ~0,30 m de chaque côté.
+
+* `BUILD_CAR = True` en tête de script permet de la désactiver.
+* La couleur se change dans `setup_materials()` : entrée `MATS["carrosserie"]`
+  (noir par défaut, `Porsche_Noir`).
+* L'orientation se règle avec `y_rear` et le sens des `s` dans la fonction :
+  pour garer la voiture nez vers la maison, inverser le sens des sections.
+* Les vues de plan (`show_floor("rdc")` / `"etage"`) masquent la voiture comme
+  le mobilier ; `show_floor("tout")` l'affiche.
 
 ## Précision du modèle
 

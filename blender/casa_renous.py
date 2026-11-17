@@ -11,6 +11,7 @@ Génère depuis les plans fournis par Maisons Belles Demeures :
   * les cloisons intérieures des deux niveaux,
   * les dalles, l'escalier et sa trémie,
   * un mobilier sommaire pour donner l'échelle,
+  * une Porsche 911 (996) garée dans le garage (BUILD_CAR),
   * les étiquettes des pièces (nom + surface du plan),
   * l'environnement (terrasse bois, pavés de la rue, gazon),
   * 5 caméras (façade jardin / façade rue / intérieur / plans ortho),
@@ -59,6 +60,7 @@ import bpy
 
 CLEAR_SCENE = True          # vide la scène avant de construire
 BUILD_FURNITURE = True      # mobilier sommaire
+BUILD_CAR = True            # Porsche 911 (996) garée dans le garage
 BUILD_LABELS = True         # étiquettes des pièces (nom + surface)
 BUILD_SITE = True           # terrasse, pavés, gazon
 BUILD_REFERENCES = True     # images de référence en fond de scène
@@ -221,6 +223,79 @@ def prism_object(nom, profil, axe, epaisseur, material, collection):
     return mesh_object(nom, verts, faces, material, collection)
 
 
+def loft_object(nom, sections, material, collection):
+    """Lisse une suite de sections 2D en un volume continu.
+
+    sections : liste de (y, points) où `points` est une liste de (x, z)
+    décrivant le même contour (même nombre de points, même ordre) à chaque
+    station y. Le maillage est fermé par un bouchon à chaque extrémité.
+    """
+    verts, faces = [], []
+    for y, points in sections:
+        verts.extend((x, y, z) for (x, z) in points)
+    n = len(sections[0][1])
+    for i in range(len(sections) - 1):
+        for j in range(n):
+            k = (j + 1) % n
+            a, b = i * n + j, (i + 1) * n + j
+            c, d = (i + 1) * n + k, i * n + k
+            faces.append((a, b, c, d))
+    faces.append(tuple(range(n - 1, -1, -1)))                       # arrière (-Y)
+    faces.append(tuple((len(sections) - 1) * n + j for j in range(n)))  # avant (+Y)
+    return mesh_object(nom, verts, faces, material, collection)
+
+
+def cylinder_x(nom, cx, cy, cz, rayon, largeur, segments, material, collection):
+    """Cylindre dont l'axe suit X (roues)."""
+    verts, faces = [], []
+    x0, x1 = cx - largeur / 2, cx + largeur / 2
+    for x in (x0, x1):
+        for i in range(segments):
+            t = 2 * math.pi * i / segments
+            verts.append((x, cy + rayon * math.cos(t), cz + rayon * math.sin(t)))
+    for i in range(segments):
+        j = (i + 1) % segments
+        faces.append((i, j, segments + j, segments + i))
+    faces.append(tuple(range(segments - 1, -1, -1)))
+    faces.append(tuple(segments + i for i in range(segments)))
+    return mesh_object(nom, verts, faces, material, collection)
+
+
+def disc_y(nom, cx, cy, cz, rx, rz, material, collection, segments=20,
+           epaisseur=0.012):
+    """Disque elliptique dans le plan XZ, face avant vers +Y (phares/feux)."""
+    verts, faces = [], []
+    for y in (cy - epaisseur, cy):
+        for i in range(segments):
+            t = 2 * math.pi * i / segments
+            verts.append((cx + rx * math.cos(t), y, cz + rz * math.sin(t)))
+    for i in range(segments):
+        j = (i + 1) % segments
+        faces.append((i, segments + i, segments + j, j))
+    faces.append(tuple(range(segments)))
+    faces.append(tuple(segments + i for i in range(segments - 1, -1, -1)))
+    return mesh_object(nom, verts, faces, material, collection)
+
+
+def rayon_box_yz(nom, cx, cy, cz, hx, hy, hz, angle, material, collection):
+    """Petit pavé orientable dans le plan YZ (rayons de jante)."""
+    co, si = math.cos(angle), math.sin(angle)
+    verts = []
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            for sz in (-1, 1):
+                uy, uz = sy * hy, sz * hz
+                verts.append((cx + sx * hx,
+                              cy + uy * co - uz * si,
+                              cz + uy * si + uz * co))
+    faces = [
+        (0, 2, 6, 4), (1, 5, 7, 3),
+        (0, 1, 3, 2), (4, 6, 7, 5),
+        (0, 4, 5, 1), (2, 3, 7, 6),
+    ]
+    return mesh_object(nom, verts, faces, material, collection)
+
+
 def label(nom, texte, x, y, z, collection, taille=0.22, material=None):
     cu = bpy.data.curves.new(nom, type="FONT")
     cu.body = texte
@@ -259,6 +334,22 @@ def setup_materials():
     MATS["laiton"] = make_material("Laiton", (0.700, 0.560, 0.280), 0.35, metallique=0.9)
     MATS["texte"] = make_material("Etiquette", (0.060, 0.060, 0.065), 0.90)
 
+    # Porsche 911 (996) — carrosserie noire
+    MATS["carrosserie"] = make_material("Porsche_Noir", (0.032, 0.033, 0.038),
+                                        0.28, metallique=0.65)
+    MATS["vitrage_voiture"] = make_material("Porsche_Vitrage", (0.050, 0.062, 0.075),
+                                            0.10, metallique=0.25, alpha=0.78)
+    MATS["pneu"] = make_material("Porsche_Pneu", (0.028, 0.028, 0.030), 0.95)
+    MATS["jante"] = make_material("Porsche_Jante", (0.560, 0.575, 0.600),
+                                  0.30, metallique=0.85)
+    MATS["chrome"] = make_material("Porsche_Chrome", (0.720, 0.745, 0.780),
+                                   0.15, metallique=0.90)
+    MATS["phare"] = make_material("Porsche_Phare", (0.880, 0.900, 0.870), 0.20,
+                                   emission=(0.45, 0.48, 0.44))
+    MATS["feu"] = make_material("Porsche_Feu", (0.650, 0.030, 0.020), 0.30,
+                                 emission=(0.40, 0.0, 0.0))
+    MATS["sombre"] = make_material("Porsche_Sombre", (0.075, 0.075, 0.080), 0.90)
+
 
 def setup_collections():
     racine = bpy.context.scene.collection
@@ -269,6 +360,7 @@ def setup_collections():
     COLS["site"] = new_collection("04_Exterieur", racine)
     COLS["mobilier_rdc"] = new_collection("05_Mobilier_RDC", racine)
     COLS["mobilier_etage"] = new_collection("05_Mobilier_Etage", racine)
+    COLS["voiture"] = new_collection("06_Voiture_Garage", racine)
     COLS["label_rdc"] = new_collection("07_Etiquettes_RDC", racine)
     COLS["label_etage"] = new_collection("07_Etiquettes_Etage", racine)
     COLS["camera"] = new_collection("06_Cameras_Lumieres", racine)
@@ -549,12 +641,12 @@ MURS_RDC = [
 
 # Surfaces des pièces telles qu'annoncées sur le plan (libellés)
 PIECES_RDC = [
-    ("Piece_de_vie", "Pièce de vie\n42,68 m²", 2.10, 4.20),
-    ("Entree", "Entrée\n4,99 m²", 5.50, 4.60),
-    ("Cellier", "Cellier\n4,30 m²", 5.35, 6.90),
-    ("Garage", "Garage\n14,23 m²", 5.45, 10.70),
-    ("Salle_d_eau", "Salle d'eau\n3,78 m²", 1.25, 9.40),
-    ("Chambre_1", "Chambre 1\n10,35 m²", 2.10, 11.85),
+    ("Piece_de_vie", "Pièce de vie\n41,11 m²", 2.10, 4.20),
+    ("Entree", "Entrée\n2,24 m²", 5.50, 4.60),
+    ("Cellier", "Cellier\n4,27 m²", 5.35, 6.90),
+    ("Garage", "Garage\n14,38 m²", 5.45, 10.70),
+    ("Salle_d_eau", "Salle d'eau\n2,32 m²", 1.25, 9.40),
+    ("Chambre_1", "Chambre 1\n9,98 m²", 2.10, 11.85),
 ]
 
 
@@ -666,14 +758,14 @@ MURS_ETAGE = [
 ]
 
 PIECES_ETAGE = [
-    ("Chambre_parentale", "Chambre parentale\n12,76 m²", 1.95, 2.40),
-    ("Salle_d_eau", "Salle d'eau\n3,21 m²", 6.00, 1.50),
-    ("Dressing", "Dressing\n3,86 m²", 5.78, 3.35),
-    ("Degagement", "Dégagement\n10,95 m²", 4.25, 5.60),
-    ("Chambre_4", "Chambre 4\n12,76 m²", 1.90, 6.20),
-    ("Salle_de_bain", "Salle de bain + WC\n4,67 m²", 5.80, 7.75),
-    ("Chambre_3", "Chambre 3\n13,28 m²", 1.95, 11.10),
-    ("Chambre_2", "Chambre 2\n13,32 m²", 5.15, 11.10),
+    ("Chambre_parentale", "Chambre 5\n12,92 m²", 1.95, 2.40),
+    ("Salle_d_eau", "Salle d'eau 2\n4,25 m²", 6.00, 1.50),
+    ("Dressing", "Dressing\n4,38 m²", 5.78, 3.35),
+    ("Degagement", "Palier\n10,09 m²", 4.25, 5.60),
+    ("Chambre_4", "Chambre 4\n12,08 m²", 1.90, 6.20),
+    ("Salle_de_bain", "Bains + WC 2\n4,63 m²", 5.80, 7.75),
+    ("Chambre_3", "Chambre 3\n12,87 m²", 1.95, 11.10),
+    ("Chambre_2", "Chambre 2\n13,23 m²", 5.15, 11.10),
 ]
 
 
@@ -766,6 +858,153 @@ def build_furniture():
     # --- salle d'eau étage ------------------------------------------------
     bloc("Douche_Etage", 5.95, 6.65, 0.45, 1.55, z, z + 0.06, "carrelage")
     bloc("Vasque_SDE", 5.45, 5.90, 0.50, 1.40, z + 0.80, z + 0.88, "menuiserie")
+
+
+# ---------------------------------------------------------------------------
+# 8b. PORSCHE 911 (996) DANS LE GARAGE
+# ---------------------------------------------------------------------------
+
+def build_porsche_996():
+    """Porsche 911 type 996 stylisée, garée nez vers la porte de rue.
+
+    Cotes réelles de la 996 (4,43 x 1,77 x 1,31 m) respectées. Le véhicule
+    tient dans le garage (2,57 x 5,37 m) avec ~0,40 m de chaque côté.
+    """
+    col = COLS["voiture"]
+    zbase = 0.02                 # dessus du dallage du garage
+    cx = 5.44                    # axe médian du garage
+    y_rear = 8.385               # pare-chocs arrière
+    longueur = 4.43
+
+    def y_depuis(s):
+        """s = distance depuis l'arrière (0) vers l'avant (4,43)."""
+        return y_rear + s
+
+    # --- caisse basse : 9 sections, 8 points par section -------------------
+    # (s, demi-largeur bas, demi-largeur à la ceinture,
+    #  z_bord_ext, z_centre_sous_caisse, z_ceinture)  — z relatifs au sol
+    caisse = [
+        (0.00, 0.620, 0.660, 0.26, 0.20, 0.70),
+        (0.30, 0.780, 0.820, 0.18, 0.15, 0.78),
+        (0.70, 0.860, 0.850, 0.30, 0.15, 0.83),   # début arche arrière
+        (0.82, 0.885, 0.860, 0.44, 0.15, 0.84),
+        (0.95, 0.885, 0.860, 0.52, 0.15, 0.84),   # sommet arche arrière
+        (1.08, 0.885, 0.860, 0.44, 0.15, 0.84),
+        (1.20, 0.885, 0.860, 0.30, 0.15, 0.84),
+        (1.50, 0.885, 0.860, 0.17, 0.15, 0.84),
+        (2.20, 0.885, 0.850, 0.16, 0.15, 0.83),
+        (3.05, 0.885, 0.845, 0.28, 0.15, 0.81),   # début arche avant
+        (3.17, 0.885, 0.840, 0.44, 0.15, 0.80),
+        (3.30, 0.885, 0.840, 0.52, 0.15, 0.80),   # sommet arche avant
+        (3.43, 0.885, 0.840, 0.44, 0.15, 0.80),
+        (3.55, 0.870, 0.830, 0.28, 0.15, 0.79),
+        (3.75, 0.840, 0.800, 0.19, 0.16, 0.76),
+        (4.10, 0.740, 0.720, 0.24, 0.20, 0.70),
+        (4.43, 0.480, 0.500, 0.30, 0.26, 0.58),
+    ]
+    sections_caisse = []
+    for s, hb, ht, ze, zc, zt in caisse:
+        y = y_depuis(s)
+        ze, zc, zt = zbase + ze, zbase + zc, zbase + zt
+        pts = [
+            (cx - hb, ze), (cx - hb * 0.55, zc),
+            (cx + hb * 0.55, zc), (cx + hb, ze),
+            (cx + ht, zt - 0.08), (cx + ht * 0.95, zt),
+            (cx - ht * 0.95, zt), (cx - ht, zt - 0.08),
+        ]
+        sections_caisse.append((y, pts))
+    loft_object("Porsche_Caisse", sections_caisse, MATS["carrosserie"], col)
+
+    # --- habitacle vitré (pare-brise, toit, lunette) -----------------------
+    # (s, demi-largeur base, demi-largeur haut, z_base, z_haut)
+    habitacle = [
+        (1.05, 0.72, 0.70, 0.80, 0.82),
+        (1.25, 0.74, 0.72, 0.82, 1.00),
+        (1.60, 0.72, 0.68, 0.83, 1.20),
+        (2.05, 0.70, 0.66, 0.83, 1.30),
+        (2.45, 0.70, 0.66, 0.83, 1.30),
+        (2.72, 0.76, 0.74, 0.82, 1.12),
+        (3.00, 0.82, 0.80, 0.80, 0.84),   # départ du capot
+    ]
+    sections_habitacle = []
+    for s, hb, ht, zb, zh in habitacle:
+        pts = [
+            (cx - hb, zbase + zb), (cx + hb, zbase + zb),
+            (cx + ht, zbase + zh), (cx - ht, zbase + zh),
+        ]
+        sections_habitacle.append((y_depuis(s), pts))
+    loft_object("Porsche_Habitacle", sections_habitacle,
+                MATS["vitrage_voiture"], col)
+
+    # pavillon (toit) dans la teinte de la caisse
+    boxes_object("Porsche_Toit", [
+        (cx - 0.66, cx + 0.66,
+         y_depuis(1.98), y_depuis(2.52),
+         zbase + 1.295, zbase + 1.32),
+    ], MATS["carrosserie"], col)
+
+    # --- roues : 4 jantes 5 branches --------------------------------------
+    rayon, largeur_pneu = 0.32, 0.24
+    cz_roue = zbase + rayon
+    for ax, (s_axe, demie_voie) in enumerate(((0.95, 0.730), (3.30, 0.740))):
+        y_axe = y_depuis(s_axe)
+        for cote in (-1, 1):
+            xr = cx + cote * demie_voie
+            prefixe = "Porsche_Roue_%s%d" % ("AR" if ax == 0 else "AV",
+                                             1 if cote < 0 else 2)
+            cylinder_x(prefixe + "_Pneu", xr, y_axe, cz_roue,
+                       rayon, largeur_pneu, 20, MATS["pneu"], col)
+            cylinder_x(prefixe + "_Jante", xr, y_axe, cz_roue,
+                       0.225, largeur_pneu + 0.006, 20, MATS["sombre"], col)
+            face_x = xr + cote * (largeur_pneu / 2 + 0.005)
+            for k in range(5):
+                t = 2 * math.pi * k / 5 + math.pi / 2
+                rayon_box_yz(
+                    prefixe + "_Branche_%d" % k, face_x,
+                    y_axe + 0.11 * math.cos(t), cz_roue + 0.11 * math.sin(t),
+                    0.006, 0.11, 0.016, t, MATS["jante"], col)
+            cylinder_x(prefixe + "_Moyeu", face_x, y_axe, cz_roue,
+                       0.055, 0.02, 16, MATS["chrome"], col)
+
+    # --- signature 996 : phares ovales ("oeufs") et feux ------------------
+    for cote in (-1, 1):
+        xf = cx + cote * 0.58
+        y_phare = y_depuis(4.12)
+        disc_y("Porsche_Phare_%d" % (cote + 2), xf, y_phare,
+               zbase + 0.64, 0.180, 0.100, MATS["sombre"], col)
+        disc_y("Porsche_Oeil_%d" % (cote + 2), xf, y_phare + 0.014,
+               zbase + 0.64, 0.150, 0.078, MATS["phare"], col)
+
+        yr = y_depuis(0.04)
+        disc_y("Porsche_Feu_%d" % (cote + 2), cx + cote * 0.58, yr,
+               zbase + 0.68, 0.175, 0.095, MATS["feu"], col)
+        disc_y("Porsche_Echappement_%d" % (cote + 2), cx + cote * 0.13,
+               yr - 0.01, zbase + 0.26, 0.045, 0.045, MATS["chrome"], col)
+
+    # --- aileron arrière, prises d'air et rétroviseurs ---------------------
+    boxes_object("Porsche_Aileron", [
+        (cx - 0.68, cx + 0.68, y_depuis(0.18), y_depuis(0.40),
+         zbase + 0.90, zbase + 0.95),
+    ], MATS["carrosserie"], col)
+    entretoises = []
+    for cote in (-1, 1):
+        x = cx + cote * 0.46
+        entretoises.append((x - 0.035, x + 0.035,
+                            y_depuis(0.24), y_depuis(0.34),
+                            zbase + 0.80, zbase + 0.91))
+        # prise d'air sur l'aile arrière
+        xe = cx + cote * 0.885
+        boxes_object("Porsche_Prise_Air_%d" % (cote + 2), [
+            (xe - 0.015, xe + 0.015, y_depuis(0.72), y_depuis(1.10),
+             zbase + 0.50, zbase + 0.64),
+        ], MATS["sombre"], col)
+        xm = cx + cote * 0.90
+        boxes_object("Porsche_Retro_%d" % (cote + 2), [
+            (xm - 0.085, xm + 0.085, y_depuis(2.82), y_depuis(2.94),
+             zbase + 0.92, zbase + 1.02),
+        ], MATS["carrosserie"], col)
+    boxes_object("Porsche_Aileron_Supports", entretoises,
+                 MATS["carrosserie"], col)
 
 
 # ---------------------------------------------------------------------------
@@ -955,12 +1194,15 @@ def show_floor(niveau="rdc"):
     etats = {
         "rdc": {"etage": True, "toit": True,
                 "mobilier_rdc": False, "mobilier_etage": True,
+                "voiture": True,
                 "label_rdc": False, "label_etage": True},
         "etage": {"etage": False, "toit": True,
                   "mobilier_rdc": True, "mobilier_etage": False,
+                  "voiture": True,
                   "label_rdc": True, "label_etage": False},
         "tout": {"etage": False, "toit": False,
                  "mobilier_rdc": False, "mobilier_etage": False,
+                 "voiture": False,
                  "label_rdc": False, "label_etage": False},
     }
     for nom, cache in etats[niveau].items():
@@ -1006,6 +1248,8 @@ def main():
         build_site()
     if BUILD_FURNITURE:
         build_furniture()
+    if BUILD_CAR:
+        build_porsche_996()
     if BUILD_REFERENCES:
         build_references()
 
