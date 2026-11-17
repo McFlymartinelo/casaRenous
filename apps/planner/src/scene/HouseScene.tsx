@@ -53,13 +53,15 @@ export function HouseScene() {
       <CameraRig />
       <SceneBridge />
       <Site />
-      <Floors level={level} />
-      {showUpper && level === "rdc" ? <Floors level="etage" /> : null}
-      <Walls level={level} />
-      {showUpper && level === "rdc" ? <Walls level="etage" /> : null}
+      {/* Le RdC reste toujours visible ; l'étage se superpose par-dessus
+          uniquement lorsqu'il est sélectionné (ou que la toiture est affichée). */}
+      <Floors level="rdc" />
+      {showUpper ? <Floors level="etage" /> : null}
+      <Walls level="rdc" />
+      {showUpper ? <Walls level="etage" /> : null}
       <Stairs />
       <Suspense fallback={null}>
-        <FurnitureLayer />
+        <FurnitureLayer showUpper={showUpper} />
       </Suspense>
       <SelectionOverlay />
       <MeasureOverlay />

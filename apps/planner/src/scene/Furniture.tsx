@@ -25,13 +25,12 @@ function pointerAngle(point: Point2, center: Point2): number {
   return (Math.atan2(point[0] - center[0], point[1] - center[1]) * 180) / Math.PI
 }
 
-export function FurnitureLayer() {
+export function FurnitureLayer({ showUpper }: { showUpper: boolean }) {
   const furniture = usePlanner((state) => state.furniture)
-  const level = usePlanner((state) => state.level)
   return (
     <group>
       {furniture
-        .filter((item) => item.level === level)
+        .filter((item) => item.level === "rdc" || (showUpper && item.level === "etage"))
         .map((item) => (
           <FurniturePiece key={item.id} item={item} />
         ))}
@@ -44,6 +43,7 @@ function FurniturePiece({ item }: { item: FurnitureItem }) {
   const hovered = usePlanner((state) => state.hoveredId === item.id)
   const tool = usePlanner((state) => state.tool)
   const view = usePlanner((state) => state.view)
+  const activeLevel = usePlanner((state) => state.level)
   const exporting = usePlanner((state) => state.exporting)
   const select = usePlanner((state) => state.select)
   const hover = usePlanner((state) => state.hover)
@@ -56,7 +56,9 @@ function FurniturePiece({ item }: { item: FurnitureItem }) {
   const size = getItemSize(item)
   const variant = getVariant(catalog, item.variantId)
   const baseY = level.elevation + (item.elevation ?? catalog.elevation ?? 0)
-  const enabled = !exporting && view !== "walk"
+  // Les meubles de l'autre niveau restent visibles comme contexte, mais ne
+  // doivent pas être éditables : screenToFloor projette sur le niveau actif.
+  const enabled = !exporting && view !== "walk" && item.level === activeLevel
   const parametric = PARAMETRIC_KINDS.has(catalog.kind)
   const modelItem = parametric
     ? { ...catalog, w: size.w, d: size.d, h: size.h }

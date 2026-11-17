@@ -763,8 +763,8 @@
       "material": "plaster",
       "baseboard": "both",
       "openings": [
-        { "from": 1.9, "to": 2.73, "sill": 0, "top": 2.04, "type": "door", "hinge": "start", "swing": -1 },
-        { "from": 3.72, "to": 4.55, "sill": 0, "top": 2.04, "type": "door", "hinge": "end", "swing": 1 }
+        { "from": 2.55, "to": 3.38, "sill": 0, "top": 2.04, "type": "door", "hinge": "start", "swing": -1 },
+        { "from": 3.86, "to": 4.69, "sill": 0, "top": 2.04, "type": "door", "hinge": "end", "swing": 1 }
       ]
     },
     {
@@ -779,8 +779,26 @@
     {
       "id": "up-degagement-ouest",
       "level": "etage",
-      "from": [2.875, 4.75],
+      "from": [2.875, 6.1],
       "to": [2.875, 10.0],
+      "thickness": 0.15,
+      "material": "plaster",
+      "baseboard": "both"
+    },
+    {
+      "id": "up-degagement-retour",
+      "level": "etage",
+      "from": [2.2, 6.1],
+      "to": [2.875, 6.1],
+      "thickness": 0.15,
+      "material": "plaster",
+      "baseboard": "both"
+    },
+    {
+      "id": "up-degagement-ouest-bas",
+      "level": "etage",
+      "from": [2.2, 4.7],
+      "to": [2.2, 6.1],
       "thickness": 0.15,
       "material": "plaster",
       "baseboard": "both",

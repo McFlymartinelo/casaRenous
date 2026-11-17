@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { getLevel, getMaterial, getRooms, getWalls, wallGeometry, openingSpan } from "@/config/house"
+import { HOUSE, getLevel, getMaterial, getRooms, getWalls, wallGeometry, openingSpan } from "@/config/house"
 import { usePlanner } from "@/store/planner"
 import type { LevelId, Rect2 } from "@/types"
 import { SurfaceMaterial } from "./SurfaceMaterial"
@@ -12,6 +12,19 @@ export function Floors({ level }: { level: LevelId }) {
   const walls = getWalls(level)
   const rects: Rect2[] = config.floorRects ?? [
     [0.38, 0.38, 7 - 0.38, 13.8 - 0.38],
+  ]
+
+  // Bandeau d'enduit affleurant : il comble les 0,22 m entre le haut du RDC
+  // (2,50) et le bas de l'étage (2,72) sans dépasser des façades. La dalle est
+  // rentrée de 2 cm sur le pourtour pour laisser la place à l'enduit.
+  const largeur = HOUSE.envelope.width
+  const profondeur = HOUSE.envelope.depth
+  const epEnduit = 0.02
+  const bandeau: { key: string; position: [number, number, number]; size: [number, number, number] }[] = [
+    { key: "sud", position: [largeur / 2, config.elevation - 0.11, -epEnduit / 2], size: [largeur, 0.22, epEnduit] },
+    { key: "nord", position: [largeur / 2, config.elevation - 0.11, -profondeur + epEnduit / 2], size: [largeur, 0.22, epEnduit] },
+    { key: "ouest", position: [epEnduit / 2, config.elevation - 0.11, -profondeur / 2], size: [epEnduit, 0.22, profondeur] },
+    { key: "est", position: [largeur - epEnduit / 2, config.elevation - 0.11, -profondeur / 2], size: [epEnduit, 0.22, profondeur] },
   ]
 
   const doorThresholds = useMemo(() => {
@@ -50,19 +63,26 @@ export function Floors({ level }: { level: LevelId }) {
           <SurfaceMaterial material={getMaterial("concrete")} uv={[7, 13.8]} />
         </mesh>
       ) : null}
-      {level === "etage"
-        ? rects.map((rect, index) => (
-            <mesh
-              key={`slab-${index}`}
-              position={[(rect[0] + rect[2]) / 2, config.elevation - 0.12, -(rect[1] + rect[3]) / 2]}
-              castShadow
-              receiveShadow
-            >
-              <boxGeometry args={[rect[2] - rect[0], 0.22, rect[3] - rect[1]]} />
-              <SurfaceMaterial material={getMaterial("concrete")} uv={[rect[2] - rect[0], rect[3] - rect[1]]} />
+      {level === "etage" ? (
+        <group>
+          {/* Dalle sur toute l'emprise (comme celle du RDC), rentrée de 2 cm
+              sur le pourtour pour que l'enduit soit parfaitement affleurant. */}
+          <mesh
+            position={[largeur / 2, config.elevation - 0.12, -profondeur / 2]}
+            castShadow
+            receiveShadow
+          >
+            <boxGeometry args={[largeur - 2 * epEnduit, 0.22, profondeur - 2 * epEnduit]} />
+            <SurfaceMaterial material={getMaterial("concrete")} uv={[largeur, profondeur]} />
+          </mesh>
+          {bandeau.map((bande) => (
+            <mesh key={`bandeau-${bande.key}`} position={bande.position} receiveShadow>
+              <boxGeometry args={bande.size} />
+              <SurfaceMaterial material={getMaterial("plaster")} uv={[bande.size[0], bande.size[1]]} />
             </mesh>
-          ))
-        : null}
+          ))}
+        </group>
+      ) : null}
       {rects.map((rect, index) => {
         const width = rect[2] - rect[0]
         const depth = rect[3] - rect[1]
