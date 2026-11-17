@@ -7,6 +7,7 @@ import { degToRad, snapRotation } from "@/lib/placement"
 import { applyRotation, moveFootprint } from "@/lib/place"
 import { usePlanner } from "@/store/planner"
 import type { FurnitureItem, Point2 } from "@/types"
+import { LockIcon } from "@/components/Icons"
 import { sceneApi } from "./scene-api"
 import { FurnitureModel, PARAMETRIC_KINDS } from "./furniture/models"
 
@@ -65,7 +66,9 @@ function FurniturePiece({ item }: { item: FurnitureItem }) {
     if (!enabled) return
     event.stopPropagation()
     select(item.id)
-    if (tool !== "move" && tool !== "rotate") return
+    // Un meuble verrouillé reste sélectionnable (et déverrouillable) mais ne
+    // démarre aucun glisser ni rotation.
+    if (item.locked || (tool !== "move" && tool !== "rotate")) return
     const point = sceneApi.current.screenToFloor?.(event.nativeEvent.clientX, event.nativeEvent.clientY)
     if (!point) return
     beginTransaction()
@@ -102,15 +105,16 @@ function FurniturePiece({ item }: { item: FurnitureItem }) {
         if (!enabled) return
         event.stopPropagation()
         hover(item.id)
-        if (tool === "move") document.body.style.cursor = "grab"
-        if (tool === "rotate") document.body.style.cursor = "ew-resize"
+        if (item.locked) document.body.style.cursor = "not-allowed"
+        else if (tool === "move") document.body.style.cursor = "grab"
+        else if (tool === "rotate") document.body.style.cursor = "ew-resize"
       }}
       onPointerOut={() => {
         hover(null)
         document.body.style.cursor = "auto"
       }}
       onDoubleClick={(event) => {
-        if (!enabled) return
+        if (!enabled || item.locked) return
         event.stopPropagation()
         applyRotation(item, item.rotation + 90)
       }}
@@ -129,7 +133,12 @@ function FurniturePiece({ item }: { item: FurnitureItem }) {
         <FurnitureModel item={modelItem} variant={variant} seed={item.id} />
       </group>
       {selected || hovered ? (
-        <SelectionEdges width={size.w} depth={size.d} selected={selected} />
+        <SelectionEdges
+          width={size.w}
+          depth={size.d}
+          selected={selected}
+          locked={Boolean(item.locked)}
+        />
       ) : null}
     </group>
   )
@@ -139,10 +148,12 @@ function SelectionEdges({
   width,
   depth,
   selected,
+  locked,
 }: {
   width: number
   depth: number
   selected: boolean
+  locked: boolean
 }) {
   const y = 0.012
   const hw = width / 2
@@ -154,7 +165,7 @@ function SelectionEdges({
     [-hw, y, hd],
     [-hw, y, -hd],
   ]
-  const color = selected ? "#67a879" : "#a9c2ad"
+  const color = locked ? "#d9a441" : selected ? "#67a879" : "#a9c2ad"
   return (
     <group>
       <Line
@@ -176,14 +187,14 @@ function SelectionEdges({
           ].map(([x, z], index) => (
             <mesh key={index} position={[x!, y + 0.006, z!]} rotation={[-Math.PI / 2, 0, 0]}>
               <planeGeometry args={[0.09, 0.09]} />
-              <meshBasicMaterial color="#d9f2dd" />
+              <meshBasicMaterial color={locked ? "#f6e3b8" : "#d9f2dd"} />
             </mesh>
           ))
         : null}
       {selected ? (
         <mesh position={[0, y + 0.008, -hd - 0.08]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.055, 0.085, 24]} />
-          <meshBasicMaterial color="#67a879" />
+          <meshBasicMaterial color={locked ? "#d9a441" : "#67a879"} />
         </mesh>
       ) : null}
     </group>
@@ -285,7 +296,12 @@ export function SelectionOverlay() {
         zIndexRange={[20, 0]}
         style={{ pointerEvents: "none", userSelect: "none" }}
       >
-        <div className="selection-label">
+        <div className={`selection-label${item.locked ? " selection-label--locked" : ""}`}>
+          {item.locked ? (
+            <span className="selection-label__lock" title="Emplacement verrouillé">
+              <LockIcon size={11} />
+            </span>
+          ) : null}
           <span className="selection-label__name">{catalog.name}</span>
           <span className="selection-label__dims">
             {size.w.toFixed(2).replace(".", ",")} × {size.d.toFixed(2).replace(".", ",")} m
@@ -325,7 +341,7 @@ export function DragController() {
     function onMove(event: PointerEvent) {
       if (!dragState) return
       const item = state().furniture.find((entry) => entry.id === dragState?.id)
-      if (!item) return
+      if (!item || item.locked) return
       const point = sceneApi.current.screenToFloor?.(event.clientX, event.clientY)
       if (!point) return
       if (dragState.mode === "move") {

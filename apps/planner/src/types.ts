@@ -174,6 +174,10 @@ export type FurnitureCategory =
   | "Chambre"
   | "Salle d'eau"
   | "Déco"
+  | "Garage"
+  | "Bureau"
+  | "Enfant"
+  | "Jardin"
 
 export interface FurnitureVariant {
   id: string
@@ -234,6 +238,8 @@ export interface FurnitureItem {
   elevation?: number
   /** Cotes personnalisées ; absentes = cotes du catalogue. */
   size?: FurnitureSize
+  /** Verrouille l'emplacement : plus de déplacement, rotation ni redimensionnement. */
+  locked?: boolean
 }
 
 export type Tool = "move" | "rotate" | "measure" | "grid" | "doors"

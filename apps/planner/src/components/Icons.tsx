@@ -265,3 +265,19 @@ export const GripIcon = (props: IconProps) => (
     <circle cx="15" cy="17" r="1" fill="currentColor" />
   </Base>
 )
+
+export const LockIcon = (props: IconProps) => (
+  <Base {...props}>
+    <rect x="5" y="10.5" width="14" height="10" rx="2" />
+    <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />
+    <path d="M12 14.5v2.5" />
+  </Base>
+)
+
+export const UnlockIcon = (props: IconProps) => (
+  <Base {...props}>
+    <rect x="5" y="10.5" width="14" height="10" rx="2" />
+    <path d="M8 10.5V7a4 4 0 0 1 7.6-1.8" />
+    <path d="M12 14.5v2.5" />
+  </Base>
+)

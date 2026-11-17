@@ -76,9 +76,10 @@ export function moveFootprint(
   target: Point2,
   gridSnap = true,
 ): { x: number; z: number; valid: boolean } {
+  if (item.locked) return { x: item.x, z: item.z, valid: false }
   const catalog = getCatalogItem(item.catalogId)
   const size = getItemSize(item)
-  const context = placementContext(item.level, item.id)
+  const context = placementContext(item.level, item.id, Boolean(catalog.outdoor))
   context.candidateAllowsOverlap = Boolean(catalog.allowOverlap)
   const footprint: Footprint = {
     x: gridSnap ? snap(target[0], GRID) : target[0],
@@ -97,9 +98,10 @@ export function applyRotation(
   rotation: number,
   live = false,
 ): boolean {
+  if (item.locked) return false
   const catalog = getCatalogItem(item.catalogId)
   const size = getItemSize(item)
-  const context = placementContext(item.level, item.id)
+  const context = placementContext(item.level, item.id, Boolean(catalog.outdoor))
   context.candidateAllowsOverlap = Boolean(catalog.allowOverlap)
   const footprint: Footprint = { x: item.x, z: item.z, w: size.w, d: size.d, rotation }
   let resolved = resolvePlacement(footprint, context)

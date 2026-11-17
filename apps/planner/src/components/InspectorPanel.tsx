@@ -10,12 +10,14 @@ import { NumberField } from "./NumberField"
 import { Switch } from "./Switch"
 import {
   CopyIcon,
+  LockIcon,
   MoonIcon,
   RotateIcon,
   SofaIcon,
   SparkleIcon,
   SunIcon,
   TrashIcon,
+  UnlockIcon,
 } from "./Icons"
 
 function ToggleRow({
@@ -67,6 +69,7 @@ export function InspectorPanel() {
   const beginTransaction = usePlanner((state) => state.beginTransaction)
   const commitTransaction = usePlanner((state) => state.commitTransaction)
   const setVariant = usePlanner((state) => state.setVariant)
+  const toggleLock = usePlanner((state) => state.toggleLock)
   const duplicate = usePlanner((state) => state.duplicate)
   const remove = usePlanner((state) => state.remove)
   const setAmbience = usePlanner((state) => state.setAmbience)
@@ -79,6 +82,7 @@ export function InspectorPanel() {
   const room = selected ? roomAt(selected.level, [selected.x, selected.z]) : null
   const levelConfig = selected ? getLevel(selected.level) : getLevel(level)
   const isValid = selected ? isFootprintValid(selected) : true
+  const locked = Boolean(selected?.locked)
 
   function resize(dimension: "w" | "d" | "h", centimeters: number) {
     if (!selected || !catalog) return
@@ -109,6 +113,16 @@ export function InspectorPanel() {
             <div className="icon-actions">
               <button
                 type="button"
+                className={`icon-button icon-button--lock${locked ? " is-open" : ""}`}
+                onClick={() => toggleLock(selected.id)}
+                title={locked ? "Déverrouiller l'emplacement (L)" : "Verrouiller l'emplacement (L)"}
+                aria-label={locked ? "Déverrouiller l'emplacement" : "Verrouiller l'emplacement"}
+                aria-pressed={locked}
+              >
+                {locked ? <LockIcon size={16} /> : <UnlockIcon size={16} />}
+              </button>
+              <button
+                type="button"
                 className="icon-button"
                 onClick={() => duplicate(selected.id)}
                 title="Dupliquer (Ctrl+D)"
@@ -136,6 +150,7 @@ export function InspectorPanel() {
             <span className="meta-pill">{catalog.category}</span>
             <span className="meta-pill">{levelConfig.shortName}</span>
             {room ? <span className="meta-pill">{room.name}</span> : null}
+            {locked ? <span className="meta-pill meta-pill--locked"><LockIcon size={10} /> Verrouillé</span> : null}
             {!isValid ? <span className="meta-pill meta-pill--warn">Collision</span> : null}
           </div>
         ) : (
@@ -151,13 +166,22 @@ export function InspectorPanel() {
             <section className="inspector-section">
               <div className="section-head">
                 <h3>Placement</h3>
-                <span className="section-hint">accroche 5 cm</span>
+                <span className="section-hint">
+                  {locked ? "verrouillé" : "accroche 5 cm"}
+                </span>
               </div>
+              <ToggleRow
+                label="Verrouiller l'emplacement"
+                description="Empêche le déplacement, la rotation et le redimensionnement (L)"
+                checked={locked}
+                onChange={() => toggleLock(selected.id)}
+              />
               <div className="field-grid">
                 <NumberField
                   label="Position X"
                   value={selected.x}
                   suffix="m"
+                  disabled={locked}
                   onChange={(value) => {
                     const result = moveFootprint(selected, [value, selected.z])
                     if (result.valid) updateLive(selected.id, { x: result.x, z: result.z })
@@ -169,6 +193,7 @@ export function InspectorPanel() {
                   label="Position Y"
                   value={selected.z}
                   suffix="m"
+                  disabled={locked}
                   onChange={(value) => {
                     const result = moveFootprint(selected, [selected.x, value])
                     if (result.valid) updateLive(selected.id, { x: result.x, z: result.z })
@@ -183,6 +208,7 @@ export function InspectorPanel() {
                   value={selected.rotation}
                   suffix="°"
                   digits={0}
+                  disabled={locked}
                   step={rotationStep}
                   min={0}
                   max={359}
@@ -197,7 +223,7 @@ export function InspectorPanel() {
                   </span>
                 </div>
               </div>
-              <div className="rotation-row">
+              <div className={`rotation-row${locked ? " rotation-row--disabled" : ""}`}>
                 <span className="rotation-row__label">Pas de rotation</span>
                 <div className="mini-segmented" role="group" aria-label="Pas de rotation">
                   <button
@@ -218,6 +244,7 @@ export function InspectorPanel() {
                 <button
                   type="button"
                   className="icon-button"
+                  disabled={locked}
                   onClick={() => applyRotation(selected, selected.rotation - rotationStep)}
                   aria-label={`Pivoter de ${rotationStep} degrés vers la gauche`}
                   title={`Pivoter de ${rotationStep}°`}
@@ -227,6 +254,7 @@ export function InspectorPanel() {
                 <button
                   type="button"
                   className="icon-button"
+                  disabled={locked}
                   onClick={() => applyRotation(selected, selected.rotation + rotationStep)}
                   aria-label={`Pivoter de ${rotationStep} degrés vers la droite`}
                   title={`Pivoter de ${rotationStep}°`}
@@ -240,7 +268,7 @@ export function InspectorPanel() {
               <div className="section-head">
                 <h3>Dimensions</h3>
                 <span className="section-hint">
-                  {selected.size ? "sur mesure" : "cotes catalogue"}
+                  {locked ? "verrouillé" : selected.size ? "sur mesure" : "cotes catalogue"}
                 </span>
               </div>
               <div className="field-grid field-grid--three">
@@ -248,6 +276,7 @@ export function InspectorPanel() {
                   label="Largeur"
                   value={centimeters(size!.w)}
                   suffix="cm"
+                  disabled={locked}
                   digits={centimeterDigits(size!.w)}
                   step={1}
                   min={1}
@@ -260,6 +289,7 @@ export function InspectorPanel() {
                   label="Profondeur"
                   value={centimeters(size!.d)}
                   suffix="cm"
+                  disabled={locked}
                   digits={centimeterDigits(size!.d)}
                   step={1}
                   min={1}
@@ -272,6 +302,7 @@ export function InspectorPanel() {
                   label="Hauteur"
                   value={centimeters(size!.h)}
                   suffix="cm"
+                  disabled={locked}
                   digits={centimeterDigits(size!.h)}
                   step={1}
                   min={1}
@@ -289,6 +320,7 @@ export function InspectorPanel() {
                 <button
                   type="button"
                   className="button button--outline button--sm dimensions-reset"
+                  disabled={locked}
                   onClick={() => updateItem(selected.id, { size: undefined })}
                 >
                   <RotateIcon size={14} />
@@ -484,6 +516,7 @@ export function InspectorPanel() {
           <p className="eyebrow">Repères</p>
           <ul>
             <li>Glisser un meuble : déplacement libre, accroche aux murs et à la grille.</li>
+            <li>L : verrouiller / déverrouiller l&apos;emplacement du meuble sélectionné.</li>
             <li>Molette : zoom · clic droit : orbite · double-clic : rotation 90°.</li>
             <li>Mode visite : ZQSD / WASD, souris pour regarder, Échap pour sortir.</li>
           </ul>

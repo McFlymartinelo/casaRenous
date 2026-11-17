@@ -17,6 +17,21 @@ import type {
 const STORAGE_KEY = "casa-planner-v1"
 const HISTORY_LIMIT = 60
 
+/** Champs qui définissent l'emplacement d'un meuble et qu'un verrou protège. */
+const LOCKED_FIELDS = ["x", "z", "rotation", "size"] as const
+
+/** Dernière ligne de défense : un meuble verrouillé ne peut pas être déplacé,
+ *  pivoté ou redimensionné, même depuis un appel de l'inspecteur ou de la scène. */
+function protectedPatch(
+  item: FurnitureItem,
+  patch: Partial<FurnitureItem>,
+): Partial<FurnitureItem> {
+  if (!item.locked) return patch
+  const safe: Partial<FurnitureItem> = { ...patch }
+  for (const field of LOCKED_FIELDS) delete safe[field]
+  return safe
+}
+
 export interface ProjectFile {
   app: "casa-planner"
   version: 1
@@ -57,6 +72,8 @@ interface PlannerState {
 
   addItem: (catalogId: string, x: number, z: number, rotation?: number) => string | null
   updateItem: (id: string, patch: Partial<FurnitureItem>, record?: boolean) => void
+  toggleLock: (id: string) => void
+  setAllLocked: (locked: boolean) => void
   beginTransaction: () => void
   updateLive: (id: string, patch: Partial<FurnitureItem>) => void
   commitTransaction: () => void
@@ -206,7 +223,7 @@ export const usePlanner = create<PlannerState>()(
       updateItem: (id, patch, record = true) => {
         set((state) => {
           const next = state.furniture.map((item) =>
-            item.id === id ? { ...item, ...patch } : item,
+            item.id === id ? { ...item, ...protectedPatch(item, patch) } : item,
           )
           return {
             furniture: next,
@@ -214,6 +231,33 @@ export const usePlanner = create<PlannerState>()(
               ? [...state.past.slice(-HISTORY_LIMIT + 1), state.furniture]
               : state.past,
             future: record ? [] : state.future,
+            savedAt: null,
+          }
+        })
+      },
+
+      toggleLock: (id) => {
+        set((state) => {
+          const target = state.furniture.find((item) => item.id === id)
+          if (!target) return state
+          return {
+            furniture: state.furniture.map((item) =>
+              item.id === id ? { ...item, locked: !item.locked } : item,
+            ),
+            past: [...state.past.slice(-HISTORY_LIMIT + 1), state.furniture],
+            future: [],
+            savedAt: null,
+          }
+        })
+      },
+
+      setAllLocked: (locked) => {
+        set((state) => {
+          if (state.furniture.every((item) => Boolean(item.locked) === locked)) return state
+          return {
+            furniture: state.furniture.map((item) => ({ ...item, locked })),
+            past: [...state.past.slice(-HISTORY_LIMIT + 1), state.furniture],
+            future: [],
             savedAt: null,
           }
         })
@@ -231,7 +275,7 @@ export const usePlanner = create<PlannerState>()(
         }
         set((current) => ({
           furniture: current.furniture.map((item) =>
-            item.id === id ? { ...item, ...patch } : item,
+            item.id === id ? { ...item, ...protectedPatch(item, patch) } : item,
           ),
           savedAt: null,
         }))
@@ -299,6 +343,8 @@ export const usePlanner = create<PlannerState>()(
           id: createId(),
           x: spot.x,
           z: spot.z,
+          // Une copie doit rester manipulable, même si l'original est verrouillé.
+          locked: false,
         }
         set((state) => ({
           furniture: [...state.furniture, copy],
@@ -311,6 +357,8 @@ export const usePlanner = create<PlannerState>()(
       },
 
       rotate: (id, delta) => {
+        const source = get().furniture.find((item) => item.id === id)
+        if (!source || source.locked) return
         set((state) => ({
           furniture: state.furniture.map((item) =>
             item.id === id

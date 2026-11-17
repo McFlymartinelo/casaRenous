@@ -18,6 +18,7 @@ export function App() {
   const redo = usePlanner((state) => state.redo)
   const remove = usePlanner((state) => state.remove)
   const duplicate = usePlanner((state) => state.duplicate)
+  const toggleLock = usePlanner((state) => state.toggleLock)
   const select = usePlanner((state) => state.select)
   const setView = usePlanner((state) => state.setView)
   const setTool = usePlanner((state) => state.setTool)
@@ -59,6 +60,13 @@ export function App() {
         if (selectedId) duplicate(selectedId)
         return
       }
+      if (event.key.toLowerCase() === "l") {
+        if (selectedId) {
+          event.preventDefault()
+          toggleLock(selectedId)
+        }
+        return
+      }
       if (event.key === "Delete" || event.key === "Backspace") {
         if (selectedId) {
           event.preventDefault()
@@ -85,7 +93,7 @@ export function App() {
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [duplicate, redo, remove, select, selectedId, setAmbience, setTool, setView, undo])
+  }, [duplicate, redo, remove, select, selectedId, setAmbience, setTool, setView, toggleLock, undo])
 
   return (
     <div className="app-shell">

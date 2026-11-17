@@ -353,6 +353,16 @@ button:disabled {
   background: rgba(58, 52, 41, 0.08);
 }
 
+.icon-button--lock.is-open {
+  color: #a9772f;
+  background: rgba(196, 148, 58, 0.14);
+}
+
+.icon-button--lock.is-open:hover:not(:disabled) {
+  color: #8a6122;
+  background: rgba(196, 148, 58, 0.2);
+}
+
 .menu {
   position: relative;
 }
@@ -399,9 +409,14 @@ button:disabled {
   color: var(--ink-2);
 }
 
-.menu__panel button:hover {
+.menu__panel button:hover:not(:disabled) {
   background: var(--panel-soft);
   color: var(--ink);
+}
+
+.menu__panel button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .menu__sep {
@@ -1227,6 +1242,15 @@ button:disabled {
   background: rgba(168, 79, 63, 0.06);
 }
 
+.meta-pill--locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #a9772f;
+  border-color: rgba(196, 148, 58, 0.4);
+  background: rgba(196, 148, 58, 0.12);
+}
+
 .inspector-section {
   padding: 14px 16px;
   border-bottom: 1px solid rgba(226, 219, 206, 0.65);
@@ -1346,6 +1370,15 @@ button:disabled {
 .number-field__suffix {
   color: var(--ink-3);
   font-size: 10px;
+}
+
+.number-field--disabled .number-field__control {
+  opacity: 0.5;
+  background: rgba(246, 241, 232, 0.5);
+}
+
+.rotation-row--disabled {
+  opacity: 0.45;
 }
 
 .readout-field__value {
@@ -1773,6 +1806,16 @@ button:disabled {
   color: rgba(242, 240, 232, 0.55);
   border-left: 1px solid rgba(255, 255, 255, 0.16);
   padding-left: 7px;
+}
+
+.selection-label--locked {
+  border-color: rgba(217, 164, 65, 0.55);
+}
+
+.selection-label__lock {
+  display: inline-flex;
+  align-items: center;
+  color: #e8bd6b;
 }
 
 .measure-label {

@@ -10,9 +10,11 @@ import {
   DownloadIcon,
   HouseIcon,
   LayersIcon,
+  LockIcon,
   RedoIcon,
   SparkleIcon,
   UndoIcon,
+  UnlockIcon,
   UploadIcon,
 } from "./Icons"
 
@@ -72,6 +74,7 @@ export function TopBar() {
   const importProject = usePlanner((state) => state.importProject)
   const resetProject = usePlanner((state) => state.resetProject)
   const loadExample = usePlanner((state) => state.loadExample)
+  const setAllLocked = usePlanner((state) => state.setAllLocked)
   const furniture = usePlanner((state) => state.furniture)
   const [menuOpen, setMenuOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
@@ -297,6 +300,19 @@ export function TopBar() {
               <button type="button" onClick={() => fileRef.current?.click()}>
                 <UploadIcon size={16} />
                 <span>Importer un projet</span>
+              </button>
+              <div className="menu__sep" />
+              <button
+                type="button"
+                disabled={furniture.length === 0}
+                onClick={() => {
+                  setMenuOpen(false)
+                  setAllLocked(!allLocked)
+                  setToast(allLocked ? "Tous les meubles sont déverrouillés." : "Tous les meubles sont verrouillés.")
+                }}
+              >
+                {allLocked ? <UnlockIcon size={16} /> : <LockIcon size={16} />}
+                <span>{allLocked ? "Déverrouiller tout" : "Verrouiller tout"}</span>
               </button>
               <button
                 type="button"
