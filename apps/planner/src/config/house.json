@@ -300,16 +300,18 @@
       "rect": [0.38, 5.5, 3.84, 6.95],
       "floor": "oakFloor",
       "labelAt": [2.0, 6.18],
-      "program": "Cuisine"
+      "program": "Cuisine",
+      "hideLabel": true
     },
     {
       "id": "sejour-ouest",
-      "name": "Séjour",
+      "name": "Pièce de vie",
       "level": "rdc",
       "rect": [0.38, 6.95, 3.84, 13.42],
       "floor": "oakFloor",
-      "labelAt": [2.0, 11.6],
-      "program": "Séjour"
+      "labelAt": [3.5, 9.4],
+      "program": "Séjour",
+      "areaM2": 41.11
     },
     {
       "id": "sejour-est",
@@ -318,10 +320,12 @@
       "rect": [3.84, 9.27, 6.62, 13.42],
       "floor": "oakFloor",
       "labelAt": [5.4, 11.6],
-      "program": "Séjour"
+      "program": "Séjour",
+      "hideLabel": true
     },
     {
       "id": "entree",
+      "areaM2": 2.24,
       "name": "Entrée",
       "level": "rdc",
       "rect": [4.62, 8.1, 6.62, 9.19],
@@ -340,6 +344,7 @@
     },
     {
       "id": "cellier",
+      "areaM2": 4.27,
       "name": "Cellier",
       "level": "rdc",
       "rect": [3.92, 5.52, 6.62, 7.12],
@@ -349,6 +354,7 @@
     },
     {
       "id": "garage",
+      "areaM2": 14.38,
       "name": "Garage",
       "level": "rdc",
       "rect": [3.98, 0.38, 6.62, 5.37],
@@ -358,6 +364,7 @@
     },
     {
       "id": "degagement",
+      "areaM2": 1.95,
       "name": "Dégagement",
       "level": "rdc",
       "rect": [2.95, 3.34, 3.84, 5.5],
@@ -367,6 +374,7 @@
     },
     {
       "id": "wc",
+      "areaM2": 1.16,
       "name": "WC",
       "level": "rdc",
       "rect": [2.09, 3.34, 2.87, 4.77],
@@ -376,6 +384,7 @@
     },
     {
       "id": "sde",
+      "areaM2": 2.32,
       "name": "Salle d'eau",
       "level": "rdc",
       "rect": [0.38, 3.34, 2.01, 4.77],
@@ -385,6 +394,7 @@
     },
     {
       "id": "chambre1",
+      "areaM2": 9.98,
       "name": "Chambre 1",
       "level": "rdc",
       "rect": [0.38, 0.38, 3.84, 3.26],
@@ -394,6 +404,7 @@
     },
     {
       "id": "chambre-parentale",
+      "areaM2": 12.92,
       "name": "Chambre parentale",
       "level": "etage",
       "rect": [0.38, 10.1, 4.3, 13.42],
@@ -404,6 +415,7 @@
     },
     {
       "id": "dressing",
+      "areaM2": 4.38,
       "name": "Dressing",
       "level": "etage",
       "rect": [4.53, 10.1, 6.62, 11.89],
@@ -414,6 +426,7 @@
     },
     {
       "id": "sde-etage",
+      "areaM2": 4.25,
       "name": "Salle d'eau",
       "level": "etage",
       "rect": [4.53, 11.99, 6.62, 13.42],
@@ -424,6 +437,7 @@
     },
     {
       "id": "degagement-etage",
+      "areaM2": 10.09,
       "name": "Dégagement",
       "level": "etage",
       "rect": [2.95, 7.35, 4.75, 10.0],
@@ -434,6 +448,7 @@
     },
     {
       "id": "chambre4",
+      "areaM2": 12.08,
       "name": "Chambre 4",
       "level": "etage",
       "rect": [0.38, 4.75, 3.9, 7.25],
@@ -444,6 +459,7 @@
     },
     {
       "id": "chambre3",
+      "areaM2": 12.87,
       "name": "Chambre 3",
       "level": "etage",
       "rect": [0.38, 0.38, 3.9, 4.65],
@@ -454,6 +470,7 @@
     },
     {
       "id": "chambre2",
+      "areaM2": 13.23,
       "name": "Chambre 2",
       "level": "etage",
       "rect": [4.85, 0.38, 6.62, 4.65],
@@ -464,6 +481,7 @@
     },
     {
       "id": "sdb-etage",
+      "areaM2": 4.63,
       "name": "Salle de bain",
       "level": "etage",
       "rect": [4.85, 4.75, 6.62, 7.25],
@@ -474,6 +492,7 @@
     },
     {
       "id": "wc-etage",
+      "areaM2": 1.27,
       "name": "WC",
       "level": "etage",
       "rect": [4.3, 5.7, 4.75, 7.25],

@@ -36,8 +36,9 @@ export function PlanLabels() {
   return (
     <group>
       {rooms.map((room) => {
+        if (room.hideLabel) return null
         const center = room.labelAt ?? rectCenter(room.rect)
-        const area = rectArea(room.rect)
+        const area = room.areaM2 ?? rectArea(room.rect)
         const provisional = room.provisional
         return (
           <Html

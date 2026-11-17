@@ -75,6 +75,10 @@ export interface RoomConfig {
   floor: string
   labelAt?: Point2
   program?: string
+  /** Surface officielle (tableau des surfaces), sinon déduite du rect. */
+  areaM2?: number
+  /** Masque l'étiquette (ex. zones fusionnées en une seule « Pièce de vie »). */
+  hideLabel?: boolean
   provisional?: boolean
 }
 
