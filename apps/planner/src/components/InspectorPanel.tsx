@@ -460,6 +460,12 @@ export function InspectorPanel() {
               checked={ambience.details}
               onChange={(value) => setAmbience(property("details", value))}
             />
+            <ToggleRow
+              label="Végétation détaillée"
+              description="Brins d'herbe 3D et feuillage des arbres"
+              checked={ambience.vegetation}
+              onChange={(value) => setAmbience(property("vegetation", value))}
+            />
           </div>
 
           <div className="ambience-foot">

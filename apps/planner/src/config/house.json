@@ -89,6 +89,15 @@
       "bump": 0.008,
       "clearcoat": 0.12
     },
+    "terraceTile": {
+      "name": "Grès cérame extérieur",
+      "color": "#cbc5b8",
+      "roughness": 0.62,
+      "metalness": 0,
+      "texture": "tile",
+      "textureScale": 2.4,
+      "bump": 0.006
+    },
     "stone": {
       "name": "Pierre de Bourgogne",
       "color": "#d6cbb9",
@@ -261,9 +270,12 @@
     },
     "trunk": {
       "name": "Tronc",
-      "color": "#5e4a36",
-      "roughness": 0.9,
-      "metalness": 0
+      "color": "#6a5641",
+      "roughness": 0.94,
+      "metalness": 0,
+      "texture": "bark",
+      "textureScale": 0.7,
+      "bump": 0.03
     }
   },
   "levels": [
@@ -873,9 +885,52 @@
   },
   "site": {
     "grass": "grass",
-    "terrace": { "rect": [3.1, 13.8, 7.4, 16.8], "material": "deck" },
-    "driveway": { "rect": [3.55, -5.6, 7.35, 0.25], "material": "asphalt" },
-    "path": { "rect": [0.1, -4.2, 2.2, 0.25], "material": "stone" },
+    "terrace": { "rect": [0.1, 13.8, 7.35, 16.8], "material": "terraceTile" },
+    "driveway": {
+      "material": "asphalt",
+      "width": 4.0,
+      "points": [[10.46, -9.03], [30.03, -15.03], [52.16, -11.72]]
+    },
+    "plot": {
+      "material": "asphalt",
+      "points": [
+        [-4.0, 16.46],
+        [11.04, 22.66],
+        [11.04, -7.12],
+        [30.17, -12.99],
+        [52.29, -9.68],
+        [52.02, -13.76],
+        [29.88, -17.06],
+        [-4.0, -6.7]
+      ]
+    },
+    "asphaltArea": {
+      "material": "asphalt",
+      "points": [
+        [-4.0, 16.46],
+        [11.04, 22.66],
+        [11.04, 2.74],
+        [10.76, 2.88],
+        [10.45, 2.88],
+        [10.16, 2.75],
+        [9.97, 2.5],
+        [9.9, 2.2],
+        [9.97, 1.9],
+        [10.16, 1.65],
+        [10.45, 1.52],
+        [10.76, 1.52],
+        [11.04, 1.66],
+        [11.04, -7.12],
+        [30.17, -12.99],
+        [52.29, -9.68],
+        [52.02, -13.76],
+        [29.88, -17.06],
+        [-4.0, -6.7]
+      ],
+      "holes": [
+        [[10.9, 12.4], [10.85, 12.67], [10.69, 12.89], [10.47, 13.05], [10.2, 13.1], [9.93, 13.05], [9.71, 12.89], [9.55, 12.67], [9.5, 12.4], [9.55, 12.13], [9.71, 11.91], [9.93, 11.75], [10.2, 11.7], [10.47, 11.75], [10.69, 11.91], [10.85, 12.13]]
+      ]
+    },
     "trees": [
       { "at": [10.2, 12.4], "height": 3.8, "radius": 1.2 },
       { "at": [-5.8, 12.0], "height": 4.4, "radius": 1.35 },
@@ -889,6 +944,7 @@
     "exposure": 0.94,
     "softShadows": true,
     "textures": true,
+    "vegetation": true,
     "ambientOcclusion": true,
     "details": true,
     "cutaway": true,

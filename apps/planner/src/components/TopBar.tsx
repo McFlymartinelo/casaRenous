@@ -81,7 +81,9 @@ export function TopBar() {
   const [busy, setBusy] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-  const realistic = ambience.softShadows && ambience.textures && ambience.ambientOcclusion
+  const realistic =
+    ambience.softShadows && ambience.textures && ambience.ambientOcclusion && ambience.vegetation
+  const allLocked = furniture.length > 0 && furniture.every((item) => item.locked)
 
   useEffect(() => {
     if (!toast) return

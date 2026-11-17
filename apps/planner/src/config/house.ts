@@ -168,6 +168,75 @@ export function levelFloorBounds(_level: LevelId): Rect2 {
   return [t, t, HOUSE.envelope.width - t, HOUSE.envelope.depth - t]
 }
 
+function unit(vector: Point2): Point2 {
+  const length = Math.hypot(vector[0], vector[1]) || 1
+  return [vector[0] / length, vector[1] / length]
+}
+
+/** Contour du ruban d'allée, avec jointures en onglet aux coudes (repère plan). */
+export function drivewayOutline(): Point2[] {
+  const { points, width } = HOUSE.site.driveway
+  const half = width / 2
+  const left: Point2[] = []
+  const right: Point2[] = []
+  points.forEach((point, index) => {
+    const previous = points[Math.max(0, index - 1)]!
+    const next = points[Math.min(points.length - 1, index + 1)]!
+    const incoming = unit(index === 0
+      ? [next[0] - point[0], next[1] - point[1]]
+      : [point[0] - previous[0], point[1] - previous[1]])
+    const outgoing = unit(index === points.length - 1
+      ? incoming
+      : [next[0] - point[0], next[1] - point[1]])
+    const nIn: Point2 = [-incoming[1], incoming[0]]
+    const nOut: Point2 = [-outgoing[1], outgoing[0]]
+    let offset: Point2
+    if (index === 0) {
+      offset = [nIn[0] * half, nIn[1] * half]
+    } else if (index === points.length - 1) {
+      offset = [nOut[0] * half, nOut[1] * half]
+    } else {
+      const bisector = unit([nIn[0] + nOut[0], nIn[1] + nOut[1]])
+      const projection = Math.max(0.25, bisector[0] * nOut[0] + bisector[1] * nOut[1])
+      offset = [bisector[0] * half / projection, bisector[1] * half / projection]
+    }
+    left.push([point[0] + offset[0], point[1] + offset[1]])
+    right.push([point[0] - offset[0], point[1] - offset[1]])
+  })
+  return [...left, ...right.reverse()]
+}
+
+/** Boîte englobante de l'allée (repère plan), pour l'herbe et les collisions. */
+export function drivewayBounds(): Rect2 {
+  const points = drivewayOutline()
+  const xs = points.map((point) => point[0])
+  const zs = points.map((point) => point[1])
+  return [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)]
+}
+
+/** Boîte englobante de la parcelle enrobée (repère plan). */
+export function plotBounds(): Rect2 | null {
+  const points = HOUSE.site.plot?.points
+  if (!points?.length) return null
+  const xs = points.map((point) => point[0])
+  const zs = points.map((point) => point[1])
+  return [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)]
+}
+
+/** Emprise autorisée pour les objets extérieurs : intérieur + enrobée. */
+export function siteBounds(): Rect2 {
+  const interieur = levelFloorBounds("rdc")
+  const zones: Rect2[] = [drivewayBounds()]
+  const plot = plotBounds()
+  if (plot) zones.push(plot)
+  return [
+    Math.min(interieur[0], ...zones.map((zone) => zone[0])),
+    Math.min(interieur[1], ...zones.map((zone) => zone[1])),
+    Math.max(interieur[2], ...zones.map((zone) => zone[2])),
+    Math.max(interieur[3], ...zones.map((zone) => zone[3])),
+  ]
+}
+
 export function rectArea(rect: Rect2): number {
   return Math.max(0, rect[2] - rect[0]) * Math.max(0, rect[3] - rect[1])
 }

@@ -326,6 +326,7 @@ export const usePlanner = create<PlannerState>()(
             ...state.ambience,
             softShadows: enabled,
             textures: enabled,
+            vegetation: enabled,
             ambientOcclusion: enabled,
           },
         })),

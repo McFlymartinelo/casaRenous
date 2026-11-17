@@ -1,49 +1,51 @@
-import { HOUSE, getMaterial } from "@/config/house"
+import { useMemo } from "react"
+import * as THREE from "three"
+import { HOUSE, drivewayOutline, getMaterial } from "@/config/house"
+import type { Point2 } from "@/types"
 import { usePlanner } from "@/store/planner"
 import { SurfaceMaterial } from "./SurfaceMaterial"
-
-function Tree({ x, z, height, radius }: { x: number; z: number; height: number; radius: number }) {
-  return (
-    <group position={[x, 0, -z]}>
-      <mesh position={[0, height * 0.34, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[radius * 0.08, radius * 0.13, height * 0.68, 10]} />
-        <SurfaceMaterial material={getMaterial("trunk")} />
-      </mesh>
-      {[0, 1, 2, 3, 4].map((index) => {
-        const angle = index * 2.2
-        const level = height * (0.56 + index * 0.08)
-        const spread = radius * (0.55 - index * 0.06)
-        return (
-          <mesh
-            key={index}
-            position={[Math.cos(angle) * spread, level, Math.sin(angle) * spread]}
-            scale={[radius * (0.62 - index * 0.04), radius * (0.5 - index * 0.03), radius * (0.62 - index * 0.04)]}
-            castShadow
-            receiveShadow
-          >
-            <icosahedronGeometry args={[1, 2]} />
-            <meshStandardMaterial color={index % 2 ? "#63784f" : "#556c47"} roughness={0.92} metalness={0} />
-          </mesh>
-        )
-      })}
-    </group>
-  )
-}
+import { GrassBlades, Hedge, Tree } from "./vegetation"
 
 export function Site() {
   const view = usePlanner((state) => state.view)
+  const vegetation = usePlanner((state) => state.ambience.vegetation !== false)
   const site = HOUSE.site
-  if (view === "plan") return null
   const terrace = site.terrace
   const driveway = site.driveway
+  const asphaltArea = site.asphaltArea
   const path = site.path
+
+  const geometries = useMemo(() => {
+    const trace = <T extends THREE.Path>(path: T, points: Point2[]) => {
+      points.forEach(([x, z], index) => {
+        if (index === 0) path.moveTo(x, z)
+        else path.lineTo(x, z)
+      })
+      path.closePath()
+      return path
+    }
+    const polygon = (points: Point2[], holes: Point2[][] = []) => {
+      const shape = trace(new THREE.Shape(), points)
+      holes.forEach((hole) => shape.holes.push(trace(new THREE.Path(), hole)))
+      const geometry = new THREE.ShapeGeometry(shape)
+      geometry.rotateX(-Math.PI / 2)
+      return geometry
+    }
+    return {
+      asphaltArea: asphaltArea ? polygon(asphaltArea.points, asphaltArea.holes) : polygon(drivewayOutline()),
+    }
+  }, [asphaltArea, driveway.width, driveway.points])
+
+  if (view === "plan") return null
 
   return (
     <group>
-      <mesh position={[3.5, -0.04, -6.9]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[70, 70]} />
-        <SurfaceMaterial material={getMaterial(site.grass)} uv={[70, 70]} />
+      {/* La pelouse couvre aussi l'allée en coude jusqu'à la voie, à l'est. */}
+      <mesh position={[8, -0.04, 1.5]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[100, 90]} />
+        <SurfaceMaterial material={getMaterial(site.grass)} uv={[100, 90]} />
       </mesh>
+      {vegetation ? <GrassBlades /> : null}
       <mesh
         position={[(terrace.rect[0] + terrace.rect[2]) / 2, 0.015, -(terrace.rect[1] + terrace.rect[3]) / 2]}
         castShadow
@@ -55,14 +57,10 @@ export function Site() {
           uv={[terrace.rect[2] - terrace.rect[0], terrace.rect[3] - terrace.rect[1]]}
         />
       </mesh>
-      <mesh
-        position={[(driveway.rect[0] + driveway.rect[2]) / 2, -0.005, -(driveway.rect[1] + driveway.rect[3]) / 2]}
-        receiveShadow
-      >
-        <boxGeometry args={[driveway.rect[2] - driveway.rect[0], 0.05, driveway.rect[3] - driveway.rect[1]]} />
+      <mesh geometry={geometries.asphaltArea} position={[0, -0.015, 0]} receiveShadow>
         <SurfaceMaterial
-          material={getMaterial(driveway.material)}
-          uv={[driveway.rect[2] - driveway.rect[0], driveway.rect[3] - driveway.rect[1]]}
+          material={getMaterial(asphaltArea?.material ?? driveway.material)}
+          uv={[driveway.width, 42.6]}
         />
       </mesh>
       {path ? (
@@ -86,17 +84,21 @@ export function Site() {
         <SurfaceMaterial material={getMaterial("stone")} uv={[0.3, 2.1]} />
       </mesh>
       {site.trees?.map((tree, index) => (
-        <Tree key={index} x={tree.at[0]} z={tree.at[1]} height={tree.height} radius={tree.radius} />
+        <Tree
+          key={index}
+          index={index}
+          x={tree.at[0]}
+          z={tree.at[1]}
+          height={tree.height}
+          radius={tree.radius}
+        />
       ))}
       {[
         [2.4, 17.6, 1.4],
         [2.4, 16.5, 1.25],
         [8.7, 17.4, 1.3],
       ].map(([x, z, size], index) => (
-        <mesh key={index} position={[x!, size! / 2, -z!]} castShadow receiveShadow>
-          <boxGeometry args={[size!, size! * 0.55, 1]} />
-          <SurfaceMaterial material={getMaterial("hedge")} uv={[size!, 1]} />
-        </mesh>
+        <Hedge key={index} x={x!} z={z!} size={size!} />
       ))}
     </group>
   )

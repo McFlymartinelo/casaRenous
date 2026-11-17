@@ -1,5 +1,5 @@
 import { getCatalogItem, getItemSize } from "@/catalog/catalog"
-import { getWalls, levelFloorBounds, getLevel } from "@/config/house"
+import { getWalls, levelFloorBounds, siteBounds, getLevel } from "@/config/house"
 import type { FurnitureItem, LevelId, Point2 } from "@/types"
 import {
   canPlace,
@@ -27,11 +27,12 @@ export function footprintOf(item: FurnitureItem): Footprint {
 export function placementContext(
   level: LevelId,
   excludeId?: string,
+  outdoor = false,
 ): PlacementContext {
   const all = usePlanner.getState().furniture
   return {
     walls: getWalls(level),
-    bounds: levelFloorBounds(level),
+    bounds: outdoor ? siteBounds() : levelFloorBounds(level),
     others: all
       .filter((item) => item.level === level && item.id !== excludeId)
       .map((item) => {
@@ -55,7 +56,7 @@ export function addCatalogAt(catalogId: string, point: Point2): string | null {
     return null
   }
   const level = usePlanner.getState().level
-  const context = placementContext(level)
+  const context = placementContext(level, undefined, Boolean(catalog.outdoor))
   context.candidateAllowsOverlap = Boolean(catalog.allowOverlap)
   const footprint: Footprint = {
     x: snap(point[0]),
@@ -128,7 +129,7 @@ export function applyRotation(
 
 export function isFootprintValid(item: FurnitureItem): boolean {
   const catalog = getCatalogItem(item.catalogId)
-  const context = placementContext(item.level, item.id)
+  const context = placementContext(item.level, item.id, Boolean(catalog.outdoor))
   context.candidateAllowsOverlap = Boolean(catalog.allowOverlap)
   return canPlace(footprintOf(item), context)
 }

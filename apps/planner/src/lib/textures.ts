@@ -280,21 +280,100 @@ function drawFabric(context: CanvasRenderingContext2D, size: number): void {
 }
 
 function drawGrass(context: CanvasRenderingContext2D, size: number): void {
-  context.fillStyle = "#c7d2b3"
+  // Fond dégradé : la pelouse n'est jamais parfaitement uniforme.
+  const base = context.createLinearGradient(0, 0, size, size)
+  base.addColorStop(0, "#cbd6b6")
+  base.addColorStop(0.5, "#c2cead")
+  base.addColorStop(1, "#ccd7b9")
+  context.fillStyle = base
   context.fillRect(0, 0, size, size)
+
+  // Légères bandes de tonte, très diffuses.
+  context.save()
+  context.globalAlpha = 0.09
+  for (let band = 0; band < 6; band += 1) {
+    context.fillStyle = band % 2 ? "#8fa377" : "#dbe4cb"
+    context.fillRect((band * size) / 6, 0, size / 6, size)
+  }
+  context.restore()
+
   const random = seeded(91)
-  for (let index = 0; index < 3200; index += 1) {
+  // Touffes plus sombres, puis brins.
+  for (let tuft = 0; tuft < 90; tuft += 1) {
     const x = random() * size
     const y = random() * size
-    const tone = 160 + Math.floor(random() * 70)
-    context.strokeStyle = `rgba(${tone - 20},${tone},${tone - 55},${0.15 + random() * 0.35})`
-    context.lineWidth = 0.6 + random() * 1.2
+    const radius = 10 + random() * 28
+    const gradient = context.createRadialGradient(x, y, 0, x, y, radius)
+    const dark = random() > 0.4
+    gradient.addColorStop(0, dark ? "rgba(74,96,58,0.13)" : "rgba(224,231,199,0.16)")
+    gradient.addColorStop(1, "rgba(255,255,255,0)")
+    context.fillStyle = gradient
+    context.fillRect(x - radius, y - radius, radius * 2, radius * 2)
+  }
+  for (let index = 0; index < 5200; index += 1) {
+    const x = random() * size
+    const y = random() * size
+    const tone = 152 + Math.floor(random() * 76)
+    context.strokeStyle = `rgba(${tone - 22},${tone},${tone - 58},${0.12 + random() * 0.38})`
+    context.lineWidth = 0.5 + random() * 1.1
     context.beginPath()
     context.moveTo(x, y)
-    context.lineTo(x + (random() - 0.5) * 3, y - 2 - random() * 5)
+    context.lineTo(x + (random() - 0.5) * 4, y - 2 - random() * 6)
     context.stroke()
   }
-  overlayNoise(context, size, 92, 0.22, 8)
+  // Quelques pâquerettes / trèfles ponctuels.
+  for (let flower = 0; flower < 26; flower += 1) {
+    const x = random() * size
+    const y = random() * size
+    context.fillStyle = random() > 0.6 ? "rgba(238,230,198,0.7)" : "rgba(226,206,132,0.6)"
+    context.beginPath()
+    context.arc(x, y, 0.8 + random() * 1.4, 0, Math.PI * 2)
+    context.fill()
+  }
+  overlayNoise(context, size, 92, 0.2, 8)
+}
+
+function drawBark(context: CanvasRenderingContext2D, size: number): void {
+  const random = seeded(141)
+  context.fillStyle = "#6b5742"
+  context.fillRect(0, 0, size, size)
+
+  // Larges bandes verticales : alternance de crêtes et de sillons.
+  for (let band = 0; band < 26; band += 1) {
+    const x = (band / 26) * size + (random() - 0.5) * 10
+    const width = size / 26 + random() * 9
+    const light = random() > 0.45
+    const gradient = context.createLinearGradient(x, 0, x + width, 0)
+    gradient.addColorStop(0, light ? "rgba(150,127,98,0.42)" : "rgba(58,45,34,0.5)")
+    gradient.addColorStop(0.45, light ? "rgba(122,101,77,0.2)" : "rgba(74,58,43,0.25)")
+    gradient.addColorStop(1, light ? "rgba(58,45,34,0.38)" : "rgba(150,127,98,0.3)")
+    context.fillStyle = gradient
+    context.fillRect(x, 0, width, size)
+  }
+
+  // Fissures irrégulières, plus denses vers le bas.
+  for (let line = 0; line < 190; line += 1) {
+    let x = random() * size
+    const yStart = random() * size
+    const length = 18 + random() * 130
+    context.strokeStyle = `rgba(38,29,21,${0.08 + random() * 0.24})`
+    context.lineWidth = 0.6 + random() * 2.2
+    context.beginPath()
+    context.moveTo(x, yStart)
+    for (let step = 0; step < 6; step += 1) {
+      x += (random() - 0.5) * 9
+      context.lineTo(x, yStart + (step + 1) * (length / 6))
+    }
+    context.stroke()
+  }
+
+  // Éclats clairs pour casser la régularité.
+  for (let index = 0; index < 420; index += 1) {
+    const tone = 150 + Math.floor(random() * 60)
+    context.fillStyle = `rgba(${tone},${tone - 18},${tone - 36},${0.04 + random() * 0.12})`
+    context.fillRect(random() * size, random() * size, 1 + random() * 3, 3 + random() * 14)
+  }
+  overlayNoise(context, size, 142, 0.26, 4)
 }
 
 function normalMapFromCanvas(source: HTMLCanvasElement, strength: number): THREE.CanvasTexture {
@@ -397,6 +476,10 @@ export function getSurfaceTextures(kind: TextureKind): SurfaceTextures | null {
     case "grass":
       drawGrass(context, SIZE)
       normalStrength = 3
+      break
+    case "bark":
+      drawBark(context, SIZE)
+      normalStrength = 5
       break
   }
 

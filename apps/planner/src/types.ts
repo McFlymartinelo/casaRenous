@@ -11,6 +11,7 @@ export type TextureKind =
   | "stone"
   | "marble"
   | "grass"
+  | "bark"
   | "metal"
 
 export interface MaterialTextures {
@@ -116,10 +117,28 @@ export interface RoofConfig {
   gutterMaterial: string
 }
 
+/** Allée : ruban continu d'une largeur donnée, suivant une ligne de points. */
+export interface DrivewayConfig {
+  material: string
+  /** Largeur du revêtement, en mètres. */
+  width: number
+  /** Axe du ruban, du garage vers la voie (repère plan). */
+  points: Point2[]
+}
+
 export interface SiteConfig {
   grass: string
   terrace: { rect: Rect2; material: string }
-  driveway: { rect: Rect2; material: string }
+  driveway: DrivewayConfig
+  /** Limite de parcelle : polygone cadastral du plan de masse. */
+  plot?: { points: Point2[]; material: string }
+  /** Emprise réellement enrobée : stationnement, aire devant la maison et accès. */
+  asphaltArea?: {
+    points: Point2[]
+    material: string
+    /** Trous laissés en herbe (fosses d'arbres), polygones intérieurs au contour. */
+    holes?: Point2[][]
+  }
   path?: { rect: Rect2; material: string }
   trees?: { at: Point2; height: number; radius: number }[]
 }
@@ -133,6 +152,8 @@ export interface AmbienceConfig {
   environmentHdri?: string
   softShadows: boolean
   textures: boolean
+  /** Brins d'herbe 3D et feuillage détaillé (plus coûteux en GPU). */
+  vegetation: boolean
   ambientOcclusion: boolean
   details: boolean
   cutaway: boolean
@@ -188,6 +209,8 @@ export interface CatalogItem {
   /** Élévation au-dessus du sol (tableau, miroir, hotte…). */
   elevation?: number
   allowOverlap?: boolean
+  /** Objet destiné au site extérieur (enrobée) : autorisé hors du plancher. */
+  outdoor?: boolean
   model?: CatalogModel
   keywords?: string
 }
