@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { CATALOG, CATEGORIES, getVariant } from "@/catalog/catalog"
 import { addCatalogAt } from "@/lib/place"
-import { formatDimensions } from "@/lib/format"
+import { formatDimensions, formatPrice } from "@/lib/format"
 import { usePlanner } from "@/store/planner"
 import type { FurnitureCategory, LevelId } from "@/types"
 import { FurnitureThumb } from "./FurnitureThumb"
@@ -170,6 +170,11 @@ export function CatalogPanel() {
                       <div className="catalog-card__dims">
                         {formatDimensions(item.w, item.d)}
                         {item.model ? <span className="catalog-card__badge">GLB</span> : null}
+                        {item.price !== undefined ? (
+                          <span className="catalog-card__price" title="Prix indicatif à l'import">
+                            {formatPrice(item.price)}
+                          </span>
+                        ) : null}
                       </div>
                       <div className="catalog-card__variants" aria-hidden="true">
                         {item.variants.slice(0, 4).map((entry) => (

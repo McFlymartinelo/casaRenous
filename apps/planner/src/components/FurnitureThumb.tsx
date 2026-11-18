@@ -407,6 +407,247 @@ export function FurnitureThumb({
         </>
       )
       break
+    // --- Extension du catalogue -------------------------------------------
+    case "consoleTable":
+      content = (
+        <>
+          <Legs x={cx} y={baseline} w={36} d={10} color={darken(wood, 0.35)} />
+          <Iso x={cx} y={baseline} w={40} d={13} h={4} color={wood} />
+          <line x1={cx - 15} y1={baseline - 5} x2={cx + 15} y2={baseline - 5} stroke={darken(wood, 0.25)} strokeWidth="0.8" />
+          <circle cx={cx} cy={baseline - 6} r="1" fill={metal} />
+        </>
+      )
+      break
+    case "sideTable":
+      content = (
+        <>
+          <ellipse cx={cx} cy={baseline + 2} rx="12" ry="3.4" fill="rgba(25,30,24,0.12)" />
+          <line x1={cx} y1={baseline - 2} x2={cx} y2={baseline - 16} stroke={metal} strokeWidth="2.2" />
+          <ellipse cx={cx} cy={baseline - 1} rx="7" ry="2.5" fill={darken(metal, 0.25)} />
+          <ellipse cx={cx} cy={baseline - 16} rx="13" ry="5" fill={lighten(wood, 0.14)} stroke={darken(wood, 0.28)} strokeWidth="0.7" />
+        </>
+      )
+      break
+    case "dishwasher":
+      content = (
+        <>
+          <Iso x={cx} y={baseline} w={26} d={15} h={30} color={lighten(primary, 0.45)} />
+          <line x1={cx - 10} y1={baseline - 27} x2={cx + 10} y2={baseline - 27} stroke={darken(primary, 0.28)} strokeWidth="0.8" />
+          <line x1={cx - 10} y1={baseline - 4} x2={cx + 10} y2={baseline - 4} stroke={darken(primary, 0.28)} strokeWidth="1.2" />
+          <circle cx={cx + 8} cy={baseline - 11} r="1" fill={metal} />
+        </>
+      )
+      break
+    case "microwave":
+      content = (
+        <>
+          <Iso x={cx} y={baseline - 12} w={36} d={16} h={18} color={darken(primary, 0.35)} />
+          <polygon points={`${cx - 14},${baseline - 16} ${cx + 3},${baseline - 16} ${cx + 3},${baseline - 26} ${cx - 14},${baseline - 26}`} fill="#2c3336" stroke={metal} strokeWidth="0.6" />
+          <rect x={cx + 7} y={baseline - 26} width="7" height="10" fill={darken(primary, 0.5)} />
+          <circle cx={cx + 10.5} cy={baseline - 20} r="1.5" fill={metal} />
+        </>
+      )
+      break
+    case "kitchenBin":
+      content = (
+        <>
+          <ellipse cx={cx} cy={baseline + 2} rx="10" ry="3" fill="rgba(25,30,24,0.12)" />
+          <path d={`M${cx - 10} ${baseline - 2} L${cx - 9} ${baseline - 25} Q${cx} ${baseline - 29} ${cx + 9} ${baseline - 25} L${cx + 10} ${baseline - 2} Q${cx} ${baseline + 1} ${cx - 10} ${baseline - 2} Z`} fill={primary} />
+          <ellipse cx={cx} cy={baseline - 25} rx="9" ry="3" fill={lighten(primary, 0.22)} stroke={darken(primary, 0.28)} strokeWidth="0.6" />
+          <line x1={cx - 6} y1={baseline + 1} x2={cx + 6} y2={baseline + 1} stroke={metal} strokeWidth="1.6" />
+        </>
+      )
+      break
+    case "crib":
+      content = (
+        <>
+          <Legs x={cx} y={baseline} w={30} d={16} color={darken(wood, 0.35)} />
+          <Iso x={cx} y={baseline} w={32} d={18} h={4} color={wood} />
+          <Iso x={cx} y={baseline - 4} w={28} d={15} h={4} color={lighten(primary, 0.22)} />
+          {[-12, -8, -4, 0, 4, 8, 12].map((dx) => (
+            <line key={dx} x1={cx + dx} y1={baseline - 8} x2={cx + dx} y2={baseline - 26} stroke={lighten(wood, 0.28)} strokeWidth="1.2" />
+          ))}
+          <line x1={cx - 14} y1={baseline - 26} x2={cx + 14} y2={baseline - 26} stroke={wood} strokeWidth="2" />
+        </>
+      )
+      break
+    case "chestOfDrawers":
+      content = (
+        <>
+          <Iso x={cx} y={baseline} w={34} d={15} h={28} color={wood} />
+          {[8, 15, 22].map((h) => (
+            <g key={h}>
+              <line x1={cx - 15} y1={baseline - h} x2={cx + 15} y2={baseline - h} stroke={darken(wood, 0.3)} strokeWidth="0.8" />
+              <line x1={cx - 4} y1={baseline - h + 3} x2={cx + 4} y2={baseline - h + 3} stroke={metal} strokeWidth="1.2" />
+            </g>
+          ))}
+        </>
+      )
+      break
+    case "changingTable":
+      content = (
+        <>
+          <Legs x={cx} y={baseline} w={32} d={14} color={darken(wood, 0.35)} />
+          <Iso x={cx} y={baseline} w={36} d={16} h={4} color={wood} />
+          <Iso x={cx} y={baseline - 4} w={32} d={14} h={4} color={lighten(primary, 0.22)} />
+          <line x1={cx - 13} y1={baseline - 10} x2={cx + 13} y2={baseline - 10} stroke={darken(wood, 0.28)} strokeWidth="0.8" />
+          <rect x={cx - 10} y={baseline - 25} width="20" height="10" rx="3" fill={secondary} opacity="0.85" />
+        </>
+      )
+      break
+    case "filingCabinet":
+      content = (
+        <>
+          <Iso x={cx} y={baseline} w={26} d={16} h={38} color={lighten(primary, 0.12)} />
+          {[12, 25, 37].map((h) => (
+            <g key={h}>
+              <line x1={cx - 11} y1={baseline - h} x2={cx + 11} y2={baseline - h} stroke={darken(primary, 0.32)} strokeWidth="0.9" />
+              <rect x={cx - 6} y={baseline - h + 4} width="12" height="3" fill={lighten(primary, 0.5)} opacity="0.9" />
+            </g>
+          ))}
+        </>
+      )
+      break
+    case "deskLamp":
+      content = (
+        <>
+          <ellipse cx={cx} cy={baseline + 3} rx="9" ry="2.6" fill="rgba(25,30,24,0.12)" />
+          <ellipse cx={cx} cy={baseline - 1} rx="6" ry="2" fill={metal} />
+          <line x1={cx} y1={baseline - 2} x2={cx + 3} y2={baseline - 20} stroke={metal} strokeWidth="1.6" />
+          <line x1={cx + 3} y1={baseline - 20} x2={cx + 11} y2={baseline - 26} stroke={metal} strokeWidth="1.6" />
+          <path d={`M${cx + 4} ${baseline - 24} l14 -4 l-3 9 l-11 3 z`} fill={lighten(primary, 0.22)} stroke={darken(primary, 0.2)} strokeWidth="0.6" />
+        </>
+      )
+      break
+    case "roundRug":
+      content = (
+        <>
+          <ellipse cx={cx} cy={baseline} rx="26" ry="10" fill={lighten(primary, 0.12)} stroke={darken(primary, 0.24)} strokeWidth="0.8" />
+          <ellipse cx={cx} cy={baseline} rx="20" ry="7" fill="none" stroke={secondary} strokeWidth="1.2" />
+          <ellipse cx={cx} cy={baseline} rx="13" ry="4" fill={darken(primary, 0.1)} opacity="0.45" />
+        </>
+      )
+      break
+    case "candle":
+      content = (
+        <>
+          <ellipse cx={cx} cy={baseline + 2} rx="8" ry="2.5" fill="rgba(25,30,24,0.12)" />
+          <rect x={cx - 5} y={baseline - 18} width="10" height="19" rx="1.5" fill={lighten(primary, 0.28)} stroke={darken(primary, 0.18)} strokeWidth="0.6" />
+          <line x1={cx} y1={baseline - 18} x2={cx} y2={baseline - 22} stroke={darken(primary, 0.45)} strokeWidth="1" />
+          <path d={`M${cx} ${baseline - 23} q4 4 0 7 q-4 -3 0 -7 z`} fill="#ffb454" />
+        </>
+      )
+      break
+    case "parasol":
+      content = (
+        <>
+          <ellipse cx={cx} cy={baseline + 3} rx="12" ry="3" fill="rgba(25,30,24,0.12)" />
+          <line x1={cx} y1={baseline} x2={cx} y2={baseline - 30} stroke={metal} strokeWidth="1.8" />
+          <path d={`M${cx - 26} ${baseline - 19} Q${cx} ${baseline - 41} ${cx + 26} ${baseline - 19} Z`} fill={lighten(primary, 0.14)} stroke={darken(primary, 0.22)} strokeWidth="0.7" />
+          <line x1={cx - 26} y1={baseline - 19} x2={cx + 26} y2={baseline - 19} stroke={darken(primary, 0.28)} strokeWidth="0.8" />
+        </>
+      )
+      break
+    case "bbq":
+      content = (
+        <>
+          <ellipse cx={cx} cy={baseline + 3} rx="17" ry="3.5" fill="rgba(25,30,24,0.12)" />
+          <Iso x={cx} y={baseline - 4} w={32} d={16} h={14} color={darken(primary, 0.45)} />
+          <Iso x={cx} y={baseline - 18} w={34} d={17} h={3} color={lighten(primary, 0.3)} />
+          <line x1={cx + 18} y1={baseline - 21} x2={cx + 24} y2={baseline - 21} stroke={metal} strokeWidth="1.5" />
+          {[-10, 10].map((dx) => <circle key={dx} cx={cx + dx} cy={baseline} r="3.5" fill="#1f211f" />)}
+        </>
+      )
+      break
+    case "planter":
+      content = (
+        <>
+          <ellipse cx={cx} cy={baseline + 2} rx="16" ry="3" fill="rgba(25,30,24,0.12)" />
+          <Iso x={cx} y={baseline} w={32} d={12} h={13} color={variant.stone ?? "#d6cbb9"} />
+          {[-9, 0, 9].map((dx) => (
+            <g key={dx}>
+              <path d={`M${cx + dx} ${baseline - 13} q-6 -9 -2 -15 q5 4 2 15`} fill="#6f8560" />
+              <path d={`M${cx + dx} ${baseline - 13} q6 -9 2 -15 q-5 4 -2 15`} fill="#5e7351" />
+            </g>
+          ))}
+        </>
+      )
+      break
+    case "gardenLight":
+      content = (
+        <>
+          <ellipse cx={cx} cy={baseline + 3} rx="9" ry="2.6" fill="rgba(25,30,24,0.12)" />
+          <ellipse cx={cx} cy={baseline - 1} rx="6" ry="2" fill={variant.stone ?? "#d6cbb9"} />
+          <line x1={cx} y1={baseline - 2} x2={cx} y2={baseline - 26} stroke={darken(metal, 0.25)} strokeWidth="2.4" />
+          <rect x={cx - 6} y={baseline - 34} width="12" height="10" rx="2" fill={lighten(primary, 0.45)} stroke={darken(primary, 0.18)} strokeWidth="0.6" />
+          <circle cx={cx} cy={baseline - 29} r="2.5" fill="#ffe1a0" />
+        </>
+      )
+      break
+    case "bike":
+      content = (
+        <>
+          <ellipse cx={cx} cy={baseline + 3} rx="23" ry="3" fill="rgba(25,30,24,0.1)" />
+          {[-15, 15].map((dx) => (
+            <g key={dx}>
+              <circle cx={cx + dx} cy={baseline - 7} r="7.5" fill="none" stroke="#1f211f" strokeWidth="2" />
+              <circle cx={cx + dx} cy={baseline - 7} r="1" fill={metal} />
+            </g>
+          ))}
+          <path
+            d={`M${cx - 15} ${baseline - 7} L${cx - 5} ${baseline - 20} L${cx + 7} ${baseline - 20} L${cx + 15} ${baseline - 7} M${cx - 5} ${baseline - 20} L${cx + 15} ${baseline - 7} M${cx + 7} ${baseline - 20} L${cx - 15} ${baseline - 7}`}
+            fill="none"
+            stroke={metal}
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+          />
+          <line x1={cx + 4} y1={baseline - 20} x2={cx + 6} y2={baseline - 24} stroke={metal} strokeWidth="1.4" />
+          <line x1={cx - 8} y1={baseline - 22} x2={cx - 1} y2={baseline - 22} stroke="#1f211f" strokeWidth="1.8" />
+        </>
+      )
+      break
+    case "garageShelf":
+      content = (
+        <>
+          {[-15, 15].map((dx) => (
+            <line key={dx} x1={cx + dx} y1={baseline} x2={cx + dx} y2={baseline - 38} stroke={darken(metal, 0.18)} strokeWidth="2" />
+          ))}
+          {[0, 12, 25, 37].map((h) => (
+            <line key={h} x1={cx - 17} y1={baseline - h} x2={cx + 17} y2={baseline - h} stroke={metal} strokeWidth="2.2" />
+          ))}
+        </>
+      )
+      break
+    case "evCharger":
+      content = (
+        <>
+          <Iso x={cx} y={baseline - 8} w={16} d={8} h={30} color={lighten(primary, 0.45)} />
+          <rect x={cx - 5} y={baseline - 31} width="10" height="7" rx="1" fill="#27343a" />
+          <circle cx={cx} cy={baseline - 22} r="1.2" fill="#71816c" />
+          <path d={`M${cx + 7} ${baseline - 14} q10 6 5 16`} fill="none" stroke="#1f211f" strokeWidth="1.8" />
+        </>
+      )
+      break
+    case "floatingShelf":
+      content = (
+        <>
+          <Iso x={cx} y={baseline - 22} w={38} d={13} h={3} color={wood} />
+          <rect x={cx - 14} y={baseline - 31} width="4" height="9" fill={primary} opacity="0.8" />
+          <rect x={cx - 7} y={baseline - 30} width="3.5" height="8" fill={secondary} opacity="0.85" />
+          <rect x={cx + 2} y={baseline - 32} width="4" height="10" fill={darken(primary, 0.2)} opacity="0.8" />
+        </>
+      )
+      break
+    case "kitchenUpper":
+      content = (
+        <>
+          <Iso x={cx} y={baseline - 12} w={36} d={15} h={26} color={primary} />
+          <line x1={cx} y1={baseline - 13} x2={cx} y2={baseline - 37} stroke={darken(primary, 0.3)} strokeWidth="0.9" />
+          <circle cx={cx - 3} cy={baseline - 25} r="0.9" fill={metal} />
+          <circle cx={cx + 3} cy={baseline - 25} r="0.9" fill={metal} />
+        </>
+      )
+      break
     default:
       content = (
         <>

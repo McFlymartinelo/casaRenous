@@ -458,6 +458,87 @@ l'instance) au lieu d'être simplement mise à l'échelle. Une armoire de 60 cm
 peut donc devenir un linéaire de 1,20 m avec deux portes, sans déformer les
 appareils.
 
+### 5.3 bis Catalogue IKEA importé
+
+Un import réduit du catalogue IKEA France est fourni : **150 meubles** (salon,
+cuisine, chambre, salle d'eau, déco, bureau, enfant et jardin) avec leurs
+**cotes réelles** et leur **modèle 3D GLB**. Il est généré par
+`scripts/import-ikea.mjs` dans `src/catalog/catalog-ikea.ts` et chargé par
+`src/catalog/catalog.ts`. Les GLB sont stockés dans `public/models/ikea/`.
+
+```bash
+npm run import:ikea              # à la racine ou dans apps/planner
+node apps/planner/scripts/import-ikea.mjs --max=90 --dry-run --force
+```
+
+Le script interroge les endpoints publics utilisés par le site IKEA
+(recherche `sik.search.blue.cdtapps.com`, fiches produits pour les URL de
+modèles `web-api.ikea.com/dimma/assets/.../glb/`). Il privilégie les GLB non
+compressés (pas de décodeur Draco à charger) et relève les dimensions dans le
+GLB, en mètres. Les fichiers déjà présents ne sont pas retéléchargés ; les GLB
+plus référencés sont supprimés. `--dry-run` ne télécharge rien.
+
+Dans l'inspecteur, les meubles importés affichent la marque, la référence IKEA,
+le prix et un lien vers la fiche produit. Le prix est également visible sur la
+carte du catalogue. C'est un prix indicatif, figé à l'import : relancer le
+script pour le rafraîchir.
+
+> Données publiques non officielles, non affiliées à IKEA. Les endpoints et les
+> références peuvent changer : relancer l'import pour rafraîchir. Vérifier les
+> cotes avant de commander et ne pas utiliser les modèles 3D IKEA dans un
+> produit commercial sans accord.
+
+En haut à droite de la scène, la pastille **Projet** affiche le nombre de
+meubles posés et la somme des prix indicatifs. Dépliée, elle donne le nombre
+d'articles du catalogue, le total du projet et le détail **par pièce** (la
+pièce est déterminée depuis la position du meuble, avec « Extérieur » pour
+ceux hors du plancher).
+
+Le bouton **Ajouter … lignes au budget** crée une ligne « Achat » par meuble
+IKEA posé dans le budget de la maison :
+
+- ouvert depuis le portail (`/amenagement`), le planner envoie les lignes via
+  `postMessage` au portail, qui les enregistre avec ses droits API (admin) ;
+  les doublons sont évités par un `clientId` déterministe dérivé de l'id du
+  meuble : un second clic ne crée pas de lignes supplémentaires ;
+- ouvert seul, le planner copie un tableau TSV dans le presse-papiers : collez-le
+  dans **Budget › Coller un tableau** en choisissant le type « Facture » et la
+  disposition « Libellé – Montant ».
+
+Les lignes sont tronquées par lots de 60 (limite de l'API). Seuls les meubles
+ayant un prix importé génèrent une ligne.
+
+### 5.3 ter Catalogue Leroy Merlin (API.SH)
+
+`scripts/import-leroy-merlin.mjs` importe un catalogue Leroy Merlin France via
+**API.SH** (1000 crédits gratuits/mois). Leroy Merlin n'a pas d'API publique et
+ses fiches produits sont protégées (DataDome) : c'est la seule source fiable
+trouvée pour les prix et les caractéristiques.
+
+```bash
+# clé gratuite sur api.sh, dans .env ou dans l'environnement
+APISH_KEY=...
+npm run import:lm
+node apps/planner/scripts/import-leroy-merlin.mjs --max=40 --dry-run --force
+```
+
+Le script génère `src/catalog/catalog-leroy-merlin.ts` (branché sur `CATALOG`).
+Il lit les caractéristiques `Largeur / Profondeur / Hauteur (en cm)` pour les
+cotes, le prix, la référence, la photo et le lien produit. Les réponses sont
+mises en cache dans `apps/planner/.cache/leroy-merlin/` (ignoré par git) pour ne
+pas consommer de crédits à chaque essai ; `--force` les ignore. `--dry-run`
+parcourt les données mais n'écrit pas le catalogue (les appels API sont tout de
+même consommés). Les résultats sont filtrés sur `sold_by_leroy_merlin=true`
+(pas de marketplace).
+
+Leroy Merlin **ne fournit pas de modèles 3D** : les meubles importés utilisent
+le modèle paramétrique défini par `kind` (pas de badge `GLB`). Les cotes sont
+celles du produit, pas celles de l'emballage. Le catalogue reste vide tant que
+l'import n'a pas été lancé avec une clé.
+
+> Données tierces, non affiliées à Leroy Merlin. Vérifier les cotes et les prix
+> avant usage ; ne pas redistribuer les données sans accord.
+
 ### 5.4 La cuisine de référence
 
 `EXAMPLE_RDC` contient un aménagement de cuisine calé sur la photo du

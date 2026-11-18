@@ -17,6 +17,8 @@
     "dev:portal": "npm run dev -w @casarenous/portal",
     "dev:planner": "npm run dev -w @casarenous/planner",
     "build:planner": "npm run build -w @casarenous/planner",
+    "import:ikea": "npm run import:ikea -w @casarenous/planner",
+    "import:lm": "npm run import:lm -w @casarenous/planner",
     "build:planner:embed": "npm run build:embed -w @casarenous/planner",
     "build": "npm run build -w @casarenous/shared && npm run build -w @casarenous/backend && npm run build:embed -w @casarenous/planner && npm run build -w @casarenous/portal",
     "typecheck": "npm run build -w @casarenous/shared && npm run typecheck -w @casarenous/backend && npm run typecheck -w @casarenous/planner && npm run typecheck -w @casarenous/portal",

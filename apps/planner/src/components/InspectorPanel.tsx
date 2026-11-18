@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react"
 import { getCatalogItem, getItemSize, getVariant } from "@/catalog/catalog"
 import { HOUSE, getLevel, roomAt } from "@/config/house"
-import { formatDimensions } from "@/lib/format"
+import { formatDimensions, formatPrice } from "@/lib/format"
 import { formatHour, timeOfDay } from "@/lib/sun"
 import { applyRotation, isFootprintValid, moveFootprint } from "@/lib/place"
 import { usePlanner, useSelectedItem } from "@/store/planner"
@@ -148,6 +148,28 @@ export function InspectorPanel() {
         {selected && catalog ? (
           <div className="inspector__meta">
             <span className="meta-pill">{catalog.category}</span>
+            {catalog.brand ? (
+              <span className="meta-pill">
+                {catalog.brand}
+                {catalog.reference ? ` ${catalog.reference}` : ""}
+              </span>
+            ) : null}
+            {catalog.price !== undefined ? (
+              <span className="meta-pill meta-pill--price" title="Prix indicatif relevé lors de l'import">
+                {formatPrice(catalog.price)}
+              </span>
+            ) : null}
+            {catalog.productUrl ? (
+              <a
+                className="meta-pill meta-pill--link"
+                href={catalog.productUrl}
+                target="_blank"
+                rel="noreferrer"
+                title="Ouvrir la fiche produit"
+              >
+                Fiche produit ↗
+              </a>
+            ) : null}
             <span className="meta-pill">{levelConfig.shortName}</span>
             {room ? <span className="meta-pill">{room.name}</span> : null}
             {locked ? <span className="meta-pill meta-pill--locked"><LockIcon size={10} /> Verrouillé</span> : null}

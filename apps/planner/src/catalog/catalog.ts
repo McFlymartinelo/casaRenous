@@ -5,6 +5,8 @@ import type {
   FurnitureSize,
   FurnitureVariant,
 } from "@/types"
+import { IKEA_CATALOG } from "./catalog-ikea"
+import { LM_CATALOG } from "./catalog-leroy-merlin"
 
 function variant(
   id: string,
@@ -255,11 +257,15 @@ const entries: Entry[] = [
   { id: "borne-recharge", name: "Borne de recharge", category: "Garage", kind: "evCharger", w: 0.26, d: 0.14, h: 0.55, variants: METALS, elevation: 1.1, allowOverlap: true, keywords: "borne recharge voiture électrique mur garage" },
 ]
 
-export const CATALOG: CatalogItem[] = entries.map((entry) => ({
-  ...entry,
-  variants: entry.variants ?? FABRICS,
-  defaultVariant: (entry.variants ?? FABRICS)[0]?.id,
-}))
+export const CATALOG: CatalogItem[] = [
+  ...entries.map((entry) => ({
+    ...entry,
+    variants: entry.variants ?? FABRICS,
+    defaultVariant: (entry.variants ?? FABRICS)[0]?.id,
+  })),
+  ...IKEA_CATALOG,
+  ...LM_CATALOG,
+]
 
 export const CATALOG_BY_ID = new Map(CATALOG.map((item) => [item.id, item]))
 

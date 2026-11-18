@@ -10,3 +10,7 @@ export function formatDimensions(w: number, d: number, h?: number): string {
 export function formatArea(m2: number): string {
   return `${m2.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} m²`
 }
+
+export function formatPrice(value: number): string {
+  return `${value.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
+}

@@ -217,6 +217,16 @@ export interface CatalogItem {
   outdoor?: boolean
   model?: CatalogModel
   keywords?: string
+  /** Enseigne d'origine, ex. "IKEA" (catalogues importés). */
+  brand?: string
+  /** Référence commerciale affichée dans l'inspecteur, ex. "205.220.46". */
+  reference?: string
+  /** Fiche produit d'origine, ex. une URL ikea.com. */
+  productUrl?: string
+  /** Prix public relevé lors de l'import (indicatif). */
+  price?: number
+  /** URL de la photo du catalogue. */
+  image?: string
 }
 
 export interface FurnitureSize {

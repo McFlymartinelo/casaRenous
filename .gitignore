@@ -16,6 +16,7 @@ apps/portal/public/models/*.glb
 !apps/portal/public/models/.gitkeep
 !apps/portal/public/models/casarenous.glb
 apps/portal/public/amenagement-app/
+apps/planner/.cache/
 certs/
 certbot-webroot/
 
