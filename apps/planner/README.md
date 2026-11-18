@@ -652,8 +652,11 @@ Le **plan de masse PCMI 2** est calé via `house.json → site` :
   places 2,50 × 5,00 m (bloc 4,97 × 4,96 m) sous l’angle bas-gauche de la
   maison est inclus dans `asphaltArea`.
 
-`siteBounds()`, l'herbe et les collisions des objets `outdoor` utilisent
-l'emprise de la parcelle et de l'allée.
+`siteBounds()` et les collisions des objets `outdoor` utilisent l'emprise de la
+parcelle et de l'allée. Les brins d'herbe 3D sont excluts de la terrasse, du
+chemin, de l'**enrobé réel** (`pointInPolygon()`) et de l'emprise de la maison
+(murs compris), pas de toute la parcelle. Aucun brin ne pousse donc à travers
+les planchers.
 
 Une catégorie **Garage** regroupe un carport et trois véhicules, ces derniers
 étant présents dans l'aménagement d'exemple :
