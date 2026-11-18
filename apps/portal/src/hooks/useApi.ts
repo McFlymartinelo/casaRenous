@@ -230,6 +230,28 @@ export function useAnalyzeDocument() {
   })
 }
 
+/** Lit le résultat d'une analyse. Tant qu'elle est `pending`, on interroge le serveur. */
+export function useDocumentAnalysis(id: string, enabled = true) {
+  return useQuery({
+    queryKey: keys.documentAnalysis(id),
+    queryFn: () => api.documents.analysis(id),
+    enabled,
+    refetchInterval: (query) =>
+      query.state.data?.status === "pending" ? 1200 : false,
+  })
+}
+
+export function useSaveReservedWorks(documentId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (items: { label: string; amountCents: number }[]) =>
+      api.documents.saveReservedWorks(documentId, items),
+    onSuccess: (analysis) => {
+      client.setQueryData(keys.documentAnalysis(analysis.documentId), analysis)
+    },
+  })
+}
+
 export function useAnalysisQuality(enabled = true) {
   return useQuery({
     queryKey: keys.analysisQuality,

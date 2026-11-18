@@ -6,6 +6,7 @@ import {
   DocumentUpdateInput,
   DocumentUploadFields,
   IdParam,
+  ReservedWorksUpdateInput,
   type Env,
 } from "@casarenous/shared"
 import type { Database } from "../db/client.js"
@@ -16,7 +17,7 @@ import { asyncHandler, parseBody, parseParams, parseQuery } from "../lib/http.js
 import { createUpload } from "../lib/multer.js"
 import { cursorCondition, decodeCursor, encodeCursor } from "../lib/pagination.js"
 import { toDocument, toDocumentAnalysis } from "../lib/serializers.js"
-import { analyzeDocument } from "../services/invoice-analysis.js"
+import { requestDocumentAnalysis, saveReservedWorks } from "../services/invoice-analysis.js"
 import { qualityFromExtraction, summarizeQuality } from "../services/analysis-quality.js"
 import {
   assertMagic,
@@ -248,7 +249,7 @@ export function documentsRouter(
     asyncHandler(async (req, res) => {
       const { id } = parseParams(IdParam, req.params)
       const { user } = res.locals.auth as AuthLocals
-      const { analysis } = await analyzeDocument(db, env, id)
+      const { analysis } = await requestDocumentAnalysis(db, env, id)
 
       await writeAudit(db, {
         actorId: user.id,
@@ -264,6 +265,18 @@ export function documentsRouter(
         },
       })
 
+      res.json(analysis)
+    }),
+  )
+
+  router.post(
+    "/documents/:id/analysis/reserved-works",
+    auth,
+    requireRole("admin"),
+    asyncHandler(async (req, res) => {
+      const { id } = parseParams(IdParam, req.params)
+      const input = parseBody(ReservedWorksUpdateInput, req.body)
+      const analysis = await saveReservedWorks(db, id, input.items)
       res.json(analysis)
     }),
   )

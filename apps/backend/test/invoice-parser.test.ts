@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { parseAmountToCents, parseInvoiceText } from "../src/lib/invoice-parser.js"
+import {
+  isInvoiceLike,
+  parseAmountToCents,
+  parseInvoiceText,
+} from "../src/lib/invoice-parser.js"
 
 const INVOICE = `SARL DUPONT BATIMENT
 12 rue des Artisans, 35000 Rennes
@@ -259,5 +263,27 @@ Due without deduction on: 30.03.2026`
   it("conserve le numéro de facture et l'échéance", () => {
     expect(result.invoiceNumber).toBe("1302003685435")
     expect(result.dueDate).toBe("2026-03-30")
+  })
+})
+
+describe("isInvoiceLike", () => {
+  it("reconnaît une facture", () => {
+    expect(isInvoiceLike(INVOICE)).toBe(true)
+  })
+
+  it("ne prend pas une notice de chantier pour une facture", () => {
+    const notice = [
+      "NOTICE DESCRIPTIVE",
+      "Immeuble a construire pour le compte de M RENOUS",
+      "Le montant des travaux est de 303 903 EUR",
+      "Les factures seront reglees par le maitre d'ouvrage",
+      "ACOMPTE 0",
+    ].join("\n")
+    expect(isInvoiceLike(notice)).toBe(false)
+  })
+
+  it("ignore un long document meme s'il mentionne des factures", () => {
+    const longNotice = `NOTICE CONTRAT\n${"Le montant des factures et TVA est de 500 EUR\n".repeat(1000)}`
+    expect(isInvoiceLike(longNotice)).toBe(false)
   })
 })

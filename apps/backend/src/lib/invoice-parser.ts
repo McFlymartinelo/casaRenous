@@ -762,3 +762,34 @@ export function parseInvoiceText(text: string): InvoiceExtraction {
 export function isUsableInvoiceText(text: string): boolean {
   return normalizeText(text).replace(/\s/g, "").length >= MIN_USABLE_TEXT
 }
+
+/**
+ * Distinguish an invoice from any other PDF (notice, plan, contract…).
+ *
+ * The heuristic parser always returns an extraction, so without this gate a
+ * long document merely mentioning « facture » would be shown as a bogus
+ * invoice with invented amounts. We require an explicit invoice wording, at
+ * least two strong invoice markers, and a bounded text length (a 36-page
+ * notice has no reason to be parsed as an invoice).
+ */
+const MAX_INVOICE_TEXT_CHARS = 30_000
+const INVOICE_TITLE = /\b(facture|invoice|avoir|devis)\b/
+const STRICT_INVOICE_MARKERS = [
+  TOTAL_TTC_LABEL,
+  DUE_AMOUNT_LABEL,
+  ISSUE_LABEL,
+  /\b(siret|siren|numero de tva|vat number)\b/,
+  /(?:facture|invoice|avoir|devis)\s*(?:n[°o]?\.?|num[ée]ro|no\.?)?\s*[:#-]?\s*[A-Za-z]{0,5}[-_/]?\d{2,6}(?:[-_/]\d{1,6})?/i,
+]
+
+export function isInvoiceLike(text: string): boolean {
+  const normalized = normalizeText(text)
+  if (normalized.replace(/\s/g, "").length > MAX_INVOICE_TEXT_CHARS) return false
+  const folded = fold(normalized)
+  if (!INVOICE_TITLE.test(folded)) return false
+  const hits = STRICT_INVOICE_MARKERS.reduce(
+    (sum, marker) => sum + (marker.test(folded) ? 1 : 0),
+    0,
+  )
+  return hits >= 2
+}

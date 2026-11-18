@@ -1,6 +1,8 @@
-import "dotenv/config"
 import { mkdir } from "node:fs/promises"
 import { createServer } from "node:http"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+import { config as loadDotenv } from "dotenv"
 import { loadEnvOrExit } from "./config.js"
 import { createApp } from "./app.js"
 import { createDatabase } from "./db/client.js"
@@ -9,6 +11,13 @@ import { seedDatabase } from "./db/seed.js"
 import { createLogger } from "./lib/logger.js"
 import { createMailer } from "./lib/mailer.js"
 import { startScheduler } from "./services/scheduler.js"
+
+// `npm run dev` lance le backend depuis apps/backend, alors que le .env est à
+// la racine du dépôt. On charge d'abord le .env racine, puis un éventuel .env
+// local au workspace (qui prend le dessus).
+const moduleDir = path.dirname(fileURLToPath(import.meta.url))
+loadDotenv({ path: path.resolve(moduleDir, "../../../.env"), quiet: true })
+loadDotenv({ quiet: true })
 
 async function main() {
   const env = loadEnvOrExit()

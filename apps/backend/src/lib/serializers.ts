@@ -154,6 +154,8 @@ export function toDocumentAnalysis(row: DocumentAnalysisRow): DocumentAnalysis {
     status: row.status,
     engine: row.engine,
     textLength: row.textLength,
+    text: row.text ?? null,
+    summary: row.summary ?? null,
     extraction: row.extraction ?? null,
     quality: row.quality ?? null,
     message: row.message,

@@ -6,6 +6,7 @@ import {
   PROJECT_END_DATE,
   PROJECT_START_DATE,
   type Document,
+  type DocumentSummary,
   type InvoiceConfidence,
   type InvoiceExtraction,
 } from "@casarenous/shared"
@@ -24,7 +25,9 @@ import {
   useAnalyzeDocument,
   useCreateBudgetItem,
   useCreateMilestone,
+  useDocumentAnalysis,
   useReportAnalysisCorrection,
+  useSaveReservedWorks,
 } from "@/hooks/useApi"
 import { api } from "@/lib/api-client"
 import { formatDate } from "@/lib/dates"
@@ -72,10 +75,356 @@ function Field({
   )
 }
 
+function RecapField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="app-analysis-field">
+      <span className="app-kicker">{label}</span>
+      <span className="app-analysis-field__value">
+        <span>{children}</span>
+      </span>
+    </div>
+  )
+}
+
+function ReservedWorksEditor({
+  documentId,
+  items,
+  officialTotalCents,
+  canEdit,
+  edited,
+  documentTitle,
+}: {
+  documentId: string
+  items: DocumentSummary["reservedWorks"]
+  officialTotalCents: number | null
+  canEdit: boolean
+  edited: boolean
+  documentTitle: string
+}) {
+  const { notify } = useNotify()
+  const save = useSaveReservedWorks(documentId)
+  const createBudgetItem = useCreateBudgetItem()
+  const [paid, setPaid] = useState(false)
+  const [dueDate, setDueDate] = useState("")
+  const [addedToBudget, setAddedToBudget] = useState(false)
+  const [rows, setRows] = useState(() =>
+    items.map((item) => ({ label: item.label, amount: centsToInput(item.amountCents) })),
+  )
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    setRows(items.map((item) => ({ label: item.label, amount: centsToInput(item.amountCents) })))
+    setSaved(false)
+  }, [items])
+
+  const total = rows.reduce((sum, row) => sum + (parseEuroToCents(row.amount) ?? 0), 0)
+  const gap = officialTotalCents === null ? null : total - officialTotalCents
+
+  async function saveRows() {
+    const parsed = rows.map((row) => ({
+      label: row.label.trim(),
+      amountCents: parseEuroToCents(row.amount),
+    }))
+    if (parsed.some((row) => !row.label || row.amountCents === null || row.amountCents <= 0)) {
+      notify({
+        title: "Vérifie les lignes",
+        message: "Chaque ligne doit avoir un libellé et un montant positif.",
+        tone: "danger",
+      })
+      return
+    }
+    try {
+      await save.mutateAsync(
+        parsed.map((row) => ({ label: row.label, amountCents: row.amountCents as number })),
+      )
+      setSaved(true)
+      notify({
+        title: "Travaux réservés enregistrés",
+        message: `${rows.length} lignes conservées pour ce document.`,
+        tone: "success",
+      })
+    } catch {
+      notify({ title: "Enregistrement impossible", message: "Réessaie dans un instant.", tone: "danger" })
+    }
+  }
+
+  async function addToBudget() {
+    const parsed = rows
+      .map((row) => ({ label: row.label.trim(), amountCents: parseEuroToCents(row.amount) }))
+      .filter(
+        (row): row is { label: string; amountCents: number } =>
+          Boolean(row.label) && row.amountCents !== null && row.amountCents > 0,
+      )
+    if (!parsed.length) {
+      notify({ title: "Aucune ligne à ajouter", message: "Vérifie les montants.", tone: "danger" })
+      return
+    }
+    const today = new Date().toISOString().slice(0, 10)
+    try {
+      for (const row of parsed) {
+        await createBudgetItem.mutateAsync({
+          kind: "invoice",
+          label: `Travaux réservés — ${row.label}`.slice(0, 180),
+          reference: documentTitle,
+          amountCents: row.amountCents,
+          dueDate: dueDate || null,
+          paidAt: paid ? dueDate || today : null,
+          status: paid ? "paid" : dueDate ? "due" : "planned",
+          attachmentDocumentId: documentId,
+          notes: `Travaux réservés lus dans « ${documentTitle} ». À ajuster dans le budget si besoin.`,
+          clientId: randomUUID(),
+        })
+      }
+      setAddedToBudget(true)
+      notify({
+        title: "Ajouté au budget",
+        message: `${parsed.length} lignes intégrées au budget de la maison.`,
+        tone: "success",
+      })
+    } catch {
+      notify({ title: "Ajout impossible", message: "Réessaie dans un instant.", tone: "danger" })
+    }
+  }
+
+  return (
+    <details>
+      <summary className="app-small" style={{ cursor: "pointer" }}>
+        Travaux réservés — {rows.length} lignes, {formatCents(total)}
+        {canEdit ? " · éditer et ajouter au budget" : ""}
+        {edited ? " (corrigé)" : ""}
+      </summary>
+      <div className="app-stack app-stack--tight" style={{ marginTop: 10 }}>
+        {officialTotalCents !== null ? (
+          <p className="app-tiny">
+            Total indiqué dans le document : {formatCents(officialTotalCents)}
+            {gap !== null && gap !== 0
+              ? ` — écart avec la liste : ${gap > 0 ? "+" : ""}${formatCents(gap)}`
+              : ""}
+          </p>
+        ) : null}
+        {rows.map((row, index) => (
+          <div key={`work-${index}`} style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+            <div style={{ flex: 3, minWidth: 0 }}>
+              <Input
+                label={`Travail ${index + 1}`}
+                value={row.label}
+                onChange={(event) =>
+                  setRows(rows.map((item, position) =>
+                    position === index ? { ...item, label: event.target.value } : item,
+                  ))
+                }
+              />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <Input
+                label="Montant (€)"
+                inputMode="decimal"
+                value={row.amount}
+                onChange={(event) =>
+                  setRows(rows.map((item, position) =>
+                    position === index ? { ...item, amount: event.target.value } : item,
+                  ))
+                }
+              />
+            </div>
+            {canEdit ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label={`Supprimer la ligne ${index + 1}`}
+                onClick={() => setRows(rows.filter((_, position) => position !== index))}
+              >
+                <TrashIcon size={16} />
+              </Button>
+            ) : null}
+          </div>
+        ))}
+        {canEdit ? (
+          <>
+            <Button
+              block
+              size="sm"
+              variant="ghost"
+              icon={<PlusIcon size={16} />}
+              onClick={() => setRows([...rows, { label: "", amount: "" }])}
+            >
+              Ajouter une ligne
+            </Button>
+            <Button
+              block
+              size="sm"
+              loading={save.isPending}
+              disabled={saved}
+              onClick={() => void saveRows()}
+            >
+              {saved ? "Travaux réservés enregistrés" : "Enregistrer les travaux réservés"}
+            </Button>
+
+            <div className="app-stack app-stack--tight">
+              <p className="app-kicker">Règle pour le budget</p>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Button
+                  size="sm"
+                  variant={!paid ? "soft" : "outline"}
+                  onClick={() => setPaid(false)}
+                >
+                  À payer
+                </Button>
+                <Button
+                  size="sm"
+                  variant={paid ? "outline" : "soft"}
+                  onClick={() => setPaid(true)}
+                >
+                  Déjà payé
+                </Button>
+              </div>
+              <Input
+                label="Date d'échéance (optionnelle)"
+                type="date"
+                min={PROJECT_START_DATE}
+                max={PROJECT_END_DATE}
+                value={dueDate}
+                onChange={(event) => setDueDate(event.target.value)}
+              />
+              <Button
+                block
+                icon={<WalletIcon size={18} />}
+                loading={createBudgetItem.isPending}
+                disabled={addedToBudget || total <= 0}
+                onClick={() => void addToBudget()}
+              >
+                {addedToBudget
+                  ? "Travaux ajoutés au budget"
+                  : `Ajouter ${rows.length} lignes au budget`}
+              </Button>
+              <p className="app-tiny">
+                Chaque ligne devient une dépense du budget ; tu pourras ajuster montant, date et
+                statut ligne par ligne depuis le budget.
+              </p>
+            </div>
+          </>
+        ) : null}
+      </div>
+    </details>
+  )
+}
+
+const SUMMARY_KIND: Record<DocumentSummary["kind"], string> = {
+  notice: "Notice descriptive",
+  invoice: "Facture",
+  quote: "Devis",
+  contract: "Contrat",
+  other: "Document",
+}
+
+function SummaryView({
+  summary,
+  text,
+  documentId,
+  documentTitle,
+  isAdmin,
+}: {
+  summary: DocumentSummary
+  text: string | null
+  documentId: string
+  documentTitle: string
+  isAdmin: boolean
+}) {
+  return (
+    <div className="app-stack">
+      <Card variant="soft">
+        <p className="app-kicker">{SUMMARY_KIND[summary.kind]}</p>
+        <p className="aura-h3" style={{ marginTop: 4 }}>
+          {summary.title}
+        </p>
+        <p className="app-small" style={{ marginTop: 8 }}>
+          {summary.description}
+        </p>
+      </Card>
+
+      <div className="app-analysis-fields">
+        {summary.who ? <RecapField label="Qui">{summary.who}</RecapField> : null}
+        {summary.what ? <RecapField label="Quoi">{summary.what}</RecapField> : null}
+        {summary.where ? <RecapField label="Où">{summary.where}</RecapField> : null}
+        {summary.amounts.map((item) => (
+          <RecapField key={item.label} label={item.label}>
+            {formatCents(item.amountCents)}
+          </RecapField>
+        ))}
+      </div>
+
+      {summary.reservedWorks.length ? (
+        <ReservedWorksEditor
+          documentId={documentId}
+          items={summary.reservedWorks}
+          officialTotalCents={
+            summary.amounts.find((item) => item.label === "Travaux réservés")?.amountCents ?? null
+          }
+          canEdit={isAdmin}
+          edited={summary.reservedWorksEdited}
+          documentTitle={documentTitle}
+        />
+      ) : null}
+
+      {text ? (
+        <details>
+          <summary className="app-small" style={{ cursor: "pointer" }}>
+            Voir le texte extrait
+          </summary>
+          <Card variant="soft">
+            <RawText text={text} />
+          </Card>
+        </details>
+      ) : null}
+    </div>
+  )
+}
+
+function RawText({ text }: { text: string }) {
+  const display = text.length > 40_000 ? `${text.slice(0, 40_000)}\n\n… (texte tronqué)` : text
+  return (
+    <pre
+      style={{
+        whiteSpace: "pre-wrap",
+        overflowWrap: "anywhere",
+        margin: 0,
+        font: "inherit",
+        fontSize: "var(--aura-text-sm)",
+        lineHeight: 1.55,
+      }}
+    >
+      {display}
+    </pre>
+  )
+}
+
+function RawTextView({ text, engine }: { text: string; engine: string }) {
+  const fromOcr = engine.includes("ocr")
+  return (
+    <div className="app-stack">
+      <Card variant="soft">
+        <p className="app-small">
+          {fromOcr
+            ? "Pages scannées reconnues par OCR. Vérifie les noms et les chiffres."
+            : "Texte extrait du document."}
+        </p>
+      </Card>
+      <Card variant="soft">
+        <RawText text={text} />
+      </Card>
+      <p className="app-tiny">
+        Lecture faite sur place, sans envoyer le document à un service externe.
+      </p>
+    </div>
+  )
+}
+
 function ExtractionView({
   extraction,
+  text,
 }: {
   extraction: InvoiceExtraction
+  text: string | null
 }) {
   return (
     <div className="app-stack">
@@ -163,6 +512,17 @@ function ExtractionView({
         </Card>
       ) : null}
 
+      {text ? (
+        <details>
+          <summary className="app-small" style={{ cursor: "pointer" }}>
+            Voir le texte extrait
+          </summary>
+          <Card variant="soft">
+            <RawText text={text} />
+          </Card>
+        </details>
+      ) : null}
+
       <p className="app-tiny">
         Lecture faite sur place, sans envoyer le document à un service externe.
         Vérifie les montants avant de créer un rappel.
@@ -193,15 +553,30 @@ export function InvoiceAnalysisSheet({
   const [budgetAdded, setBudgetAdded] = useState(false)
   const [remindersDone, setRemindersDone] = useState(false)
 
-  const { mutate, data, isPending, error } = analyze
+  const { mutate, isPending, error: analyzeError } = analyze
+  const [polling, setPolling] = useState(false)
+  const poll = useDocumentAnalysis(document.id, polling)
   const startedFor = useRef<string | null>(null)
+
+  function startRead() {
+    mutate(document.id, {
+      onSuccess: (analysis) => {
+        if (analysis.status === "pending") setPolling(true)
+      },
+    })
+  }
 
   useEffect(() => {
     if (startedFor.current === document.id) return
     startedFor.current = document.id
-    mutate(document.id)
-  }, [document.id, mutate])
+    startRead()
+    // Le document est immuable pendant la vie de cette feuille.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [document.id])
 
+  const data = polling ? poll.data : analyze.data
+  const error = analyzeError ?? poll.error
+  const isReading = isPending || (polling && data?.status === "pending")
   const extraction = data?.extraction ?? null
 
   useEffect(() => {
@@ -485,16 +860,20 @@ export function InvoiceAnalysisSheet({
     <Sheet
       open
       onClose={onClose}
-      title="Lecture de la facture"
+      title="Lecture du document"
       description={document.title}
       footer={footer}
     >
-      {isPending ? (
+      {isReading ? (
         <div className="app-stack">
           <Skeleton height={72} />
           <Skeleton height={32} />
           <Skeleton height={32} />
-          <p className="app-small">Lecture du document et extraction des montants…</p>
+          <p className="app-small">
+            {data?.status === "pending"
+              ? "Lecture OCR en cours : les pages du document sont analysées. Cela peut prendre quelques minutes."
+              : "Lecture du document et extraction des montants…"}
+          </p>
         </div>
       ) : error ? (
         <div className="app-stack">
@@ -503,12 +882,35 @@ export function InvoiceAnalysisSheet({
               {readableError(error)}
             </p>
           </Card>
-          <Button block variant="outline" icon={<RefreshIcon size={16} />} onClick={() => mutate(document.id)}>
+          <Button block variant="outline" icon={<RefreshIcon size={16} />} onClick={() => {
+              setPolling(false)
+              startRead()
+            }}>
             Relancer la lecture
           </Button>
         </div>
+      ) : data && data.summary ? (
+        <div className="app-stack">
+          <SummaryView
+            summary={data.summary}
+            text={data.text ?? null}
+            documentId={document.id}
+            documentTitle={document.title}
+            isAdmin={isAdmin}
+          />
+          {extraction ? (
+            <details>
+              <summary className="app-small" style={{ cursor: "pointer" }}>
+                Voir le détail de la facture
+              </summary>
+              <ExtractionView extraction={extraction} text={null} />
+            </details>
+          ) : null}
+        </div>
       ) : data && extraction ? (
-        <ExtractionView extraction={extraction} />
+        <ExtractionView extraction={extraction} text={data.text ?? null} />
+      ) : data && data.text ? (
+        <RawTextView text={data.text} engine={data.engine} />
       ) : (
         <div className="app-stack">
           <Card variant="soft">
@@ -521,7 +923,10 @@ export function InvoiceAnalysisSheet({
                 "Ce document n'a pas pu être interprété. Tu peux toujours le télécharger et le lire manuellement."}
             </p>
           </Card>
-          <Button block variant="outline" icon={<RefreshIcon size={16} />} onClick={() => mutate(document.id)}>
+          <Button block variant="outline" icon={<RefreshIcon size={16} />} onClick={() => {
+              setPolling(false)
+              startRead()
+            }}>
             Réessayer
           </Button>
         </div>

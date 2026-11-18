@@ -44,6 +44,7 @@ import {
   PushVapidResponse,
   RegisterRequestInput,
   RegisterVerifyInput,
+  ReservedWorksUpdateInput,
   ReserveCreateInput,
   ReservePageSchema,
   ReserveSchema,
@@ -404,6 +405,11 @@ export const api = {
       request(`/api/documents/${id}/analysis/correction`, OkResponse, {
         method: "POST",
         body: JSON.stringify(AnalysisCorrectionInput.parse({ amountCents })),
+      }),
+    saveReservedWorks: (id: string, items: { label: string; amountCents: number }[]) =>
+      request(`/api/documents/${id}/analysis/reserved-works`, DocumentAnalysisSchema, {
+        method: "POST",
+        body: JSON.stringify(ReservedWorksUpdateInput.parse({ items })),
       }),
   },
   documentCategories: {

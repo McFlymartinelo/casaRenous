@@ -276,7 +276,7 @@ export function ChantierScreen() {
                             size="sm"
                             variant="ghost"
                             aria-label={`Lire ${doc.title}`}
-                            title="Lire la facture"
+                            title="Lire le document"
                             onClick={() => setAnalysisTarget(doc)}
                           >
                             <SearchIcon size={16} />
@@ -536,7 +536,7 @@ export function ChantierScreen() {
           rooms={rooms.data ?? []}
           categories={customCategories}
           onUploaded={(doc) => {
-            if (doc.category === "facture" && doc.mime === "application/pdf") {
+            if (doc.mime === "application/pdf") {
               setAnalysisTarget(doc)
             }
           }}

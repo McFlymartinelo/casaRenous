@@ -86,6 +86,10 @@ export function summarizeQuality(rows: QualityRow[]): AnalysisQualitySummary {
     else if (row.status === "unsupported") unsupported += 1
     else if (row.status === "failed") failed += 1
 
+    // Un document non-facture est lu comme texte brut : il n'a pas de champs
+    // de facture à qualifier et ne doit pas polluer le journal qualité.
+    if (row.status === "ready" && !row.extraction) continue
+
     const quality = qualityOf(row)
     if (quality.corrected) corrected += 1
     if (row.status === "ready" && !quality.hasAmount) missingAmount += 1

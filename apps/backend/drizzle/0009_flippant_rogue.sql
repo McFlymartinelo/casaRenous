@@ -1,0 +1,1 @@
+ALTER TABLE "document_analyses" ADD COLUMN "reserved_works_override" jsonb;

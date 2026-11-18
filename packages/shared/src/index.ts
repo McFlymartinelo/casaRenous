@@ -935,11 +935,48 @@ export const AnalysisQualitySchema = z.object({
 })
 export type AnalysisQuality = z.infer<typeof AnalysisQualitySchema>
 
+/** Ligne détaillée des travaux réservés, modifiable par l'admin. */
+export const ReservedWorkSchema = z.object({
+  label: z.string().max(200),
+  amountCents: MoneyCents,
+})
+export type ReservedWork = z.infer<typeof ReservedWorkSchema>
+
+export const ReservedWorksUpdateInput = z.object({
+  items: z.array(ReservedWorkSchema).max(100),
+})
+export type ReservedWorksUpdate = z.infer<typeof ReservedWorksUpdateInput>
+
+/** Récap lisible d'un document : qui, quoi, où, combien, et description. */
+export const DocumentSummarySchema = z.object({
+  kind: z.enum(["notice", "invoice", "quote", "contract", "other"]),
+  title: z.string().max(200),
+  who: z.string().max(400).nullable(),
+  what: z.string().max(400).nullable(),
+  where: z.string().max(300).nullable(),
+  amounts: z
+    .array(
+      z.object({
+        label: z.string().max(120),
+        amountCents: MoneyCents,
+      }),
+    )
+    .max(8),
+  reservedWorks: z.array(ReservedWorkSchema).max(100),
+  reservedWorksEdited: z.boolean(),
+  description: z.string().max(1000),
+})
+export type DocumentSummary = z.infer<typeof DocumentSummarySchema>
+
 export const DocumentAnalysisSchema = z.object({
   documentId: Uuid,
   status: DocumentAnalysisStatus,
   engine: z.string().max(60),
   textLength: z.number().int().min(0),
+  /** Texte extrait (ou reconnu par OCR), conservé pour les documents non-factures. */
+  text: z.string().nullable(),
+  /** Récap structuré, affiché en priorité dans le portail. */
+  summary: DocumentSummarySchema.nullable(),
   extraction: InvoiceExtractionSchema.nullable(),
   quality: AnalysisQualitySchema.nullable(),
   message: z.string().nullable(),

@@ -25,6 +25,15 @@ const INVOICE_PDF = makePdf([
   "Echeance de paiement : 12/12/2026",
 ])
 
+const NOTICE_PDF = makePdf([
+  "NOTICE CONTRAT DE CONSTRUCTION",
+  "Maitre d'ouvrage : M RENOUS Axel et Mme SEVIN Diane",
+  "11 rue de la liberation 78640 NEAUPHLE LE VIEUX",
+  "La presente notice a pour objet de decrire les prestations",
+  "Les travaux seront realises conformement aux plans signes",
+  "Le maitre d'ouvrage pourra visiter le chantier en cours de travaux",
+])
+
 async function uploadDocument(
   file: Buffer,
   filename: string,
@@ -92,6 +101,23 @@ describe("lecture automatique d'une facture PDF", () => {
       .send({})
     expect(second.status).toBe(200)
     expect(second.body.extraction.invoiceNumber).toBe("F-2026-042")
+  })
+
+  it("lit un PDF qui n'est pas une facture sans inventer d'extraction", async () => {
+    await signIn(context, "admin@test.local", "Admin-Test-Password-2026!")
+    const document = await uploadDocument(NOTICE_PDF, "notice.pdf", "application/pdf", "notice")
+
+    const response = await context.agent
+      .post(`/api/documents/${document.id}/analyze`)
+      .set("Origin", origin(context))
+      .send({})
+
+    expect(response.status).toBe(200)
+    expect(response.body.status).toBe("ready")
+    expect(response.body.extraction).toBeNull()
+    expect(response.body.text).toContain("NOTICE CONTRAT DE CONSTRUCTION")
+    expect(response.body.textLength).toBeGreaterThan(40)
+    expect(response.body.message).toMatch(/ne semble pas/)
   })
 
   it("explique clairement qu'une image n'est pas encore lisible", async () => {
@@ -199,5 +225,33 @@ describe("lecture automatique d'une facture PDF", () => {
       .set("Origin", origin(context))
       .send({ amountCents: 1_000 })
     expect(forbidden.status).toBe(403)
+  })
+
+  it("conserve les corrections des travaux réservés après ré-analyse", async () => {
+    await signIn(context, "admin@test.local", "Admin-Test-Password-2026!")
+    const document = await uploadDocument(NOTICE_PDF, "notice.pdf", "application/pdf", "notice")
+    await context.agent
+      .post(`/api/documents/${document.id}/analyze`)
+      .set("Origin", origin(context))
+      .send({})
+
+    const saved = await context.agent
+      .post(`/api/documents/${document.id}/analysis/reserved-works`)
+      .set("Origin", origin(context))
+      .send({ items: [{ label: "Terrassement (corrigé)", amountCents: 123_456 }] })
+    expect(saved.status).toBe(200)
+    expect(saved.body.summary.reservedWorks).toEqual([
+      { label: "Terrassement (corrigé)", amountCents: 123_456 },
+    ])
+    expect(saved.body.summary.reservedWorksEdited).toBe(true)
+
+    const again = await context.agent
+      .post(`/api/documents/${document.id}/analyze`)
+      .set("Origin", origin(context))
+      .send({})
+    expect(again.body.summary.reservedWorks).toEqual([
+      { label: "Terrassement (corrigé)", amountCents: 123_456 },
+    ])
+    expect(again.body.summary.reservedWorksEdited).toBe(true)
   })
 })

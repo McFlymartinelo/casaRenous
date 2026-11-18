@@ -19,8 +19,10 @@ import {
 import type {
   AnalysisQuality,
   ExteriorSpecs,
+  DocumentSummary,
   InvoiceExtraction,
   KitchenSpecs,
+  ReservedWork,
 } from "@casarenous/shared"
 
 /* ========================================================================== */
@@ -384,6 +386,9 @@ export const documentAnalyses = pgTable(
     status: documentAnalysisStatusEnum("status").notNull(),
     engine: text("engine").notNull(),
     textLength: integer("text_length").notNull().default(0),
+    text: text("text"),
+    summary: jsonb("summary").$type<DocumentSummary | null>(),
+    reservedWorksOverride: jsonb("reserved_works_override").$type<ReservedWork[] | null>(),
     extraction: jsonb("extraction").$type<InvoiceExtraction | null>(),
     quality: jsonb("quality").$type<AnalysisQuality | null>(),
     message: text("message"),
