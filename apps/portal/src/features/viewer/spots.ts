@@ -1,9 +1,9 @@
 /**
  * Repère du modèle `casarenous.glb` (export Blender, Y vers le haut) :
  *
- *   X : largeur de la maison, 0 → 7,10 m
- *   Y : hauteur, sol du RDC = 0, sol de l'étage = 2,72, faîtage ≈ 7,5
- *   Z : profondeur, 0 = façade rue (garage), -13,60 = façade jardin (terrasse)
+ *   X : largeur de la maison, 0 → 7,00 m
+ *   Y : hauteur, sol du RDC = 0, sol de l'étage = 2,82, faîtage ≈ 8,1
+ *   Z : profondeur, 0 = façade rue (garage), -13,80 = façade jardin (terrasse)
  *
  * Les points de visite sont donnés en mètres dans ce repère, avec la hauteur
  * du sol du niveau concerné et la direction du regard. Ils ont été calés sur
@@ -22,7 +22,7 @@ export interface ViewerSpot {
 }
 
 export const RDC_FLOOR = 0
-export const ETAGE_FLOOR = 2.72
+export const ETAGE_FLOOR = 2.82
 export const EYE_HEIGHT = 1.65
 
 export const VIEWER_SPOTS: ViewerSpot[] = [
@@ -42,7 +42,7 @@ export const VIEWER_SPOTS: ViewerSpot[] = [
     id: "salon",
     label: "Salon",
     position: [3.6, RDC_FLOOR, -10.4],
-    lookAt: [3, RDC_FLOOR + 1.35, -13.6],
+    lookAt: [3, RDC_FLOOR + 1.35, -13.8],
   },
   {
     id: "etage-jardin",

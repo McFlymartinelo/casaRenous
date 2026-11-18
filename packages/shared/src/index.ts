@@ -505,6 +505,15 @@ export const ROOM_PROGRAM: readonly RoomProgramItem[] = [
     features: ["Rangement", "Accès garage"],
   },
   {
+    slug: "placard",
+    name: "Placard",
+    level: "rdc",
+    areaM2: 0.61,
+    features: ["Rangement entrée"],
+    description:
+      "Placard de l'entrée (0,61 m² habitable + 1,75 m² annexe au tableau des surfaces).",
+  },
+  {
     slug: "cellier",
     name: "Cellier",
     level: "rdc",
@@ -512,11 +521,25 @@ export const ROOM_PROGRAM: readonly RoomProgramItem[] = [
     features: ["Buanderie", "Stockage"],
   },
   {
-    slug: "garage",
-    name: "Garage",
+    slug: "degagement-rdc",
+    name: "Dégagement",
     level: "rdc",
-    areaM2: 14.38,
-    features: ["Porte motorisée", "Accès maison"],
+    areaM2: 1.95,
+    features: ["Distribution chambres et salle d'eau"],
+  },
+  {
+    slug: "wc-rdc",
+    name: "WC",
+    level: "rdc",
+    areaM2: 1.16,
+    features: ["WC"],
+  },
+  {
+    slug: "salle-d-eau-rdc",
+    name: "Salle d'Eau",
+    level: "rdc",
+    areaM2: 2.32,
+    features: ["Douche", "WC"],
   },
   {
     slug: "chambre-1",
@@ -526,11 +549,11 @@ export const ROOM_PROGRAM: readonly RoomProgramItem[] = [
     features: ["Volets roulants motorisés"],
   },
   {
-    slug: "salle-d-eau-rdc",
-    name: "Salle d'Eau",
+    slug: "garage",
+    name: "Garage",
     level: "rdc",
-    areaM2: 2.32,
-    features: ["Douche", "WC"],
+    areaM2: 14.38,
+    features: ["Porte motorisée", "Accès maison"],
   },
   {
     slug: "degagement",

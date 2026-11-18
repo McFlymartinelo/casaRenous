@@ -112,6 +112,8 @@ export interface StairConfig {
 
 export interface RoofConfig {
   pitch: number
+  /** Altitude de l'égout (haut de mur). Par défaut : niveau + hauteur sous plafond. */
+  eaveHeight?: number
   overhangSide: number
   overhangGable: number
   thickness: number

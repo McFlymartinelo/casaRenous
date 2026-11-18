@@ -9,7 +9,7 @@ export function Roof() {
   const view = usePlanner((state) => state.view)
   const roof = HOUSE.roof
   const level = getLevel("etage")
-  const eave = level.elevation + level.ceilingHeight
+  const eave = roof.eaveHeight ?? level.elevation + level.ceilingHeight
   const half = HOUSE.envelope.width / 2
   const pitch = (roof.pitch * Math.PI) / 180
   const rise = half * Math.tan(pitch)

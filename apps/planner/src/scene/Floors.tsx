@@ -11,20 +11,21 @@ export function Floors({ level }: { level: LevelId }) {
   const rooms = getRooms(level)
   const walls = getWalls(level)
   const rects: Rect2[] = config.floorRects ?? [
-    [0.38, 0.38, 7 - 0.38, 13.8 - 0.38],
+    [HOUSE.envelope.wallThickness, HOUSE.envelope.wallThickness, HOUSE.envelope.width - HOUSE.envelope.wallThickness, HOUSE.envelope.depth - HOUSE.envelope.wallThickness],
   ]
 
-  // Bandeau d'enduit affleurant : il comble les 0,22 m entre le haut du RDC
-  // (2,50) et le bas de l'étage (2,72) sans dépasser des façades. La dalle est
+  // Bandeau d'enduit affleurant : il comble les 0,32 m entre le haut du RDC
+  // (2,50) et le bas de l'étage (2,82) sans dépasser des façades. La dalle est
   // rentrée de 2 cm sur le pourtour pour laisser la place à l'enduit.
   const largeur = HOUSE.envelope.width
   const profondeur = HOUSE.envelope.depth
   const epEnduit = 0.02
+  const epDalle = config.slabThickness
   const bandeau: { key: string; position: [number, number, number]; size: [number, number, number] }[] = [
-    { key: "sud", position: [largeur / 2, config.elevation - 0.11, -epEnduit / 2], size: [largeur, 0.22, epEnduit] },
-    { key: "nord", position: [largeur / 2, config.elevation - 0.11, -profondeur + epEnduit / 2], size: [largeur, 0.22, epEnduit] },
-    { key: "ouest", position: [epEnduit / 2, config.elevation - 0.11, -profondeur / 2], size: [epEnduit, 0.22, profondeur] },
-    { key: "est", position: [largeur - epEnduit / 2, config.elevation - 0.11, -profondeur / 2], size: [epEnduit, 0.22, profondeur] },
+    { key: "sud", position: [largeur / 2, config.elevation - epDalle / 2, -epEnduit / 2], size: [largeur, epDalle, epEnduit] },
+    { key: "nord", position: [largeur / 2, config.elevation - epDalle / 2, -profondeur + epEnduit / 2], size: [largeur, epDalle, epEnduit] },
+    { key: "ouest", position: [epEnduit / 2, config.elevation - epDalle / 2, -profondeur / 2], size: [epEnduit, epDalle, profondeur] },
+    { key: "est", position: [largeur - epEnduit / 2, config.elevation - epDalle / 2, -profondeur / 2], size: [epEnduit, epDalle, profondeur] },
   ]
 
   const doorThresholds = useMemo(() => {
@@ -68,11 +69,11 @@ export function Floors({ level }: { level: LevelId }) {
           {/* Dalle sur toute l'emprise (comme celle du RDC), rentrée de 2 cm
               sur le pourtour pour que l'enduit soit parfaitement affleurant. */}
           <mesh
-            position={[largeur / 2, config.elevation - 0.12, -profondeur / 2]}
+            position={[largeur / 2, config.elevation - epDalle / 2 - 0.01, -profondeur / 2]}
             castShadow
             receiveShadow
           >
-            <boxGeometry args={[largeur - 2 * epEnduit, 0.22, profondeur - 2 * epEnduit]} />
+            <boxGeometry args={[largeur - 2 * epEnduit, epDalle, profondeur - 2 * epEnduit]} />
             <SurfaceMaterial material={getMaterial("concrete")} uv={[largeur, profondeur]} />
           </mesh>
           {bandeau.map((bande) => (
@@ -129,8 +130,8 @@ export function Floors({ level }: { level: LevelId }) {
       {view === "walk" ? (
         <>
           <mesh position={[3.5, config.elevation + config.ceilingHeight - 0.015, -6.9]} receiveShadow>
-            <boxGeometry args={[6.24, 0.03, 13.04]} />
-            <SurfaceMaterial material={getMaterial("whitePaint")} uv={[6.24, 13.04]} />
+            <boxGeometry args={[HOUSE.envelope.width - 2 * HOUSE.envelope.wallThickness, 0.03, HOUSE.envelope.depth - 2 * HOUSE.envelope.wallThickness]} />
+            <SurfaceMaterial material={getMaterial("whitePaint")} uv={[HOUSE.envelope.width - 2 * HOUSE.envelope.wallThickness, HOUSE.envelope.depth - 2 * HOUSE.envelope.wallThickness]} />
           </mesh>
           {rooms.map((room) => {
             const [x0, z0, x1, z1] = room.rect

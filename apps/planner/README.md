@@ -265,12 +265,13 @@ Dressing 4,38 · Palier 10,09. Total habitable : 139,36 m².
 
 ### 4.5 Niveaux et étage
 
-Le RdC est à `elevation: 0`. L'étage est à `2.72` (2,50 m de hauteur + 0,22 m de
-dalle) et sa hauteur sous plafond est de 2,50 m.
+Le RdC est à `elevation: 0`. L'étage est à `2.82` (2,50 m de hauteur + 0,32 m
+de plancher, cote du plan : +2,82) et sa hauteur sous plafond est de 2,50 m.
+L'égout est à `roof.eaveHeight: 5.47` et le faîtage atteint +8,11 (pente 35°).
 
-L'étage est aujourd'hui une **esquisse** issue du script Blender : les cloisons,
-ouvertures et pièces sont dans le JSON avec `provisional: true`, mais les cotes
-définitives ne sont pas encore fournies. Pour les remplacer :
+Les **façades et ouvertures de l'étage** sont aux cotes du plan signé
+(`provisional: true` ne concerne plus que les cloisons intérieures). Pour les
+remplacer quand le plan d'exécution arrive :
 
 1. modifiez `levels[1].elevation`, `ceilingHeight`, `slabThickness` ;
 2. remplacez les murs `up-*` dans `walls` ;
@@ -279,8 +280,9 @@ définitives ne sont pas encore fournies. Pour les remplacer :
 
 ### 4.6 Toiture, escalier, extérieurs
 
-- `roof.pitch` : pente en degrés ; le faîtage court selon `y` (axe `z` en three).
-- `roof.overhangSide` / `overhangGable` : débords.
+- `roof.pitch` : pente en degrés (35° sur le plan signé) ; le faîtage court
+  selon `y` (axe `z` en three). `roof.eaveHeight` fixe l'égout (+5,47).
+- `roof.overhangSide` / `overhangGable` : débords (0,27 m horizontal côté versants).
 - `stairs.steps` : 13 contremarches, avec marches balancées et volée droite.
 - `site` : terrasse, enrobé de l’entrée, arbres et haies. Les rectangles sont en plan.
 
@@ -878,7 +880,7 @@ Format exporté :
   "app": "casa-planner",
   "version": 1,
   "savedAt": "2026-11-16T12:00:00.000Z",
-  "house": { "name": "Maison Sévigné–Renous", "version": "1.0.0" },
+  "house": { "name": "Maison Sévin–Renous", "version": "1.1.0" },
   "level": "rdc",
   "furniture": [
     {
@@ -973,7 +975,8 @@ portrait.
 
 ## 9. Limites connues
 
-- L'**étage** est une esquisse (`provisional`) en attendant les cotes définitives.
+- L'**étage** : façades, fenêtres et niveaux sont aux cotes du plan signé ;
+  les **cloisons intérieures** restent une esquisse (`provisional`).
 - Les **escaliers** ne sont pas grimpables en visite ; on change de niveau avec
   la bascule RdC / Étage.
 - Les **portes ouvertes** sont visuelles et ne participent pas aux collisions
@@ -987,8 +990,9 @@ portrait.
 
 ## 10. Crédits
 
-- Cotes de la maison : plans fournis + script Blender `maison_blender_v4.py`
-  (murs, ouvertures, escalier, étage provisoire).
+- Cotes de la maison : plan signé « BON POUR ACCORD » (AP_RENOUS_SEVIN,
+  7,00 × 13,80 m, pente 35°, faîtage +8,11) + script Blender `casa_renous.py`
+  (murs, ouvertures, escalier).
 - Three.js, React Three Fiber, drei, zustand, Tailwind CSS.
 - Polices Inter et Fraunces (SIL Open Font License).
 - Textures : générées procéduralement dans le navigateur.

@@ -184,8 +184,8 @@ Le seed est **idempotent**. Il crée :
 - 1 admin et 2 invités (Mme Sévin, M. Renous) ;
 - un second admin optionnel si `SEED_ADMIN_2_EMAIL` / `_NAME` / `_PASSWORD`
   sont définis ;
-- le profil maison `7,10 × 13,60 m`, R+1 ;
-- les 15 pièces avec leurs surfaces exactes et la terrasse bois ;
+- le profil maison `7,00 × 13,80 m`, R+1 ;
+- les 18 pièces avec leurs surfaces exactes et la terrasse bois ;
 - les specs cuisine validées ;
 - les dates clés et jalons **provisoires** jusqu'à la livraison de juin 2028 ;
 - **compromis signé le 19 octobre 2026** et **CCMI signé le 6 novembre 2026**,
@@ -542,8 +542,8 @@ apps/portal/public/models/casarenous.glb
 
 Le modèle est utilisé **à l'échelle réelle**, sans recalibrage : il doit être
 exporté en mètres, Y vers le haut, sol du rez-de-chaussée à `y = 0`, façade rue
-du côté `z = 0` et façade jardin vers `z = -13,60`. C'est le cas de l'export
-Blender de la maison (7,10 × 13,60 m, étage à 2,72 m). Les points de visite
+du côté `z = 0` et façade jardin vers `z = -13,80`. C'est le cas de l'export
+Blender de la maison (7,00 × 13,80 m, étage à 2,82 m). Les points de visite
 (`src/features/viewer/spots.ts`) sont exprimés dans ce même repère.
 
 ### Deux modes

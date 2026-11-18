@@ -51,10 +51,12 @@ Pour tout rendre d'un coup en ligne de commande : passer
 
 ## Ce que construit le script
 
-* volume 7,10 × 13,60 m, murs extérieurs de 0,38 m (6,34 m intérieurs, cote du plan),
-* hauteur 2,60 m au RDC, 2,85 m à l'étage, toit à deux pans à 28° avec débords,
-* toutes les ouvertures lues sur les plans (baie 3,50 × 2,15, porte de garage
-  2,40 × 2,00, fenêtres 1,20 ou 1,80, 0,60 en sanitaires…),
+* volume 7,00 × 13,80 m, murs extérieurs de 0,40 m (6,20 × 13,00 m intérieurs),
+* hauteurs 2,50 m aux deux niveaux, plancher étage +2,82, égout +5,47,
+  faîtage +8,11, toit à deux pans à 35° (débord ≈ 0,27 m horizontal),
+* toutes les ouvertures du plan signé (baie 3,50 × 2,15, VR 1,80 × 2,15,
+  porte de garage 2,40 × 2,00, fenêtres 1,40 × 1,05 allège 1,10,
+  0,60 × 1,05 en sanitaires, porte d'entrée 0,90 × 2,15),
 * cloisons des deux niveaux, dalles, escalier droit et sa trémie,
 * mobilier sommaire (cuisine, séjour, lits, sanitaires) pour l'échelle,
 * une Porsche 911 type 996 noire garée dans le garage, nez vers la rue
@@ -92,9 +94,9 @@ Le script fonctionne aussi sans ce dossier (la galerie est simplement ignorée).
 Tout est piloté par des listes lisibles en haut du fichier :
 
 ```python
-LARGEUR, PROFONDEUR = 7.10, 13.60   # cotes extérieures
-H_RDC, H_ETAGE      = 2.60, 2.50
-PENTE_TOIT          = math.radians(28)
+LARGEUR, PROFONDEUR = 7.00, 13.80   # cotes extérieures (chaînes du plan)
+H_RDC, H_ETAGE      = 2.50, 2.50    # hauteurs sous plafond (coupe AA)
+PENTE_TOIT          = math.radians(35)
 ```
 
 Chaque mur est une entrée de `MURS_RDC` / `MURS_ETAGE` :
@@ -116,8 +118,9 @@ Le script prévient dans la console si une ouverture dépasse la longueur de son
 
 La 996 est construite par `build_porsche_996()` avec les cotes réelles du
 modèle (4,43 × 1,77 × 1,31 m). Elle est garée au centre du garage
-(`cx = 5,44`, pare-chocs arrière à `y = 8,385`), le nez tourné vers la porte de
-rue : il reste ~0,40 m devant, ~0,50 m derrière et ~0,30 m de chaque côté.
+(`cx = 5,28`, pare-chocs arrière à `y = 8,55`, sur le dallage à −0,07), le nez
+tourné vers la porte de rue : il reste ~0,40 m devant, ~0,40 m derrière et
+~0,44 m de chaque côté.
 
 * `BUILD_CAR = True` en tête de script permet de la désactiver.
 * La couleur se change dans `setup_materials()` : entrée `MATS["carrosserie"]`
@@ -129,17 +132,18 @@ rue : il reste ~0,40 m devant, ~0,50 m derrière et ~0,30 m de chaque côté.
 
 ## Précision du modèle
 
-Les cotes lues sur les plans sont respectées : 7,10 / 13,60 / 6,34 m, les
-ouvertures de façade et les surfaces annoncées des pièces.
+Les cotes du plan signé (« BON POUR ACCORD », AP_RENOUS_SEVIN) sont
+respectées : 7,00 / 13,80 / murs 0,40 / HSP 2,50 / +2,82 / +5,47 / +8,11 /
+pente 35°, les ouvertures de façade et les surfaces du tableau (dont Dgt,
+WC 1, Placard au RDC et WC 2 séparé à l'étage).
 
-En revanche, la position exacte de quelques cloisons intérieures est une
-reconstitution (une photo de plan ne donne pas les épaisseurs réelles). Les
-écarts restent inférieurs à quelques dizaines de centimètres, et chaque mur se
-corrige en une ligne. Points volontairement simplifiés :
+En revanche, la position exacte de quelques cloisons intérieures reste une
+reconstitution (l'intérieur n'est pas coté sur ce plan). Les écarts restent
+inférieurs à quelques dizaines de centimètres, et chaque mur se corrige en une
+ligne. Points volontairement simplifiés :
 
-* l'escalier est droit (le plan utilise des marches gironnées) ;
-* le WC de l'étage est regroupé avec la salle de bain ;
-* le dressing de l'étage est plus compact que sur le plan ;
+* l'escalier est droit alors que le plan utilise des marches gironnées
+  (13 contremarches dans les deux cas, départ le long du mur est) ;
 * le cellier est fermé par un muret bas sous la volée d'escalier.
 
 ## Export pour le portail

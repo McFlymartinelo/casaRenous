@@ -4,9 +4,10 @@
 CASA RENOUS — reconstruction 3D du pavillon (RDC + étage) dans Blender
 ======================================================================
 
-Génère depuis les plans fournis par Maisons Belles Demeures :
+Génère depuis le plan signé « BON POUR ACCORD » (AP_RENOUS_SEVIN,
+Maisons Belles Demeures) :
 
-  * le volume général (7,10 x 13,60 m, toit à deux pans),
+  * le volume général (7,00 x 13,80 m, toit à deux pans à 35°),
   * les murs extérieurs avec leurs ouvertures (fenêtres, baies, portes, porte de garage),
   * les cloisons intérieures des deux niveaux,
   * les dalles, l'escalier et sa trémie,
@@ -42,11 +43,14 @@ de modifier les coordonnées ou la liste d'ouvertures pour corriger un détail.
 
 Fiabilité des cotes
 -------------------
-Les cotes issues du plan (7,10 / 13,60 / 6,34 / ouvertures en façade, surfaces
-des pièces) sont respectées. En revanche, la position exacte de certaines
-cloisons intérieures est une reconstitution : une photo de plan ne permet pas
-de lire au millimètre les épaisseurs de murs. Les zones les plus incertaines
-sont signalées par un commentaire "APPROX" dans les listes de murs.
+Cotes du plan signé : emprise 7,00 × 13,80, murs ext. 0,40, HSP 2,50/2,50,
+plancher R+1 +2,82, égout +5,47, faîtage +8,11, pente 35°, fenêtres 1,40 × 1,05
+et 0,60 × 1,05 allège 1,10 (têtes alignées à 2,15), VR 1,80 × 2,15, baie
+3,50 × 2,15, porte d'entrée 0,90 × 2,15, garage 2,40 × 2,00, 13 marches,
+sol garage -0,07. Les surfaces des étiquettes sont celles du tableau du plan.
+La position exacte de certaines cloisons intérieures reste une reconstitution
+(non cotée sur le plan) : les zones incertaines sont signalées par un
+commentaire "APPROX" dans les listes de murs.
 """
 
 import math
@@ -67,33 +71,36 @@ BUILD_REFERENCES = True     # images de référence en fond de scène
 SAVE_BLEND = True           # sauvegarde .blend (uniquement en --background)
 RENDER_PREVIEWS = False     # rend les 4 vues dans renders/ (long, en --background)
 
-# --- Cotes principales (m) -------------------------------------------------
-LARGEUR = 7.10              # cote extérieure, plan
-PROFONDEUR = 13.60          # cote extérieure, plan
-MUR_EXT = 0.38              # épaisseur murs extérieurs (7,10 - 6,34 = 0,76)
+# --- Cotes principales (m) — plan signé AP_RENOUS_SEVIN -------------------
+LARGEUR = 7.00              # cote extérieure, plan (chaînes 7,00)
+PROFONDEUR = 13.80          # cote extérieure, plan (chaînes 13,80)
+MUR_EXT = 0.40              # épaisseur murs ext. (segments d'angle des chaînes)
 MUR_INT = 0.10              # cloisons de distribution
 MUR_PORTEUR = 0.20          # murs porteurs intérieurs
-H_RDC = 2.60                # hauteur sous plafond du RDC
-H_ETAGE = 2.50              # hauteur sous plafond de l'étage
-EP_DALLE = 0.25             # épaisseur de la dalle intermédiaire
-Z_ETAGE = H_RDC + EP_DALLE  # altitude du sol fini de l'étage (2,85)
-Z_EGOUT = Z_ETAGE + H_ETAGE # altitude du haut des murs (5,35)
-PENTE_TOIT = math.radians(28)
-DEBORD_TOIT = 0.55          # débord de toiture
+H_RDC = 2.50                # hauteur sous plafond du RDC (coupe AA)
+H_ETAGE = 2.50              # hauteur sous plafond de l'étage (coupe AA)
+EP_DALLE = 0.32             # plancher R+1 à +2,82 (2,50 + 0,32)
+Z_ETAGE = H_RDC + EP_DALLE  # altitude du sol fini de l'étage (+2,82)
+Z_PLAFOND_ETAGE = Z_ETAGE + H_ETAGE   # sous-face plafond étage (+5,32)
+Z_EGOUT = 5.47              # égout du plan : haut de mur (+0,15 de plénum)
+Z_FAITAGE = 8.11            # faîtage du plan (coupe AA, dessus faîtière)
+PENTE_TOIT = math.radians(35)   # PENTE = 35,00° (coupe AA)
+DEBORD_TOIT = 0.27          # débord horizontal (≈ 0,33 rampant), déduit du faîtage
 EP_TOIT = 0.22              # épaisseur de la couverture
 
-X0 = MUR_EXT                # 0,38  face intérieure gauche
-X1 = LARGEUR - MUR_EXT      # 6,72  face intérieure droite
-Y0 = MUR_EXT                # 0,38  face intérieure jardin
-Y1 = PROFONDEUR - MUR_EXT   # 13,22 face intérieure rue
+X0 = MUR_EXT                # 0,40  face intérieure gauche
+X1 = LARGEUR - MUR_EXT      # 6,60  face intérieure droite
+Y0 = MUR_EXT                # 0,40  face intérieure jardin
+Y1 = PROFONDEUR - MUR_EXT   # 13,40 face intérieure rue
 
-# Escalier RDC -> étage
-ESC_X0, ESC_X1 = 5.55, 6.50
-ESC_Y_BAS = 7.60            # nez de la première marche
-ESC_MARCHES = 12
+# Escalier RDC -> étage : 13 contremarches, gironnées sur le plan
+# (simplifié en volée droite le long du mur est, arrivée côté palier)
+ESC_X0, ESC_X1 = 5.60, 6.55
+ESC_Y_BAS = 7.55            # nez de la première marche (zone plan 5,45-7,57)
+ESC_MARCHES = 12            # + le palier haut = 13 contremarches (plan)
 ESC_GIRON = 0.26
-ESC_HAUTEUR = Z_ETAGE       # 2,85
-TREMIE = (5.45, 6.72, 4.05, 6.60)   # x0, x1, y0, y1 (trémie dans la dalle)
+ESC_HAUTEUR = Z_ETAGE       # +2,82
+TREMIE = (5.50, 6.60, 4.35, 7.55)   # x0, x1, y0, y1 (trémie dans la dalle)
 
 MATS = {}
 COLS = {}
@@ -556,9 +563,9 @@ def build_roof(collection):
     mod.thickness = EP_TOIT
     mod.offset = -1.0
 
-    # faîtage
+    # faîtage (dessus à +8,11, cote du plan)
     boxes_object("Faitage", [
-        (demi - 0.10, demi + 0.10, y_a, y_b, z_faitage - 0.04, z_faitage + 0.10)
+        (demi - 0.10, demi + 0.10, y_a, y_b, z_faitage - 0.05, Z_FAITAGE)
     ], MATS["tuile"], collection)
 
     # pignons (murs montant jusqu'à la toiture, façades jardin et rue)
@@ -581,72 +588,79 @@ def build_roof(collection):
 # ---------------------------------------------------------------------------
 
 MURS_RDC = [
-    # --- murs extérieurs --------------------------------------------------
-    ("Ext_Jardin", (0.00, 0.19), (LARGEUR, 0.19), MUR_EXT, [
-        op(3.55, 3.50, 2.15, 0.0, "bay"),          # baie coulissante 3,50 x 2,15
+    # --- murs extérieurs (cotes des chaînes du plan) -----------------------
+    ("Ext_Jardin", (0.00, 0.20), (LARGEUR, 0.20), MUR_EXT, [
+        op(3.50, 3.50, 2.15, 0.0, "bay"),          # baie 3,50 x 2,15 (1,75 + 3,50 + 1,75)
     ], "enduit"),
 
-    ("Ext_Rue", (0.00, 13.41), (LARGEUR, 13.41), MUR_EXT, [
-        op(1.60, 1.20, 1.20, 1.00),                # fenêtre chambre 1
-        op(5.50, 2.40, 2.00, 0.0, "garage"),       # porte de garage 2,40 x 2,00
+    ("Ext_Rue", (0.00, 13.60), (LARGEUR, 13.60), MUR_EXT, [
+        op(1.60, 1.40, 1.05, 1.10),                # fenêtre chambre 1 (All 1,10)
+        op(5.40, 2.40, 2.00, 0.0, "garage"),       # porte garage 2,40 x 2,00 (4,20 -> 6,60)
     ], "enduit"),
 
-    ("Ext_Gauche", (0.19, 0.00), (0.19, PROFONDEUR), MUR_EXT, [
-        op(1.80, 1.80, 1.35, 0.95),                # séjour
-        op(7.50, 1.20, 1.35, 0.95),                # séjour / cuisine
-        op(9.90, 0.60, 0.60, 1.40),                # salle d'eau
+    ("Ext_Gauche", (0.20, 0.00), (0.20, PROFONDEUR), MUR_EXT, [
+        op(2.00, 1.80, 2.15, 0.0, "bay"),           # VR séjour (1,10 -> 2,90)
+        op(7.65, 1.40, 1.05, 1.10),                # fenêtre cuisine (6,85 -> 8,25)
+        op(10.05, 0.60, 1.05, 1.10),               # fenêtre salle d'eau (9,75 -> 10,35)
     ], "enduit"),
 
-    ("Ext_Droite", (6.91, 0.00), (6.91, PROFONDEUR), MUR_EXT, [
-        op(1.80, 1.80, 1.35, 0.95),                # séjour
-        op(5.00, 0.95, 2.10, 0.00, "door"),        # porte d'entrée
-        op(6.80, 0.60, 0.60, 1.60),                # cellier
+    ("Ext_Droite", (6.80, 0.00), (6.80, PROFONDEUR), MUR_EXT, [
+        op(2.00, 1.80, 2.15, 0.0, "bay"),           # VR séjour (1,10 -> 2,90)
+        op(5.15, 0.90, 2.15, 0.0, "door"),         # porte d'entrée (4,70 -> 5,60)
+        op(7.87, 0.60, 1.05, 1.10),                # fenêtre cellier (7,57 -> 8,17)
     ], "enduit"),
 
     # --- cloisons ---------------------------------------------------------
-    ("Cloison_Entree", (4.30, 4.05), (4.30, 6.05), MUR_INT, [
-        op(1.30, 0.90, 2.10, 0.0, "door"),         # entrée -> séjour
+    ("Cloison_Entree", (4.30, 4.20), (4.30, 6.30), MUR_INT, [
+        op(0.95, 0.90, 2.05, 0.0, "door"),         # entrée -> pièce de vie
     ], "cloison"),
 
-    ("Cloison_Entree_Cellier", (4.08, 6.10), (5.45, 6.10), MUR_INT, [
-        op(0.72, 0.80, 2.10, 0.0, "door"),         # entrée -> cellier
+    ("Cloison_Entree_Cellier", (4.30, 6.30), (5.45, 6.30), MUR_INT, [
+        op(0.55, 0.80, 2.05, 0.0, "door"),         # entrée -> cellier
     ], "cloison"),
 
     # mur bas sous l'escalier : ferme le cellier sans bloquer la volée
-    ("Cloison_Sous_Escalier", (5.45, 6.10), (6.72, 6.10), MUR_INT, [],
-     "cloison", 1.15),
+    ("Cloison_Sous_Escalier", (5.45, 6.30), (6.60, 6.30), MUR_INT, [],
+     "cloison", 0.95),
 
-    ("Cloison_Cellier_Garage", (3.95, 7.75), (6.72, 7.75), MUR_PORTEUR, [
-        op(2.35, 0.80, 2.10, 0.0, "door"),         # cellier -> garage
+    ("Cloison_Cellier_Garage", (4.30, 8.05), (6.60, 8.05), MUR_PORTEUR, [
+        op(0.55, 0.80, 2.05, 0.0, "door"),         # cellier -> garage
     ], "cloison"),
 
-    ("Cloison_Cellier_Sejour", (4.08, 6.15), (4.08, 7.65), MUR_INT, [],
+    ("Cloison_Cellier_Sejour", (4.30, 6.30), (4.30, 8.05), MUR_INT, [],
      "cloison"),
 
-    ("Mur_Garage", (4.05, 7.85), (4.05, Y1), MUR_PORTEUR, [], "cloison"),
+    ("Mur_Garage", (3.75, 8.05), (3.75, Y1), MUR_PORTEUR, [], "cloison"),
 
-    # APPROX : limite séjour / dégagement, recalée sur la surface du séjour
-    ("Cloison_Sejour_Couloir", (0.38, 8.35), (3.95, 8.35), MUR_INT, [
-        op(2.55, 0.90, 2.10, 0.0, "door"),
+    # APPROX : limite pièce de vie / couloir (Dgt 1,95 m² du tableau)
+    ("Cloison_Sejour_Couloir", (0.40, 8.40), (3.85, 8.40), MUR_INT, [
+        op(2.10, 0.90, 2.05, 0.0, "door"),
     ], "cloison"),
 
-    ("Cloison_SalleEau", (2.25, 8.40), (2.25, 10.32), MUR_INT, [
-        op(1.00, 0.70, 2.05, 0.0, "door"),
+    ("Cloison_SalleEau", (2.20, 8.40), (2.20, 10.45), MUR_INT, [
+        op(0.33, 0.70, 2.05, 0.0, "door"),        # WC 1
+        op(1.30, 0.70, 2.05, 0.0, "door"),         # salle d'eau
     ], "cloison"),
 
-    ("Cloison_Chambre1", (0.38, 10.37), (3.95, 10.37), MUR_INT, [
-        op(2.62, 0.90, 2.05, 0.0, "door"),
+    # séparation WC 1 (1,16 m²) / salle d'eau (2,32 m²)
+    ("Cloison_WC_SDE", (0.40, 9.10), (2.20, 9.10), MUR_INT, [], "cloison"),
+
+    ("Cloison_Chambre1", (0.40, 10.45), (3.85, 10.45), MUR_INT, [
+        op(2.10, 0.90, 2.05, 0.0, "door"),
     ], "cloison"),
 ]
 
-# Surfaces des pièces telles qu'annoncées sur le plan (libellés)
+# Surfaces du tableau du plan (libellés)
 PIECES_RDC = [
     ("Piece_de_vie", "Pièce de vie\n41,11 m²", 2.10, 4.20),
-    ("Entree", "Entrée\n2,24 m²", 5.50, 4.60),
-    ("Cellier", "Cellier\n4,27 m²", 5.35, 6.90),
-    ("Garage", "Garage\n14,38 m²", 5.45, 10.70),
-    ("Salle_d_eau", "Salle d'eau\n2,32 m²", 1.25, 9.40),
+    ("Entree", "Entrée\n2,24 m²", 5.50, 5.00),
+    ("Placard", "Placard\n0,61 m²", 4.80, 4.55),
+    ("Cellier", "Cellier\n4,27 m²", 5.45, 7.15),
+    ("Dgt", "Dgt\n1,95 m²", 3.05, 9.40),
+    ("WC_1", "WC 1\n1,16 m²", 1.20, 8.72),
+    ("Salle_d_eau", "Salle d'eau\n2,32 m²", 1.20, 9.80),
     ("Chambre_1", "Chambre 1\n9,98 m²", 2.10, 11.85),
+    ("Garage", "Garage\n14,38 m²", 5.25, 10.80),
 ]
 
 
@@ -659,17 +673,18 @@ def build_rdc():
                MATS["beton"], col)
     # revêtements
     boxes_object("Sol_Sejour", [
-        (0.38, 6.72, 0.38, 8.35, 0.0, 0.02),
+        (0.40, 6.60, 0.40, 8.40, 0.0, 0.02),
     ], MATS["sol_bois"], col)
     boxes_object("Sol_Pieces_Humides", [
-        (0.38, 2.20, 8.40, 10.32, 0.0, 0.022),   # salle d'eau
-        (4.35, 6.72, 4.05, 6.10, 0.0, 0.022),    # entrée
-        (4.08, 6.72, 6.10, 7.65, 0.0, 0.020),    # cellier
-        (2.30, 3.95, 8.40, 10.32, 0.0, 0.020),   # couloir
+        (0.40, 2.20, 8.40, 10.45, 0.0, 0.022),   # salle d'eau + WC 1
+        (4.30, 6.60, 4.20, 6.30, 0.0, 0.022),    # entrée
+        (4.30, 6.60, 6.30, 8.05, 0.0, 0.020),    # cellier
+        (2.20, 3.85, 8.40, 10.45, 0.0, 0.020),   # couloir (Dgt)
     ], MATS["carrelage"], col)
-    boxes_object("Sol_Garage", [(4.15, 6.72, 7.85, 13.22, 0.0, 0.02)],
+    # sol garage à -0,07 (niveau du plan)
+    boxes_object("Sol_Garage", [(3.95, 6.60, 8.15, 13.40, -0.07, -0.05)],
                  MATS["beton"], col)
-    boxes_object("Sol_Chambre1", [(0.38, 3.95, 10.42, 13.22, 0.0, 0.02)],
+    boxes_object("Sol_Chambre1", [(0.40, 3.85, 10.45, 13.40, 0.0, 0.02)],
                  MATS["sol_bois"], col)
 
     build_stairs(col)
@@ -685,87 +700,89 @@ def build_rdc():
 # ---------------------------------------------------------------------------
 
 MURS_ETAGE = [
-    # --- murs extérieurs --------------------------------------------------
-    ("Ext_Jardin_E", (0.00, 0.19), (LARGEUR, 0.19), MUR_EXT, [
-        op(2.40, 1.20, 1.35, 0.95),                # chambre parentale
-        op(5.30, 1.20, 1.35, 0.95),                # salle d'eau
-    ], "enduit"),
+    # --- murs extérieurs (cotes des chaînes du plan) -----------------------
+    ("Ext_Jardin_E", (0.00, 0.20), (LARGEUR, 0.20), MUR_EXT, [
+        op(2.45, 1.40, 1.05, 1.10),                # chambre parentale (1,75 -> 3,15)
+        op(4.95, 0.60, 1.05, 1.10),               # salle d'eau 2 (4,65 -> 5,25)
+    ], "enduit", Z_EGOUT - Z_ETAGE),
 
-    ("Ext_Rue_E", (0.00, 13.41), (LARGEUR, 13.41), MUR_EXT, [
-        op(1.60, 1.20, 1.35, 0.95),                # chambre 3
-        op(5.50, 1.20, 1.35, 0.95),                # chambre 2
-    ], "enduit"),
+    ("Ext_Rue_E", (0.00, 13.60), (LARGEUR, 13.60), MUR_EXT, [
+        op(1.60, 1.40, 1.05, 1.10),               # chambre 3 (0,90 -> 2,30)
+        op(5.40, 1.40, 1.05, 1.10),               # chambre 2 (4,70 -> 6,10)
+    ], "enduit", Z_EGOUT - Z_ETAGE),
 
-    ("Ext_Gauche_E", (0.19, 0.00), (0.19, PROFONDEUR), MUR_EXT, [
-        op(2.40, 1.20, 1.35, 0.95),                # chambre parentale
-        op(6.80, 1.00, 1.35, 0.95),                # chambre 4
-    ], "enduit"),
+    ("Ext_Gauche_E", (0.20, 0.00), (0.20, PROFONDEUR), MUR_EXT, [
+        op(7.55, 1.40, 1.05, 1.10),               # chambre 4 (6,85 -> 8,25)
+    ], "enduit", Z_EGOUT - Z_ETAGE),
+    # (pas de fenêtre côté jardin pour la chambre parentale : 6,85 de mur plein)
 
-    ("Ext_Droite_E", (6.91, 0.00), (6.91, PROFONDEUR), MUR_EXT, [
-        op(1.70, 0.60, 0.60, 1.45),                # salle d'eau étage
-        op(8.60, 0.60, 0.60, 1.45),                # salle de bain
-    ], "enduit"),
+    ("Ext_Droite_E", (6.80, 0.00), (6.80, PROFONDEUR), MUR_EXT, [
+        op(5.15, 0.60, 1.05, 1.10),               # palier (4,85 -> 5,45)
+        op(7.87, 0.60, 1.05, 1.10),               # bains (7,57 -> 8,17)
+    ], "enduit", Z_EGOUT - Z_ETAGE),
 
-    # --- cloisons ---------------------------------------------------------
-    ("Cloison_Parentale", (3.56, 0.38), (3.56, 4.43), MUR_INT, [
-        op(3.55, 0.90, 2.05, 0.0, "door"),
+    # --- cloisons (positions relevées sur le plan) -------------------------
+    # Mur chambre 5 / (SDE 2 + dressing) : ~3,56 m, deux portes PP 73 dans
+    # les coins — SDE 2 côté façade, dressing côté fond — soit ~1,93 m de
+    # mur libre entre les deux portes.
+    ("Cloison_Parentale", (4.11, 0.40), (4.11, 3.96), MUR_INT, [
+        op(0.41, 0.76, 2.05, 0.0, "door"),        # chambre 5 -> salle d'eau 2
+        op(3.09, 0.73, 2.05, 0.0, "door"),        # chambre 5 -> dressing
     ], "cloison"),
 
-    ("Cloison_Parentale_Sud", (0.38, 4.48), (3.56, 4.48), MUR_INT, [],
-     "cloison"),
-
-    ("Cloison_Chambre4_Est", (3.56, 4.53), (3.56, 7.90), MUR_INT, [],
-     "cloison"),
-
-    ("Cloison_Chambre4_Hall", (2.60, 7.90), (2.60, 8.80), MUR_INT, [
-        op(0.45, 0.80, 2.05, 0.0, "door"),         # chambre 4 -> hall
+    ("Cloison_Parentale_Sud", (0.40, 3.96), (4.11, 3.96), MUR_INT, [
+        op(2.98, 0.73, 2.05, 0.0, "door"),        # entrée chambre 5 (depuis le palier)
     ], "cloison"),
 
-    ("Cloison_Chambre4_Sud", (2.55, 7.90), (3.56, 7.90), MUR_INT, [],
+    ("Cloison_Dressing_SalleEau", (4.11, 2.19), (6.60, 2.19), MUR_INT, [],
      "cloison"),
 
-    ("Cloison_Chambres_Sud", (0.38, 8.85), (6.72, 8.85), MUR_INT, [
-        op(2.72, 0.90, 2.05, 0.0, "door"),         # chambre 3
-        op(3.87, 0.90, 2.05, 0.0, "door"),         # chambre 2
+    ("Cloison_Dressing_Sud", (4.11, 3.96), (6.60, 3.96), MUR_INT, [],
+     "cloison"),
+
+    ("Cloison_Chambre4_Hall", (2.80, 3.96), (2.80, 8.85), MUR_INT, [
+        op(0.45, 0.80, 2.05, 0.0, "door"),        # chambre 4 -> palier
     ], "cloison"),
 
-    ("Cloison_SalleDeBain", (4.85, 6.70), (4.85, 8.80), MUR_INT, [
-        op(1.65, 0.80, 2.05, 0.0, "door"),
+    ("Cloison_Chambres_Sud", (0.40, 8.85), (6.60, 8.85), MUR_INT, [
+        op(1.50, 0.90, 2.05, 0.0, "door"),        # chambre 3
+        op(4.80, 0.90, 2.05, 0.0, "door"),        # chambre 2
     ], "cloison"),
 
-    ("Cloison_SalleDeBain_Nord", (4.90, 6.70), (6.72, 6.70), MUR_INT, [],
+    ("Cloison_Chambres_23", (3.50, 8.85), (3.50, Y1), MUR_INT, [],
      "cloison"),
 
-    ("Cloison_Tremie_Ouest", (5.40, 4.00), (5.40, 6.65), MUR_INT, [],
+    # WC 2 (1,27 m²) entre palier et bains
+    ("Cloison_WC_Ouest", (4.40, 5.70), (4.40, 6.80), MUR_INT, [
+        op(0.55, 0.70, 2.05, 0.0, "door"),        # WC 2 -> palier
+    ], "cloison"),
+    ("Cloison_WC_Sud", (4.40, 5.70), (5.50, 5.70), MUR_INT, [], "cloison"),
+    ("Cloison_WC_Est", (5.50, 5.70), (5.50, 6.80), MUR_INT, [], "cloison"),
+
+    ("Cloison_SalleDeBain_Nord", (4.40, 6.80), (6.60, 6.80), MUR_INT, [],
      "cloison"),
 
-    ("Cloison_Dressing_Sud", (4.80, 4.00), (6.72, 4.00), MUR_INT, [],
-     "cloison"),
-
-    ("Cloison_Dressing_Ouest", (4.80, 2.70), (4.80, 4.00), MUR_INT, [
-        op(0.90, 0.80, 2.05, 0.0, "door"),
+    ("Cloison_SalleDeBain", (4.40, 6.80), (4.40, 8.85), MUR_INT, [
+        op(0.80, 0.80, 2.05, 0.0, "door"),        # bains -> couloir
     ], "cloison"),
 
-    ("Cloison_Dressing_SalleEau", (4.80, 2.70), (6.72, 2.70), MUR_INT, [],
-     "cloison"),
-
-    ("Cloison_SalleEau_Etage", (5.35, 0.38), (5.35, 2.70), MUR_INT, [
-        op(1.65, 0.70, 2.05, 0.0, "door"),
-    ], "cloison"),
-
-    ("Cloison_Chambres_23", (3.56, 8.90), (3.56, Y1), MUR_INT, [],
-     "cloison"),
+    # garde-corps de la trémie (palier, côté escalier)
+    ("Garde_Corps_Tremie_N", (5.50, 4.35), (5.50, 5.70), MUR_INT, [],
+     "cloison", 1.00),
+    ("Garde_Corps_Tremie_S", (5.50, 6.80), (5.50, 7.55), MUR_INT, [],
+     "cloison", 1.00),
 ]
 
 PIECES_ETAGE = [
     ("Chambre_parentale", "Chambre 5\n12,92 m²", 1.95, 2.40),
-    ("Salle_d_eau", "Salle d'eau 2\n4,25 m²", 6.00, 1.50),
-    ("Dressing", "Dressing\n4,38 m²", 5.78, 3.35),
-    ("Degagement", "Palier\n10,09 m²", 4.25, 5.60),
-    ("Chambre_4", "Chambre 4\n12,08 m²", 1.90, 6.20),
-    ("Salle_de_bain", "Bains + WC 2\n4,63 m²", 5.80, 7.75),
+    ("Salle_d_eau_2", "S-D-E 2\n4,25 m²", 5.50, 1.40),
+    ("Dressing", "Dressing\n4,38 m²", 5.40, 3.10),
+    ("Palier", "Palier\n10,09 m²", 4.00, 5.20),
+    ("Chambre_4", "Chambre 4\n12,08 m²", 1.60, 6.20),
+    ("WC_2", "WC 2\n1,27 m²", 4.95, 6.25),
+    ("Salle_de_bain", "Bains\n4,63 m²", 5.50, 7.85),
     ("Chambre_3", "Chambre 3\n12,87 m²", 1.95, 11.10),
-    ("Chambre_2", "Chambre 2\n13,23 m²", 5.15, 11.10),
+    ("Chambre_2", "Chambre 2\n13,23 m²", 5.10, 11.10),
 ]
 
 
@@ -775,17 +792,24 @@ def build_etage():
                H_RDC, Z_ETAGE, MATS["beton"], col, trou=TREMIE)
 
     boxes_object("Sol_Etage", [
-        (0.38, 6.72, 0.38, 8.80, Z_ETAGE, Z_ETAGE + 0.02),
+        (0.40, 6.60, 0.40, 8.85, Z_ETAGE, Z_ETAGE + 0.02),
     ], MATS["sol_etage"], col)
     boxes_object("Sol_Etage_Sud", [
-        (0.38, 6.72, 8.85, 13.22, Z_ETAGE, Z_ETAGE + 0.02),
+        (0.40, 6.60, 8.85, 13.40, Z_ETAGE, Z_ETAGE + 0.02),
     ], MATS["sol_etage"], col)
     boxes_object("Sol_Etage_Carrelage", [
-        (5.40, 6.72, 0.38, 2.70, Z_ETAGE, Z_ETAGE + 0.022),
-        (4.90, 6.72, 6.70, 8.80, Z_ETAGE, Z_ETAGE + 0.022),
+        (4.16, 6.60, 0.40, 2.19, Z_ETAGE, Z_ETAGE + 0.022),   # salle d'eau 2
+        (4.40, 6.60, 6.80, 8.85, Z_ETAGE, Z_ETAGE + 0.022),   # bains
+        (4.40, 5.50, 5.70, 6.80, Z_ETAGE, Z_ETAGE + 0.022),   # WC 2
     ], MATS["carrelage"], col)
 
     build_walls(MURS_ETAGE, Z_ETAGE, H_ETAGE, MATS["cloison"], col)
+
+    # plafond étage : sous-face à +5,32, fermé jusqu'à l'égout (+5,47),
+    # ouvert au droit de la trémie. Le portail masque les maillages
+    # « plafond » en mode visite.
+    build_slab("Plafond_Etage", 0.40, 6.60, 0.40, 13.40,
+               Z_PLAFOND_ETAGE, Z_EGOUT, MATS["enduit"], col, trou=TREMIE)
 
     if BUILD_LABELS:
         for nom, texte, x, y in PIECES_ETAGE:
@@ -808,7 +832,7 @@ def build_furniture():
 
     z = 0.0
     # --- séjour / cuisine -------------------------------------------------
-    bloc("Cuisine_Plan", 0.38, 1.00, 2.60, 6.40, z, z + 0.90, "bois")
+    bloc("Cuisine_Plan", 0.40, 1.00, 5.90, 8.30, z, z + 0.90, "bois")
     bloc("Cuisine_Ilot", 1.70, 2.90, 3.20, 5.20, z, z + 0.92, "bois")
     bloc("Canape", 0.55, 2.85, 0.55, 1.45, z, z + 0.72, "tissu")
     bloc("Canape_Retour", 0.55, 1.45, 0.55, 2.80, z, z + 0.72, "tissu")
@@ -824,16 +848,16 @@ def build_furniture():
     bloc("Armoire_Ch1", 2.90, 3.90, 12.25, 12.85, z, z + 2.10, "bois")
 
     # --- salle d'eau RDC --------------------------------------------------
-    bloc("Douche_RDC", 0.42, 1.40, 8.44, 9.42, z, z + 0.06, "carrelage")
-    bloc("Vasque_RDC", 0.42, 1.30, 9.95, 10.28, z + 0.82, z + 0.90, "menuiserie")
+    bloc("Douche_RDC", 0.42, 1.40, 9.20, 10.35, z, z + 0.06, "carrelage")
+    bloc("Vasque_RDC", 0.45, 1.35, 9.70, 10.30, z + 0.82, z + 0.90, "menuiserie")
 
     # --- cellier / garage -------------------------------------------------
-    bloc("Etagere_Cellier", 4.12, 4.60, 6.20, 7.55, z, z + 1.90, "bois")
+    bloc("Etagere_Cellier", 4.35, 4.83, 6.40, 7.95, z, z + 1.90, "bois")
 
     z = Z_ETAGE
     # --- chambre parentale ------------------------------------------------
-    bloc("Lit_Parental", 0.60, 2.20, 1.90, 4.00, z, z + 0.52, "textile_blanc")
-    bloc("Tete_Parental", 0.60, 2.20, 0.62, 0.72, z, z + 1.00, "bois")
+    bloc("Lit_Parental", 0.60, 2.20, 0.75, 2.85, z, z + 0.52, "textile_blanc")
+    bloc("Tete_Parental", 0.60, 2.20, 0.62, 0.75, z, z + 1.00, "bois")
     bloc("Armoire_Parentale", 2.60, 3.45, 0.45, 1.90, z, z + 2.00, "bois")
 
     # --- dressing ---------------------------------------------------------
@@ -842,7 +866,7 @@ def build_furniture():
 
     # --- chambre 4 --------------------------------------------------------
     bloc("Lit_Ch4", 0.60, 2.00, 5.30, 7.30, z, z + 0.52, "textile_blanc")
-    bloc("Armoire_Ch4", 2.85, 3.45, 4.60, 5.90, z, z + 2.00, "bois")
+    bloc("Armoire_Ch4", 2.05, 2.70, 4.60, 5.90, z, z + 2.00, "bois")
 
     # --- chambres 3 et 2 --------------------------------------------------
     bloc("Lit_Ch3", 0.60, 2.20, 10.60, 12.60, z, z + 0.52, "textile_blanc")
@@ -851,9 +875,11 @@ def build_furniture():
     bloc("Armoire_Ch2", 6.10, 6.65, 9.00, 10.30, z, z + 2.00, "bois")
 
     # --- salle de bain étage ---------------------------------------------
-    bloc("Baignoire", 4.95, 6.60, 6.80, 7.60, z, z + 0.55, "carrelage")
+    bloc("Baignoire", 4.95, 6.60, 6.90, 7.70, z, z + 0.55, "carrelage")
     bloc("Vasque_Etage", 6.05, 6.65, 8.10, 8.70, z + 0.80, z + 0.88, "menuiserie")
-    bloc("WC_Etage", 4.95, 5.35, 8.20, 8.65, z, z + 0.42, "menuiserie")
+
+    # --- WC 2 (pièce séparée) ----------------------------------------------
+    bloc("WC_Etage", 4.55, 4.95, 5.90, 6.35, z, z + 0.42, "menuiserie")
 
     # --- salle d'eau étage ------------------------------------------------
     bloc("Douche_Etage", 5.95, 6.65, 0.45, 1.55, z, z + 0.06, "carrelage")
@@ -868,12 +894,12 @@ def build_porsche_996():
     """Porsche 911 type 996 stylisée, garée nez vers la porte de rue.
 
     Cotes réelles de la 996 (4,43 x 1,77 x 1,31 m) respectées. Le véhicule
-    tient dans le garage (2,57 x 5,37 m) avec ~0,40 m de chaque côté.
+    tient dans le garage (2,65 x 5,25 m) avec ~0,40 m devant et derrière.
     """
     col = COLS["voiture"]
-    zbase = 0.02                 # dessus du dallage du garage
-    cx = 5.44                    # axe médian du garage
-    y_rear = 8.385               # pare-chocs arrière
+    zbase = -0.06                # dessus du dallage du garage (-0,07)
+    cx = 5.28                     # axe médian du garage (3,95 -> 6,60)
+    y_rear = 8.55                 # pare-chocs arrière (mur cellier à 8,15)
     longueur = 4.43
 
     def y_depuis(s):
@@ -1025,7 +1051,7 @@ def build_site():
         lames.append((x, x + 0.115, -3.90, 0.00, -0.10, -0.03))
         x += 0.135
     boxes_object("Terrasse_Bois", lames, MATS["terrasse"], col)
-    boxes_object("Seuil_Garage", [(3.90, 6.85, PROFONDEUR, PROFONDEUR + 1.6,
+    boxes_object("Seuil_Garage", [(4.10, 6.70, PROFONDEUR, PROFONDEUR + 1.6,
                                    -0.24, -0.20)], MATS["pave"], col)
 
 

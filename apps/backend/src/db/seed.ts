@@ -145,8 +145,8 @@ export async function seedDatabase(db: Database, env: Env): Promise<SeedResult> 
     .values({
       id: 1,
       name: "Maison Sévin – Renous",
-      footprintWidthM: "7.10",
-      footprintDepthM: "13.60",
+      footprintWidthM: "7.00",
+      footprintDepthM: "13.80",
       levels: 2,
       kitchenSpecs: DEFAULT_KITCHEN_SPECS,
       exteriorSpecs: DEFAULT_EXTERIOR_SPECS,
@@ -155,8 +155,8 @@ export async function seedDatabase(db: Database, env: Env): Promise<SeedResult> 
       target: projectProfile.id,
       set: {
         name: "Maison Sévin – Renous",
-        footprintWidthM: "7.10",
-        footprintDepthM: "13.60",
+        footprintWidthM: "7.00",
+        footprintDepthM: "13.80",
         levels: 2,
         kitchenSpecs: DEFAULT_KITCHEN_SPECS,
         exteriorSpecs: DEFAULT_EXTERIOR_SPECS,
@@ -177,7 +177,18 @@ export async function seedDatabase(db: Database, env: Env): Promise<SeedResult> 
         sortOrder: index,
         specs: room.slug === "piece-de-vie" ? { kitchen: true } : null,
       })
-      .onConflictDoNothing({ target: rooms.slug })
+      .onConflictDoUpdate({
+        target: rooms.slug,
+        set: {
+          name: room.name,
+          level: room.level,
+          areaM2: room.areaM2 === null ? null : room.areaM2.toFixed(2),
+          description: room.description ?? null,
+          features: room.features,
+          sortOrder: index,
+          specs: room.slug === "piece-de-vie" ? { kitchen: true } : null,
+        },
+      })
   }
 
   const dates = [
