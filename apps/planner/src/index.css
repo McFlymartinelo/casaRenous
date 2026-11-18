@@ -967,6 +967,129 @@ button:disabled {
   padding: 3px 9px;
 }
 
+/* ------------------------------------------------------- récapitulatif projet */
+
+.project-summary {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 13;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.project-summary__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.92);
+  border: 1px solid rgba(222, 214, 199, 0.92);
+  box-shadow: 0 3px 12px rgba(54, 46, 34, 0.06);
+  backdrop-filter: blur(10px);
+  font-size: 10.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.project-summary__toggle:hover {
+  border-color: var(--line-strong);
+}
+
+.project-summary__label {
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.project-summary__count {
+  color: var(--ink-3);
+}
+
+.project-summary__price {
+  color: var(--terracotta);
+  font-weight: 650;
+}
+
+.project-summary__chevron {
+  font-size: 12px;
+  line-height: 1;
+  color: var(--ink-3);
+  transition: transform 180ms ease;
+}
+
+.project-summary.is-open .project-summary__chevron {
+  transform: rotate(180deg);
+}
+
+.project-summary__body {
+  width: 244px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 253, 248, 0.95);
+  border: 1px solid rgba(222, 214, 199, 0.92);
+  box-shadow: var(--shadow-2);
+  backdrop-filter: blur(10px);
+  font-size: 10.5px;
+  color: var(--ink-2);
+}
+
+.project-summary__line {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 0;
+}
+
+.project-summary__line--strong {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.project-summary__divider {
+  height: 1px;
+  background: var(--line);
+  margin: 6px 0;
+}
+
+.project-summary__budget {
+  width: 100%;
+  margin-top: 8px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--green);
+  background: var(--green);
+  color: #f8fbf6;
+  font-size: 10px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.project-summary__budget:hover:not(:disabled) {
+  background: var(--green-deep);
+}
+
+.project-summary__budget:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.project-summary__feedback {
+  margin: 7px 0 0;
+  color: var(--green);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.project-summary__empty,
+.project-summary__note {
+  margin: 6px 0 0;
+  color: var(--ink-3);
+  font-size: 9px;
+}
+
 .scene-compass {
   position: absolute;
   right: 18px;
@@ -2159,6 +2282,11 @@ button:disabled {
   .scene-hud {
     top: 10px;
     left: 10px;
+  }
+
+  .project-summary {
+    top: 10px;
+    right: 10px;
   }
 
   .scene-pill {

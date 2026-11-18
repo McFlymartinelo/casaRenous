@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { CatalogPanel } from "@/components/CatalogPanel"
 import { InspectorPanel } from "@/components/InspectorPanel"
+import { ProjectSummary } from "@/components/ProjectSummary"
 import { SceneCanvas } from "@/components/SceneCanvas"
 import { Toolbar } from "@/components/Toolbar"
 import { TopBar } from "@/components/TopBar"
@@ -104,6 +105,7 @@ export function App() {
         </div>
         <div className="stage">
           <SceneCanvas />
+          <ProjectSummary />
           <Toolbar />
         </div>
         <div className={`sheet-slot sheet-slot--inspector${mobilePanel === "inspector" ? " is-open" : ""}`}>
