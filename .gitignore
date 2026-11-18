@@ -20,6 +20,10 @@ apps/planner/.cache/
 certs/
 certbot-webroot/
 
+# Python
+__pycache__/
+*.pyc
+
 # Blender
 blender/*.blend
 blender/*.blend1
