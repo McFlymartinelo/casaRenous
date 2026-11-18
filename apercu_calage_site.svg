@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="820" viewBox="0 0 360 820" font-family="Segoe UI, sans-serif">
+  <rect width="360" height="820" fill="#dfe6d2"/>
+  <text x="180" y="28" text-anchor="middle" font-size="17" font-weight="700" fill="#2b2f33">Calage terrasse + chemin (vue de dessus)</text>
+  <text x="180" y="48" text-anchor="middle" font-size="11" fill="#5b636c">échelle 20 px / m · haut = jardin, bas = rue</text>
+
+  <!-- enrobé : stationnement + allée -->
+  <rect x="0" y="609" width="219" height="145" fill="#5d5e5a"/>
+  <text x="110" y="690" text-anchor="middle" font-size="12" fill="#fff">ENROBÉ</text>
+  <text x="110" y="708" text-anchor="middle" font-size="10" fill="#ddd">stationnement</text>
+
+  <!-- terrasse -->
+  <rect x="20" y="220" width="260" height="124" fill="#cbc5b8" stroke="#9a9488" stroke-width="1.5"/>
+  <text x="150" y="288" text-anchor="middle" font-size="14" font-weight="700" fill="#4a4a45">TERRASSE 13 × 6,2 m</text>
+  <text x="150" y="307" text-anchor="middle" font-size="10" fill="#6a6a60">débord 3 m de chaque côté</text>
+
+  <!-- chemin -->
+  <rect x="220" y="340" width="26" height="296" fill="#d8d2c3" stroke="#a9a394" stroke-width="1"/>
+  <text x="253" y="490" font-size="10" fill="#6a6a60" transform="rotate(90,253,490)">CHEMINvers l'entrée</text>
+
+  <!-- maison -->
+  <rect x="80" y="344" width="140" height="276" fill="#f4f1ea" stroke="#2b2f33" stroke-width="3"/>
+  <text x="150" y="490" text-anchor="middle" font-size="14" font-weight="700" fill="#2b2f33">MAISON</text>
+  <text x="150" y="510" text-anchor="middle" font-size="10" fill="#5b636c">7 × 13,8 m</text>
+
+  <!-- porte d'entrée (façade est) -->
+  <rect x="218" y="470" width="5" height="22" fill="#b04826"/>
+  <text x="232" y="486" font-size="10" fill="#b04826">entrée</text>
+
+  <!-- cotes -->
+  <line x1="20" y1="206" x2="280" y2="206" stroke="#2b2f33" stroke-width="1"/>
+  <text x="150" y="200" text-anchor="middle" font-size="11" fill="#2b2f33">13,00 m</text>
+  <line x1="6" y1="220" x2="6" y2="344" stroke="#2b2f33" stroke-width="1"/>
+  <text x="16" y="288" font-size="11" fill="#2b2f33">6,2 m</text>
+
+  <text x="180" y="790" text-anchor="middle" font-size="11" fill="#5b636c">Le chemin rejoint maintenant la terrasse et passe devant la porte.</text>
+</svg>

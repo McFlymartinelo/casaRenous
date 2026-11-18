@@ -625,12 +625,21 @@ interactives avec l’outil **Portes** :
 Le **plan de masse PCMI 2** est calé via `house.json → site` :
 
 - `plot` : le contour de parcelle (ce n'est pas une surface enrobée).
-- `asphaltArea` : la surface enrobée, qui reprend **toute la parcelle** (même
-  contour que `plot` : autour de la maison, stationnement, allée en chevron
-  jusqu'à la voie). La maison et la terrasse sont posées par-dessus. `holes`
-  laisse des fosses en herbe de 0,70 m de rayon au pied des arbres
-  (10,2 / 12,4 en trou intérieur ; 10,6 / 2,2 en encoche, car il touche la
-  limite droite).
+- `asphaltArea` : la surface réellement enrobée. Elle se limite au
+  **stationnement devant la maison** (au sud, `z ≤ 0,55`) et à l'allée en
+  chevron jusqu'à la voie. Il n'y a **plus d'enrobé derrière la maison ni du
+  côté terrasse** : ces zones restent en pelouse. Les anciennes fosses d'arbres
+  (`holes`) ont disparu avec l'enrobé arrière.
+- `path` : le **chemin en pierre claire** qui longe toute la façade est, du
+  stationnement (`z ≈ −0,8`) jusqu'à la terrasse (`z ≈ 14`). Il passe devant la
+  porte d'entrée (`z ≈ 8,6`) et est dessiné par-dessus l'enrobé au sud, puis sur
+  la pelouse.
+- `terrace` : la terrasse a été agrandie (`x −3 → 10`, `z 13,8 → 20`,
+  soit 13 × 6,2 m). Centrée sur la maison (largeur 7,0 m), elle déborde d'environ
+  3 m de chaque côté et s'étend jusqu'au fond du jardin, comme sur le visuel de
+  référence. Son dessus est **affine avec le sol fini du salon** (`y = 0,004`,
+  comme les planchers du RdC dans `Floors.tsx`) : plus de marche entre la baie
+  vitrée et la terrasse.
 - `driveway` : l'axe du ruban de 4,00 m de large, défini par trois points, dont
   le contour est calculé avec des **jointures en onglet** (`drivewayOutline()`)
   pour éviter le cran d'un assemblage de rectangles.

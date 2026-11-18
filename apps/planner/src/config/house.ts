@@ -254,6 +254,23 @@ export function pointInRect(point: Point2, rect: Rect2): boolean {
   )
 }
 
+/** Test ray-casting : le point est-il à l'intérieur du polygone (repère plan) ? */
+export function pointInPolygon(point: Point2, polygon: Point2[]): boolean {
+  const [x, z] = point
+  let inside = false
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const a = polygon[i]!
+    const b = polygon[j]!
+    if (
+      (a[1] > z) !== (b[1] > z) &&
+      x < ((b[0] - a[0]) * (z - a[1])) / (b[1] - a[1]) + a[0]
+    ) {
+      inside = !inside
+    }
+  }
+  return inside
+}
+
 export function roomAt(level: LevelId, point: Point2): RoomConfig | null {
   const rooms = getRooms(level)
   const exact = rooms.find((room) => pointInRect(point, room.rect))

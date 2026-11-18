@@ -46,8 +46,13 @@ export function Site() {
         <SurfaceMaterial material={getMaterial(site.grass)} uv={[100, 90]} />
       </mesh>
       {vegetation ? <GrassBlades /> : null}
+      {/* Le dessus de la terrasse est affine avec le sol fini du RdC (Floors.tsx : +0,004). */}
       <mesh
-        position={[(terrace.rect[0] + terrace.rect[2]) / 2, 0.015, -(terrace.rect[1] + terrace.rect[3]) / 2]}
+        position={[
+          (terrace.rect[0] + terrace.rect[2]) / 2,
+          0.004 - 0.045,
+          -(terrace.rect[1] + terrace.rect[3]) / 2,
+        ]}
         castShadow
         receiveShadow
       >

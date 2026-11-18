@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react"
 import { useFrame } from "@react-three/fiber"
 import * as THREE from "three"
-import { HOUSE, drivewayBounds, getMaterial, plotBounds } from "@/config/house"
+import { HOUSE, drivewayBounds, getMaterial, pointInPolygon } from "@/config/house"
 import type { Rect2 } from "@/types"
 import { SurfaceMaterial } from "./SurfaceMaterial"
 
@@ -346,10 +346,13 @@ function GrassBlades() {
   const blades = useMemo(() => {
     const random = rng(20261117)
     const site = HOUSE.site
+    const asphalt = site.asphaltArea?.points
+    const envelope = HOUSE.envelope
     const excluded: Rect2[] = [
+      // La maison entière (murs compris) ne reçoit aucun brin d'herbe.
+      worldRect([0, 0, envelope.width, envelope.depth]),
       worldRect(site.terrace.rect),
       worldRect(drivewayBounds()),
-      ...(plotBounds() ? [worldRect(plotBounds()!)] : []),
       ...(site.path ? [worldRect(site.path.rect)] : []),
     ]
     const result: { position: THREE.Vector3; rotation: number; scale: number; color: THREE.Color }[] = []
@@ -360,6 +363,8 @@ function GrassBlades() {
       const x = -6 + random() * 24
       const z = -18 + random() * 23
       if (excluded.some((rect) => inside(rect, x, z, 0.25))) continue
+      // Le gazon ne pousse que hors de l'enrobé (stationnement + allée).
+      if (asphalt && pointInPolygon([x, -z], asphalt)) continue
       const dry = random() < 0.06
       result.push({
         position: new THREE.Vector3(x, 0.012, z),
