@@ -460,7 +460,7 @@ appareils.
 
 ### 5.3 bis Catalogue IKEA importé
 
-Un import réduit du catalogue IKEA France est fourni : **150 meubles** (salon,
+Un import du catalogue IKEA France est fourni : **500 meubles** (salon,
 cuisine, chambre, salle d'eau, déco, bureau, enfant et jardin) avec leurs
 **cotes réelles** et leur **modèle 3D GLB**. Il est généré par
 `scripts/import-ikea.mjs` dans `src/catalog/catalog-ikea.ts` et chargé par
@@ -468,7 +468,9 @@ cuisine, chambre, salle d'eau, déco, bureau, enfant et jardin) avec leurs
 
 ```bash
 npm run import:ikea              # à la racine ou dans apps/planner
-node apps/planner/scripts/import-ikea.mjs --max=90 --dry-run --force
+# Extension par catégories (ajoute sans écraser l'existant) :
+node apps/planner/scripts/import-ikea.mjs --categories --append --max=500
+node apps/planner/scripts/import-ikea.mjs --dry-run --max=20 --out=/tmp/test.ts
 ```
 
 Le script interroge les endpoints publics utilisés par le site IKEA
@@ -476,7 +478,13 @@ Le script interroge les endpoints publics utilisés par le site IKEA
 modèles `web-api.ikea.com/dimma/assets/.../glb/`). Il privilégie les GLB non
 compressés (pas de décodeur Draco à charger) et relève les dimensions dans le
 GLB, en mètres. Les fichiers déjà présents ne sont pas retéléchargés ; les GLB
-plus référencés sont supprimés. `--dry-run` ne télécharge rien.
+plus référencés sont supprimés. `--dry-run` ne télécharge rien. `--categories`
+parcourt les grandes catégories (fenêtre limitée à 1000 produits, l'API refusant
+les requêtes plus larges) et `--append` conserve les entrées déjà générées.
+
+> Les 500 meubles importés représentent ~678 Mo de GLB. Le catalogue complet
+> IKEA FR (~36 000 références, ~10 Go) n'est pas embarquable dans une PWA :
+> le script est volontairement plafonné via `--max`.
 
 Dans l'inspecteur, les meubles importés affichent la marque, la référence IKEA,
 le prix et un lien vers la fiche produit. Le prix est également visible sur la
@@ -510,7 +518,8 @@ ayant un prix importé génèrent une ligne.
 
 ### 5.3 ter Catalogue Leroy Merlin (API.SH)
 
-`scripts/import-leroy-merlin.mjs` importe un catalogue Leroy Merlin France via
+**59 meubles** sont importés. `scripts/import-leroy-merlin.mjs` importe un
+catalogue Leroy Merlin France via
 **API.SH** (1000 crédits gratuits/mois). Leroy Merlin n'a pas d'API publique et
 ses fiches produits sont protégées (DataDome) : c'est la seule source fiable
 trouvée pour les prix et les caractéristiques.
@@ -538,6 +547,50 @@ l'import n'a pas été lancé avec une clé.
 
 > Données tierces, non affiliées à Leroy Merlin. Vérifier les cotes et les prix
 > avant usage ; ne pas redistribuer les données sans accord.
+
+### 5.3 quater Amazon et Boulanger (API.SH)
+
+`npm run import:amazon` importe **65 articles** ciblés (15 électroménager,
+19 jardin, 31 déco) depuis Amazon.fr. Les cotes sont lues dans `details` /
+`overview`, y compris les formats `35.9D x 21.2W x 11.2H centimetres`. Le script
+plafonne le nombre de fiches interrogées par requête (`limit × 4`) car chaque
+fiche coûte **3 crédits**. `npm run import:boulanger` est prêt (1 crédit/appel)
+mais le endpoint `/boulanger/v1/product` d'API.SH répondait **503** : le
+catalogue généré est vide et l'import sera à relancer quand le service sera
+rétabli. Les recherches déjà faites sont mises en cache et ne coûtent rien à
+relancer. `npm run check:boulanger` interroge gratuitement la page de statut
+API.SH : l'incident en cours (« Boulanger data unavailable: source temporarily
+down », ouvert le 17/11/2026) indique que c'est le site Boulanger lui-même qui ne
+répond pas ; les appels en échec ne sont pas facturés.
+
+Comme pour Leroy Merlin, ces meubles n'ont pas de GLB et utilisent le modèle
+paramétrique défini par `kind`.
+
+Des requêtes supplémentaires sont déjà ajoutées aux `PLAN` des deux scripts mais
+**pas encore exécutées** (pour économiser les crédits du mois en cours). Le mois
+prochain, il suffira de lancer :
+
+```bash
+npm run check:boulanger                  # attendre « disponible »
+npm run import:boulanger -- --max=80     # ~30-40 articles, ~30-50 crédits
+npm run import:amazon -- --max=140       # ~40-70 articles, ~250-400 crédits
+```
+
+Sans `--force`, les requêtes déjà en cache ne consomment rien : seules les
+nouvelles requêtes sont appelées.
+
+### 5.3 quinquies Autres sources envisageables
+
+Avec la même clé API.SH, d'autres enseignes sont couvertes et pourraient être
+importées de la même façon : **ManoMano** (1 crédit/appel, FR/ES/IT/DE),
+**Cdiscount**, **B&Q** (UK), **Home Depot**, **Lowe's**, **Wayfair**. IKEA est
+aussi disponible chez API.SH, mais l'import direct ci-dessus est préférable car
+il récupère les GLB officiels gratuitement.
+
+Castorama, Brico Dépôt, Conforama et But n'ont pas d'endpoint dédié ; ils
+resteraient accessibles via l'endpoint « Any website » (moins fiable). Le
+catalogue IKEA complet (~36 000 références, ~10 Go de GLB) dépasse largement
+ce qu'une PWA statique peut embarquer : l'import est volontairement plafonné.
 
 ### 5.4 La cuisine de référence
 

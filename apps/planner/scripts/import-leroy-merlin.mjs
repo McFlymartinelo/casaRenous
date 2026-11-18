@@ -36,7 +36,7 @@ const option = (name, fallback) => {
   const found = [...args].find((arg) => arg.startsWith(`--${name}=`))
   return found ? found.slice(name.length + 3) : fallback
 }
-const MAX = Number(option("max", "60"))
+const MAX = Number(option("max", "150"))
 const OUT = option("out", CATALOG_FILE)
 if (!Number.isFinite(MAX) || MAX <= 0) throw new Error("--max doit être un entier positif")
 
@@ -65,6 +65,32 @@ const PLAN = [
   { q: "table de jardin", category: "Jardin", kind: "diningTable", outdoor: true, limit: 2 },
   { q: "parasol", category: "Jardin", kind: "parasol", outdoor: true, limit: 2 },
   { q: "jardiniere", category: "Jardin", kind: "planter", outdoor: true, limit: 2 },
+
+  // Compléments : mobilier et équipements encore peu couverts
+  { q: "table repas", category: "Salon", kind: "diningTable", limit: 3 },
+  { q: "chaise de table", category: "Salon", kind: "diningChair", limit: 3 },
+  { q: "canape 3 places", category: "Salon", kind: "sofa", limit: 3 },
+  { q: "canape angle", category: "Salon", kind: "sofaCorner", limit: 2 },
+  { q: "table basse salon", category: "Salon", kind: "coffeeTable", limit: 3 },
+  { q: "meuble television", category: "Salon", kind: "tvUnit", limit: 3 },
+  { q: "etagere salon", category: "Salon", kind: "shelf", limit: 3 },
+  { q: "commode chambre", category: "Chambre", kind: "chestOfDrawers", limit: 3 },
+  { q: "lit double", category: "Chambre", kind: "bed", limit: 3 },
+  { q: "chevet chambre", category: "Chambre", kind: "nightstand", limit: 3 },
+  { q: "dressing armoire", category: "Chambre", kind: "wardrobe", limit: 3 },
+  { q: "bureau maison", category: "Bureau", kind: "desk", limit: 3 },
+  { q: "chaise bureau", category: "Bureau", kind: "officeChair", limit: 2 },
+  { q: "four encastrable", category: "Cuisine", kind: "kitchenOvenBank", limit: 2 },
+  { q: "refrigerateur", category: "Cuisine", kind: "fridge", limit: 2 },
+  { q: "lave vaisselle", category: "Cuisine", kind: "dishwasher", limit: 2 },
+  { q: "hotte cuisine", category: "Cuisine", kind: "hood", limit: 2 },
+  { q: "micro ondes", category: "Cuisine", kind: "microwave", limit: 2 },
+  { q: "meuble haut cuisine", category: "Cuisine", kind: "kitchenUpper", limit: 2 },
+  { q: "lit bebe", category: "Enfant", kind: "crib", limit: 2 },
+  { q: "bureau enfant", category: "Enfant", kind: "desk", limit: 2 },
+  { q: "salon de jardin", category: "Jardin", kind: "sofa", outdoor: true, limit: 2 },
+  { q: "barbecue", category: "Jardin", kind: "bbq", outdoor: true, limit: 2 },
+  { q: "eclairage jardin", category: "Jardin", kind: "gardenLight", outdoor: true, limit: 2 },
 ]
 
 const REJECT = /lot de|recharge|accessoire|pièce détachée|housse|protège|nettoyant|produit d'entretien/i

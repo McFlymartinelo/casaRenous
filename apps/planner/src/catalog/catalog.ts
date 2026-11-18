@@ -7,6 +7,8 @@ import type {
 } from "@/types"
 import { IKEA_CATALOG } from "./catalog-ikea"
 import { LM_CATALOG } from "./catalog-leroy-merlin"
+import { BOULANGER_CATALOG } from "./catalog-boulanger"
+import { AMAZON_CATALOG } from "./catalog-amazon"
 
 function variant(
   id: string,
@@ -265,6 +267,8 @@ export const CATALOG: CatalogItem[] = [
   })),
   ...IKEA_CATALOG,
   ...LM_CATALOG,
+  ...BOULANGER_CATALOG,
+  ...AMAZON_CATALOG,
 ]
 
 export const CATALOG_BY_ID = new Map(CATALOG.map((item) => [item.id, item]))

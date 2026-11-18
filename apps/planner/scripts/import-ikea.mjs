@@ -13,6 +13,7 @@
  *   node scripts/import-ikea.mjs
  *   node scripts/import-ikea.mjs --max=48 --dry-run
  *   node scripts/import-ikea.mjs --force
+ *   node scripts/import-ikea.mjs --categories --append --max=350
  *
  * Génère src/catalog/catalog-ikea.ts et télécharge les GLB dans
  * public/models/ikea/. Les fichiers déjà présents ne sont pas retéléchargés
@@ -32,8 +33,14 @@ const SEARCH_URL = "https://sik.search.blue.cdtapps.com/fr/fr/search-result-page
 const args = new Set(process.argv.slice(2))
 const dryRun = args.has("--dry-run")
 const force = args.has("--force")
-const maxArg = [...args].find((a) => a.startsWith("--max="))
-const MAX = maxArg ? Number(maxArg.split("=")[1]) : 150
+const categoriesMode = args.has("--categories")
+const append = args.has("--append")
+const option = (name, fallback) => {
+  const found = [...args].find((a) => a.startsWith(`--${name}=`))
+  return found ? found.slice(name.length + 3) : fallback
+}
+const MAX = Number(option("max", "150"))
+const OUT = option("out", CATALOG_FILE)
 if (!Number.isFinite(MAX) || MAX <= 0) throw new Error("--max doit être un entier positif")
 
 /** Requêtes ciblées : on reste sur du mobilier, pas sur tout le catalogue IKEA. */
@@ -132,6 +139,27 @@ const PLAN = [
   { q: "lampe de jardin", category: "Jardin", kind: "gardenLight", outdoor: true, limit: 2 },
 ]
 
+/**
+ * Mode `--categories` : parcourt les grandes catégories du catalogue IKEA FR.
+ * Le catalogue complet représente ~36 000 références et ~10 Go de GLB : on se
+ * limite volontairement aux univers utiles à la maison, avec un plafond.
+ */
+const CATEGORY_PLAN = [
+  { id: "700640", q: "Sofas & fauteuils", category: "Salon", kind: "sofa", limit: 35 },
+  { id: "fu002", q: "Tables & chaises", category: "Salon", kind: "diningTable", limit: 35 },
+  { id: "st001", q: "Rangements", category: "Salon", kind: "shelf", limit: 35 },
+  { id: "st007", q: "Petits rangements", category: "Salon", kind: "shelf", limit: 20 },
+  { id: "de001", q: "Décoration", category: "Déco", kind: "vase", limit: 25 },
+  { id: "li001", q: "Luminaires", category: "Déco", kind: "pendant", limit: 25 },
+  { id: "tl001", q: "Tapis & textiles", category: "Déco", kind: "rug", limit: 20 },
+  { id: "bm001", q: "Lits & matelas", category: "Chambre", kind: "bed", limit: 35 },
+  { id: "ka001", q: "Cuisine & électroménager", category: "Cuisine", kind: "kitchenBase", limit: 30 },
+  { id: "ba001", q: "Salle de bain", category: "Salle d'eau", kind: "vanity", limit: 25 },
+  { id: "od001", q: "Outdoor", category: "Jardin", kind: "diningTable", outdoor: true, limit: 25 },
+  { id: "bc001", q: "Enfant", category: "Enfant", kind: "crib", limit: 20 },
+  { id: "fu004", q: "Bureaux", category: "Bureau", kind: "desk", limit: 20 },
+]
+
 /** Accessoires et pièces détachées : on ne veut que des meubles / objets posés.
  *  Tapis, rideaux, vases, cadres, coussins et bougies sont désormais conservés. */
 const REJECT =
@@ -221,6 +249,35 @@ async function searchProducts(query) {
   return json.searchResultPage?.products?.main?.items ?? []
 }
 
+/** Une catégorie entière en un appel : `size` accepte le nombre total. */
+async function fetchCategoryItems(id) {
+  const base = "https://sik.search.blue.cdtapps.com/fr/fr/product-list-page"
+  const probe = await fetch(`${base}?category=${id}&size=1`)
+  if (!probe.ok) throw new Error(`Catégorie IKEA ${probe.status} (${id})`)
+  const probeJson = await probe.json()
+  const count = probeJson.productListPage?.productCount ?? 0
+  if (!count) return []
+  // Au-delà de ~1500, l'API répond 400 : on plafonne la fenêtre à 1000.
+  const size = Math.min(count, 1000)
+  await sleep(200)
+  const full = await fetch(`${base}?category=${id}&size=${size}`)
+  if (!full.ok) throw new Error(`Catégorie IKEA ${full.status} (${id}, ${count} produits)`)
+  const json = await full.json()
+  return (json.productListPage?.productWindow ?? []).map((product) => ({ product }))
+}
+
+/** En mode --append, on relit les entrées déjà générées pour les conserver. */
+function readExistingEntries() {
+  try {
+    return readFileSync(CATALOG_FILE, "utf8")
+      .split(/\r?\n/)
+      .filter((line) => line.trim().startsWith("{"))
+      .map((line) => JSON.parse(line.replace(/,\s*$/, "")))
+  } catch {
+    return []
+  }
+}
+
 /** Préfère un GLB non compressé (Draco) : aucun décodeur externe nécessaire. */
 function pickGlb(html) {
   const urls = [
@@ -266,15 +323,17 @@ async function download(url, destination) {
 async function main() {
   if (!dryRun) await mkdir(MODELS_DIR, { recursive: true })
 
-  const seen = new Set()
-  const entries = []
+  const entries = append ? readExistingEntries() : []
+  const seen = new Set(entries.map((entry) => String(entry.id).replace(/^ikea-/, "")))
+  const planList = categoriesMode ? CATEGORY_PLAN : PLAN
+  console.log(`${entries.length} entrées existantes conservées (--append=${append})`)
   let glbFound = 0
   let skipped = 0
 
-  outer: for (const plan of PLAN) {
+  outer: for (const plan of planList) {
     let items
     try {
-      items = await searchProducts(plan.q)
+      items = categoriesMode ? await fetchCategoryItems(plan.id) : await searchProducts(plan.q)
     } catch (error) {
       console.warn(`[ Recherche ] ${error.message}`)
       continue
@@ -361,9 +420,9 @@ async function main() {
     "export const IKEA_CATALOG: CatalogItem[] = [",
   ].join("\n")
   const body = entries.map((entry) => `  ${JSON.stringify(entry)},`).join("\n")
-  await writeFile(CATALOG_FILE, `${header}\n${body}\n]\n`, "utf8")
+  await writeFile(OUT, `${header}\n${body}\n]\n`, "utf8")
 
-  if (!dryRun) {
+  if (!dryRun && OUT === CATALOG_FILE) {
     const used = new Set(entries.map((entry) => path.basename(entry.model?.url ?? "")))
     for (const file of await readdir(MODELS_DIR)) {
       if (file.endsWith(".glb") && !used.has(file)) {
@@ -373,7 +432,7 @@ async function main() {
     }
   }
 
-  console.log(`\n${entries.length} entrées écrites dans ${path.relative(ROOT, CATALOG_FILE)}`)
+  console.log(`\n${entries.length} entrées écrites dans ${path.relative(ROOT, OUT)}`)
   console.log(`${glbFound} modèles 3D téléchargés dans ${path.relative(ROOT, MODELS_DIR)}`)
   if (skipped) console.log(`${skipped} résultats ignorés (cotes indisponibles)`)
 }

@@ -10,7 +10,10 @@
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "import:ikea": "node scripts/import-ikea.mjs",
-    "import:lm": "node scripts/import-leroy-merlin.mjs"
+    "import:lm": "node scripts/import-leroy-merlin.mjs",
+    "import:boulanger": "node scripts/import-boulanger.mjs",
+    "import:amazon": "node scripts/import-amazon.mjs",
+    "check:boulanger": "node scripts/check-boulanger.mjs"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.3.0",
