@@ -76,10 +76,15 @@ export default defineConfig({
               request.mode === "navigate" &&
               (url.pathname === "/amenagement-app/" ||
                 url.pathname === "/amenagement-app/index.html"),
+            // Le HTML du planificateur doit TOUJOURS venir du réseau. Avec
+            // l'ancien `networkTimeoutSeconds: 3`, un serveur un peu lent
+            // resservait l'index en cache (avec ses assets immutable) après
+            // chaque déploiement : l'app paraissait figée sur l'ancienne
+            // version, même après un rebuild Docker. On garde le cache pour
+            // le hors-ligne, mais plus aucun repli prématuré sur timeout.
             handler: "NetworkFirst",
             options: {
-              cacheName: "casarenous-amenagement-v1",
-              networkTimeoutSeconds: 3,
+              cacheName: "casarenous-amenagement-v2",
               expiration: { maxEntries: 2, maxAgeSeconds: 60 * 60 * 24 * 30 },
               cacheableResponse: { statuses: [0, 200] },
             },
@@ -90,7 +95,7 @@ export default defineConfig({
               url.pathname.startsWith("/amenagement-app/textures/"),
             handler: "CacheFirst",
             options: {
-              cacheName: "casarenous-amenagement-assets-v1",
+              cacheName: "casarenous-amenagement-assets-v2",
               expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 30 },
               cacheableResponse: { statuses: [0, 200] },
             },
