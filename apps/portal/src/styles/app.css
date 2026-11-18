@@ -577,6 +577,21 @@
   pointer-events: none;
 }
 
+.app-viewer__quality {
+  position: absolute;
+  right: var(--aura-space-3);
+  bottom: var(--aura-space-3);
+  z-index: 2;
+  padding: var(--aura-space-1) var(--aura-space-3);
+  border-radius: var(--aura-r-full);
+  background: var(--aura-glass-strong);
+  border: 1px solid var(--aura-glass-border);
+  backdrop-filter: blur(var(--aura-blur));
+  font-size: var(--aura-text-xs);
+  color: var(--aura-ink-2);
+  pointer-events: none;
+}
+
 .app-viewer__stick {
   position: absolute;
   left: var(--aura-space-3);

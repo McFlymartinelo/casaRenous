@@ -10,7 +10,10 @@ export function Effects() {
   const { gl, scene, camera, size } = useThree()
   const ssao = usePlanner((state) => state.ambience.ambientOcclusion)
   const view = usePlanner((state) => state.view)
-  const enabled = ssao && view === "3d"
+  const quality = usePlanner((state) => state.quality)
+  // Le post-traitement SSAO est le poste le plus coûteux : réservé aux machines
+  // qui tiennent le rythme, même si l'utilisateur l'a activé dans l'ambiance.
+  const enabled = ssao && view === "3d" && quality === "high"
 
   const composer = useMemo(() => {
     if (!enabled) return null

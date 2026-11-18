@@ -9,6 +9,7 @@ import { GrassBlades, Hedge, Tree } from "./vegetation"
 export function Site() {
   const view = usePlanner((state) => state.view)
   const vegetation = usePlanner((state) => state.ambience.vegetation !== false)
+  const quality = usePlanner((state) => state.quality)
   const site = HOUSE.site
   const terrace = site.terrace
   const driveway = site.driveway
@@ -45,7 +46,9 @@ export function Site() {
         <planeGeometry args={[100, 90]} />
         <SurfaceMaterial material={getMaterial(site.grass)} uv={[100, 90]} />
       </mesh>
-      {vegetation ? <GrassBlades /> : null}
+      {vegetation ? (
+        <GrassBlades density={quality === "low" ? 0.25 : quality === "medium" ? 0.5 : 1} />
+      ) : null}
       {/* Le dessus de la terrasse est affine avec le sol fini du RdC (Floors.tsx : +0,004). */}
       <mesh
         position={[

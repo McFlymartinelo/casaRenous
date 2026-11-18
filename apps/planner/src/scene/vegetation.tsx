@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber"
 import * as THREE from "three"
 import { HOUSE, drivewayBounds, getMaterial, pointInPolygon } from "@/config/house"
 import type { Rect2 } from "@/types"
+import { AutoMerge } from "./AutoMerge"
 import { SurfaceMaterial } from "./SurfaceMaterial"
 
 /* -------------------------------------------------------------------------- */
@@ -292,32 +293,34 @@ function Tree({
       <mesh geometry={trunk} castShadow receiveShadow dispose={null}>
         <SurfaceMaterial material={getMaterial("trunk")} uv={[radius * 2.2, height * 0.7]} />
       </mesh>
-      {branches.map((branch, i) => (
-        <mesh
-          key={i}
-          position={branch.position}
-          quaternion={branch.quaternion}
-          castShadow
-          dispose={null}
-        >
-          <cylinderGeometry args={[branch.tip, branch.base, branch.length, 6, 1]} />
-          <SurfaceMaterial material={getMaterial("trunk")} uv={[branch.length, branch.length]} />
-        </mesh>
-      ))}
-      {clusters.map((cluster, i) => (
-        <mesh
-          key={i}
-          geometry={cluster.geometry}
-          position={cluster.position}
-          rotation={cluster.rotation}
-          scale={cluster.scale}
-          castShadow
-          receiveShadow
-          dispose={null}
-        >
-          <meshStandardMaterial color={cluster.color} roughness={1} metalness={0} />
-        </mesh>
-      ))}
+      <AutoMerge>
+        {branches.map((branch, i) => (
+          <mesh
+            key={i}
+            position={branch.position}
+            quaternion={branch.quaternion}
+            castShadow
+            dispose={null}
+          >
+            <cylinderGeometry args={[branch.tip, branch.base, branch.length, 6, 1]} />
+            <SurfaceMaterial material={getMaterial("trunk")} uv={[branch.length, branch.length]} />
+          </mesh>
+        ))}
+        {clusters.map((cluster, i) => (
+          <mesh
+            key={i}
+            geometry={cluster.geometry}
+            position={cluster.position}
+            rotation={cluster.rotation}
+            scale={cluster.scale}
+            castShadow
+            receiveShadow
+            dispose={null}
+          >
+            <meshStandardMaterial color={cluster.color} roughness={1} metalness={0} />
+          </mesh>
+        ))}
+      </AutoMerge>
       <instancedMesh
         ref={leafMesh}
         args={[LEAF_GEOMETRY, LEAF_MATERIAL, leaves.length]}
@@ -340,7 +343,7 @@ function inside(rect: Rect2, x: number, z: number, margin: number): boolean {
   return x > rect[0] - margin && x < rect[2] + margin && z > rect[1] - margin && z < rect[3] + margin
 }
 
-function GrassBlades() {
+function GrassBlades({ density = 1 }: { density?: number }) {
   const mesh = useRef<THREE.InstancedMesh>(null)
 
   const blades = useMemo(() => {
@@ -356,7 +359,7 @@ function GrassBlades() {
       ...(site.path ? [worldRect(site.path.rect)] : []),
     ]
     const result: { position: THREE.Vector3; rotation: number; scale: number; color: THREE.Color }[] = []
-    const target = 26000
+    const target = Math.round(26000 * density)
     let attempts = 0
     while (result.length < target && attempts < target * 4) {
       attempts += 1
@@ -376,7 +379,7 @@ function GrassBlades() {
       })
     }
     return result
-  }, [])
+  }, [density])
 
   useEffect(() => {
     const instanced = mesh.current

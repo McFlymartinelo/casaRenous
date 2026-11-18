@@ -4,6 +4,7 @@ import * as THREE from "three"
 import { HOUSE_CENTER, getMaterial, getWalls, wallGeometry, wallHeight, wallBase, openingSpan, wallRenderTransform } from "@/config/house"
 import { usePlanner } from "@/store/planner"
 import type { OpeningConfig, WallConfig } from "@/types"
+import { MergedBoxes, pushBox, type BoxSpec } from "./MergedBoxes"
 import { SurfaceMaterial } from "./SurfaceMaterial"
 
 function wallOutwardSign(wall: WallConfig): number {
@@ -12,7 +13,7 @@ function wallOutwardSign(wall: WallConfig): number {
     HOUSE_CENTER[0] - geom.center[0],
     HOUSE_CENTER[1] - geom.center[1],
   ]
-  // +Z local correspond ? l'oppos? de la normale de plan apr?s le passage en z n?gatif.
+  // +Z local correspond à l'opposé de la normale de plan après le passage en z négatif.
   return geom.normal[0] * toCenter[0] + geom.normal[1] * toCenter[1] >= 0 ? -1 : 1
 }
 
@@ -85,142 +86,84 @@ function FadeGroup({
   return <group ref={group}>{children}</group>
 }
 
-function WallBox({
-  wall,
-  x0,
-  x1,
-  y0,
-  y1,
-  materialId,
-  uv,
-  castShadow = true,
-}: {
-  wall: WallConfig
-  x0: number
-  x1: number
-  y0: number
-  y1: number
-  materialId: string
-  uv?: [number, number]
-  castShadow?: boolean
-}) {
-  if (x1 - x0 < 0.001 || y1 - y0 < 0.001) return null
-  return (
-    <mesh
-      position={[(x0 + x1) / 2, (y0 + y1) / 2, 0]}
-      castShadow={castShadow}
-      receiveShadow
-    >
-      <boxGeometry args={[x1 - x0, y1 - y0, wall.thickness]} />
-      <SurfaceMaterial material={getMaterial(materialId)} uv={uv} />
-    </mesh>
-  )
-}
-
-function TrimBox({
-  wall: _wall,
-  x0,
-  x1,
-  y0,
-  y1,
-  z0,
-  z1,
-  materialId,
-  castShadow = false,
-}: {
-  wall: WallConfig
-  x0: number
-  x1: number
-  y0: number
-  y1: number
-  z0: number
-  z1: number
-  materialId: string
-  castShadow?: boolean
-}) {
-  if (x1 - x0 < 0.001 || y1 - y0 < 0.001) return null
-  return (
-    <mesh
-      position={[(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2]}
-      castShadow={castShadow}
-      receiveShadow
-    >
-      <boxGeometry args={[x1 - x0, y1 - y0, z1 - z0]} />
-      <SurfaceMaterial material={getMaterial(materialId)} uv={[x1 - x0, y1 - y0]} />
-    </mesh>
-  )
-}
-
-function WindowUnit({
-  wall,
-  opening,
-  a,
-  b,
-}: {
-  wall: WallConfig
-  opening: OpeningConfig
-  a: number
-  b: number
-}) {
+function windowBoxes(wall: WallConfig, opening: OpeningConfig, a: number, b: number): BoxSpec[] {
   const t = wall.thickness
   const frame = opening.type === "bay" ? 0.07 : 0.055
   const divisions = opening.divisions ?? 1
   const bottom = opening.sill
   const top = opening.top
-  const glassDepth = 0.008
+  const boxes: BoxSpec[] = []
+
+  pushBox(boxes, { x0: a, x1: a + frame, y0: bottom, y1: top, z0: -0.035, z1: 0.035, materialId: "whitePaint", castShadow: true })
+  pushBox(boxes, { x0: b - frame, x1: b, y0: bottom, y1: top, z0: -0.035, z1: 0.035, materialId: "whitePaint", castShadow: true })
+  pushBox(boxes, { x0: a, x1: b, y0: top - frame, y1: top, z0: -0.035, z1: 0.035, materialId: "whitePaint", castShadow: true })
+  pushBox(boxes, { x0: a, x1: b, y0: bottom, y1: bottom + frame, z0: -0.035, z1: 0.035, materialId: "whitePaint", castShadow: true })
+
+  for (let index = 0; index < Math.max(0, divisions - 1); index += 1) {
+    const x = a + ((b - a) * (index + 1)) / divisions
+    pushBox(boxes, { x0: x - 0.018, x1: x + 0.018, y0: bottom + frame, y1: top - frame, z0: -0.03, z1: 0.03, materialId: "whitePaint" })
+  }
+
+  if (bottom > 0.02) {
+    pushBox(boxes, { x0: a - 0.1, x1: b + 0.1, y0: bottom - 0.05, y1: bottom - 0.018, z0: -t / 2 - 0.08, z1: -t / 2 + 0.01, materialId: "stone", castShadow: true })
+    pushBox(boxes, { x0: a - 0.02, x1: b + 0.02, y0: bottom, y1: bottom + 0.03, z0: t / 2 - 0.01, z1: t / 2 + 0.05, materialId: "stone" })
+  }
+  return boxes
+}
+
+function windowGlass(wall: WallConfig, opening: OpeningConfig, a: number, b: number): ReactNode {
+  const frame = opening.type === "bay" ? 0.07 : 0.055
   return (
-    <group>
-      <TrimBox wall={wall} x0={a} x1={a + frame} y0={bottom} y1={top} z0={-0.035} z1={0.035} materialId="whitePaint" castShadow />
-      <TrimBox wall={wall} x0={b - frame} x1={b} y0={bottom} y1={top} z0={-0.035} z1={0.035} materialId="whitePaint" castShadow />
-      <TrimBox wall={wall} x0={a} x1={b} y0={top - frame} y1={top} z0={-0.035} z1={0.035} materialId="whitePaint" castShadow />
-      <TrimBox wall={wall} x0={a} x1={b} y0={bottom} y1={bottom + frame} z0={-0.035} z1={0.035} materialId="whitePaint" castShadow />
-      {Array.from({ length: Math.max(0, divisions - 1) }).map((_, index) => {
-        const x = a + ((b - a) * (index + 1)) / divisions
-        return (
-          <TrimBox
-            key={index}
-            wall={wall}
-            x0={x - 0.018}
-            x1={x + 0.018}
-            y0={bottom + frame}
-            y1={top - frame}
-            z0={-0.03}
-            z1={0.03}
-            materialId="whitePaint"
-          />
-        )
-      })}
-      <mesh position={[(a + b) / 2, (bottom + top) / 2, 0]} receiveShadow>
-        <boxGeometry args={[b - a - frame * 2, top - bottom - frame * 2, glassDepth]} />
-        <SurfaceMaterial material={getMaterial("glass")} envMapIntensity={1.35} />
-      </mesh>
-      {bottom > 0.02 ? (
-        <>
-          <TrimBox
-            wall={wall}
-            x0={a - 0.1}
-            x1={b + 0.1}
-            y0={bottom - 0.05}
-            y1={bottom - 0.018}
-            z0={-t / 2 - 0.08}
-            z1={-t / 2 + 0.01}
-            materialId="stone"
-            castShadow
-          />
-          <TrimBox
-            wall={wall}
-            x0={a - 0.02}
-            x1={b + 0.02}
-            y0={bottom}
-            y1={bottom + 0.03}
-            z0={t / 2 - 0.01}
-            z1={t / 2 + 0.05}
-            materialId="stone"
-          />
-        </>
-      ) : null}
-    </group>
+    <mesh key={`glass-${a}-${b}`} position={[(a + b) / 2, (opening.sill + opening.top) / 2, 0]} receiveShadow>
+      <boxGeometry args={[b - a - frame * 2, opening.top - opening.sill - frame * 2, 0.008]} />
+      <SurfaceMaterial material={getMaterial("glass")} envMapIntensity={1.35} />
+    </mesh>
   )
+}
+
+function casingBoxes(wall: WallConfig, a: number, b: number, top: number): BoxSpec[] {
+  const t = wall.thickness
+  const trim = 0.07
+  return [
+    { x0: a - trim, x1: a, y0: 0, y1: top + trim, z0: -t / 2 - 0.006, z1: t / 2 + 0.006, materialId: "whitePaint" },
+    { x0: b, x1: b + trim, y0: 0, y1: top + trim, z0: -t / 2 - 0.006, z1: t / 2 + 0.006, materialId: "whitePaint" },
+    { x0: a - trim, x1: b + trim, y0: top, y1: top + trim, z0: -t / 2 - 0.006, z1: t / 2 + 0.006, materialId: "whitePaint" },
+  ]
+}
+
+function baseboardBoxes(wall: WallConfig): BoxSpec[] {
+  const t = wall.thickness
+  const mode = wall.baseboard ?? (wall.exterior ? "auto" : "both")
+  if (mode === "none") return []
+  const sides: number[] = mode === "both" ? [1, -1] : mode === "auto" ? [wallOutwardSign(wall)] : [1]
+  const cuts = (wall.openings ?? [])
+    .filter((opening) => opening.sill <= 0.02)
+    .map((opening) => openingSpan(wall, opening))
+    .sort((a, b) => a[0] - b[0])
+  const spans: [number, number][] = []
+  let cursor = 0
+  for (const [a, b] of cuts) {
+    if (a > cursor + 0.005) spans.push([cursor, a])
+    cursor = Math.max(cursor, b)
+  }
+  if (cursor < wallGeometry(wall).length - 0.005) spans.push([cursor, wallGeometry(wall).length])
+
+  const boxes: BoxSpec[] = []
+  for (const side of sides) {
+    for (const [a, b] of spans) {
+      const offset = side * (t / 2 + 0.008)
+      pushBox(boxes, {
+        x0: a,
+        x1: b,
+        y0: 0,
+        y1: 0.09,
+        z0: offset - 0.008,
+        z1: offset + 0.008,
+        materialId: "whitePaint",
+      })
+    }
+  }
+  return boxes
 }
 
 function DoorLeaf({
@@ -257,6 +200,14 @@ function DoorLeaf({
   const open = storedOpen ?? defaultOpen
   const group = useRef<THREE.Group>(null)
 
+  const trims: BoxSpec[] = []
+  if (exterior) {
+    pushBox(trims, { x0: exteriorTrimA, x1: exteriorTrimB, y0: 0.55, y1: height - 0.25, z0: 0.025, z1: 0.035, materialId: "entryDoor" })
+    pushBox(trims, { x0: exteriorGlassA, x1: exteriorGlassB, y0: 0.85, y1: height - 0.5, z0: 0.025, z1: 0.038, materialId: "blackMetal" })
+  } else {
+    pushBox(trims, { x0: interiorTrimA, x1: interiorTrimB, y0: 0.35, y1: height - 0.25, z0: 0.024, z1: 0.034, materialId: leafMaterial })
+  }
+
   useFrame((_, delta) => {
     if (!group.current) return
     const target = open ? 1.12 * swing : 0
@@ -291,14 +242,7 @@ function DoorLeaf({
         <boxGeometry args={[width, height, 0.045]} />
         <SurfaceMaterial material={getMaterial(leafMaterial)} uv={[width, height]} />
       </mesh>
-      {exterior ? (
-        <>
-          <TrimBox wall={wall} x0={exteriorTrimA} x1={exteriorTrimB} y0={0.55} y1={height - 0.25} z0={0.025} z1={0.035} materialId="entryDoor" />
-          <TrimBox wall={wall} x0={exteriorGlassA} x1={exteriorGlassB} y0={0.85} y1={height - 0.5} z0={0.025} z1={0.038} materialId="blackMetal" />
-        </>
-      ) : (
-        <TrimBox wall={wall} x0={interiorTrimA} x1={interiorTrimB} y0={0.35} y1={height - 0.25} z0={0.024} z1={0.034} materialId={leafMaterial} />
-      )}
+      <MergedBoxes boxes={trims} />
       <mesh position={[direction * (width - 0.09), 1.02, -0.045]} rotation={[Math.PI / 2, 0, 0]} castShadow>
         <cylinderGeometry args={[0.012, 0.012, 0.1, 12]} />
         <SurfaceMaterial material={getMaterial("metal")} />
@@ -337,69 +281,13 @@ function GarageDoor({ wall: _wall, a, b, top }: { wall: WallConfig; a: number; b
   )
 }
 
-function OpeningCasing({
-  wall,
-  a,
-  b,
-  top,
-}: {
-  wall: WallConfig
-  a: number
-  b: number
-  top: number
-}) {
-  const t = wall.thickness
-  const trim = 0.07
-  return (
-    <group>
-      <TrimBox wall={wall} x0={a - trim} x1={a} y0={0} y1={top + trim} z0={-t / 2 - 0.006} z1={t / 2 + 0.006} materialId="whitePaint" />
-      <TrimBox wall={wall} x0={b} x1={b + trim} y0={0} y1={top + trim} z0={-t / 2 - 0.006} z1={t / 2 + 0.006} materialId="whitePaint" />
-      <TrimBox wall={wall} x0={a - trim} x1={b + trim} y0={top} y1={top + trim} z0={-t / 2 - 0.006} z1={t / 2 + 0.006} materialId="whitePaint" />
-    </group>
-  )
-}
-
-function Baseboards({ wall }: { wall: WallConfig }) {
-  const t = wall.thickness
-  const mode = wall.baseboard ?? (wall.exterior ? "auto" : "both")
-  if (mode === "none") return null
-  const sides: number[] = mode === "both" ? [1, -1] : mode === "auto" ? [wallOutwardSign(wall)] : [1]
-  const cuts = (wall.openings ?? [])
-    .filter((opening) => opening.sill <= 0.02)
-    .map((opening) => openingSpan(wall, opening))
-    .sort((a, b) => a[0] - b[0])
-  const spans: [number, number][] = []
-  let cursor = 0
-  for (const [a, b] of cuts) {
-    if (a > cursor + 0.005) spans.push([cursor, a])
-    cursor = Math.max(cursor, b)
-  }
-  if (cursor < wallGeometry(wall).length - 0.005) spans.push([cursor, wallGeometry(wall).length])
-  return (
-    <group>
-      {sides.map((side) =>
-        spans.map(([a, b], index) => (
-          <mesh
-            key={`${side}-${index}`}
-            position={[(a + b) / 2, 0.045, side * (t / 2 + 0.008)]}
-            castShadow={false}
-            receiveShadow
-          >
-            <boxGeometry args={[b - a, 0.09, 0.016]} />
-            <SurfaceMaterial material={getMaterial("whitePaint")} uv={[b - a, 0.09]} />
-          </mesh>
-        )),
-      )}
-    </group>
-  )
-}
-
 function Wall({ wall }: { wall: WallConfig }) {
   const details = usePlanner((state) => state.ambience.details)
   const view = usePlanner((state) => state.view)
   const geom = wallGeometry(wall)
   const height = wallHeight(wall)
   const base = wallBase(wall)
+  const t = wall.thickness
   const openings = [...(wall.openings ?? [])].sort(
     (a, b) => openingSpan(wall, a)[0] - openingSpan(wall, b)[0],
   )
@@ -414,59 +302,58 @@ function Wall({ wall }: { wall: WallConfig }) {
   }
   if (cursor < geom.length) segments.push({ x0: cursor, x1: geom.length, y0: 0, y1: height })
 
+  const boxes: BoxSpec[] = []
+  const extras: ReactNode[] = []
+  for (const segment of segments) {
+    pushBox(boxes, {
+      x0: segment.x0,
+      x1: segment.x1,
+      y0: segment.y0,
+      y1: segment.y1,
+      z0: -t / 2,
+      z1: t / 2,
+      materialId: wall.material,
+      castShadow: true,
+    })
+  }
+  if (view === "plan") {
+    for (const segment of segments) {
+      pushBox(boxes, {
+        x0: segment.x0,
+        x1: segment.x1,
+        y0: height,
+        y1: height + 0.008,
+        z0: -t / 2,
+        z1: t / 2,
+        materialId: "planWall",
+      })
+    }
+  }
+  if (details) boxes.push(...baseboardBoxes(wall))
+
+  for (const opening of openings) {
+    const [a, b] = openingSpan(wall, opening)
+    if (opening.type === "window" || opening.type === "bay") {
+      boxes.push(...windowBoxes(wall, opening, a, b))
+      extras.push(windowGlass(wall, opening, a, b))
+    } else if (opening.type === "garage") {
+      extras.push(<GarageDoor key={`garage-${a}-${b}`} wall={wall} a={a} b={b} top={opening.top} />)
+    } else if (opening.type === "door") {
+      if (details) boxes.push(...casingBoxes(wall, a, b, opening.top))
+      extras.push(
+        <DoorLeaf key={`door-${a}-${b}`} wall={wall} opening={opening} a={a} b={b} exterior={Boolean(wall.exterior)} />,
+      )
+    } else if (details) {
+      boxes.push(...casingBoxes(wall, a, b, opening.top))
+    }
+  }
+
   const transform = wallRenderTransform(wall)
   return (
     <group position={[transform.position[0], base, transform.position[1]]} rotation={[0, transform.rotation, 0]}>
       <FadeGroup wall={wall}>
-        {segments.map((segment, index) => (
-          <WallBox
-            key={index}
-            wall={wall}
-            x0={segment.x0}
-            x1={segment.x1}
-            y0={segment.y0}
-            y1={segment.y1}
-            materialId={wall.material}
-            uv={[segment.x1 - segment.x0, segment.y1 - segment.y0]}
-          />
-        ))}
-        {view === "plan"
-          ? segments.map((segment, index) => (
-              <WallBox
-                key={`cap-${index}`}
-                wall={wall}
-                x0={segment.x0}
-                x1={segment.x1}
-                y0={height}
-                y1={height + 0.008}
-                materialId="planWall"
-                castShadow={false}
-              />
-            ))
-          : null}
-        {details ? <Baseboards wall={wall} /> : null}
-        {openings.map((opening) => {
-          const [a, b] = openingSpan(wall, opening)
-          if (opening.type === "window" || opening.type === "bay") {
-            return <WindowUnit key={`${a}-${b}`} wall={wall} opening={opening} a={a} b={b} />
-          }
-          if (opening.type === "garage") {
-            return <GarageDoor key={`${a}-${b}`} wall={wall} a={a} b={b} top={opening.top} />
-          }
-          if (opening.type === "door") {
-            return (
-              <group key={`${a}-${b}`}>
-                {details ? <OpeningCasing wall={wall} a={a} b={b} top={opening.top} /> : null}
-                <DoorLeaf wall={wall} opening={opening} a={a} b={b} exterior={Boolean(wall.exterior)} />
-              </group>
-            )
-          }
-          return (
-            <group key={`${a}-${b}`}>
-              {details ? <OpeningCasing wall={wall} a={a} b={b} top={opening.top} /> : null}
-            </group>
-          )
-        })}
+        <MergedBoxes boxes={boxes} />
+        {extras}
       </FadeGroup>
     </group>
   )

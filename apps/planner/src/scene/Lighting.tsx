@@ -19,6 +19,7 @@ export function Lighting() {
   const ambience = usePlanner((state) => state.ambience)
   const level = usePlanner((state) => state.level)
   const view = usePlanner((state) => state.view)
+  const quality = usePlanner((state) => state.quality)
   const sun = useMemo(
     () => sunState(ambience.hour, ambience.latitude, ambience.dayOfYear),
     [ambience.hour, ambience.latitude, ambience.dayOfYear],
@@ -32,7 +33,9 @@ export function Lighting() {
   const rooms = getRooms(level).filter(
     (room) => (room.rect[2] - room.rect[0]) * (room.rect[3] - room.rect[1]) > 4,
   )
-  const lampRooms = rooms.slice(0, 5)
+  const lampCount = quality === "low" ? 2 : quality === "medium" ? 3 : 5
+  const lampRooms = rooms.slice(0, lampCount)
+  const shadowSize = quality === "high" ? 2048 : 1024
   const hemiSky = useMemo(() => sun.skyTint.clone().lerp(new THREE.Color("#f7e7cf"), 0.42), [sun.skyTint])
   const hemiGround = useMemo(() => sun.horizonTint.clone().lerp(new THREE.Color("#b08a61"), 0.5), [sun.horizonTint])
   const centerZ = -HOUSE_CENTER[1]
@@ -55,7 +58,9 @@ export function Lighting() {
     <>
       <color attach="background" args={[view === "plan" ? paper : skyColor]} />
       <fog attach="fog" args={[skyColor, 42, 110]} />
-      {ambience.softShadows && view !== "walk" ? <SoftShadows size={10} samples={16} focus={0.4} /> : null}
+      {ambience.softShadows && view !== "walk" && quality === "high" ? (
+        <SoftShadows size={10} samples={16} focus={0.4} />
+      ) : null}
       <hemisphereLight
         args={[hemiSky, hemiGround, 0.17 + sun.daylight * 0.22]}
       />
@@ -72,9 +77,9 @@ export function Lighting() {
         position={sunPosition}
         intensity={Math.max(0.015, sun.intensity)}
         color={sun.color}
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
+        castShadow={quality !== "low"}
+        shadow-mapSize-width={shadowSize}
+        shadow-mapSize-height={shadowSize}
         shadow-camera-left={-12}
         shadow-camera-right={12}
         shadow-camera-top={14}

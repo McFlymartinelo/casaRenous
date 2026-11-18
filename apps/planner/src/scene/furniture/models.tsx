@@ -1,6 +1,5 @@
-import { Component, Suspense, useMemo, useRef, type ReactNode } from "react"
+import { Component, Suspense, useMemo, type ReactNode } from "react"
 import { RoundedBox, useGLTF } from "@react-three/drei"
-import { useFrame } from "@react-three/fiber"
 import * as THREE from "three"
 import type { CatalogItem, FurnitureVariant, MaterialConfig } from "@/types"
 import { usePlanner } from "@/store/planner"
@@ -104,13 +103,6 @@ function Cyl({
 const DOOR_ANGLE = Math.PI * 0.6
 const DOOR_GROOVE: MaterialConfig = { color: "#8f897e", roughness: 0.62, metalness: 0.04 }
 
-function useDoorState(doorId: string) {
-  const open = usePlanner((state) => Boolean(state.openDoors[doorId]))
-  const tool = usePlanner((state) => state.tool)
-  const toggleDoor = usePlanner((state) => state.toggleDoor)
-  return { open, tool, toggleDoor }
-}
-
 interface HingedDoorProps {
   doorId: string
   side: 1 | -1
@@ -126,9 +118,16 @@ interface HingedDoorProps {
   openAngle?: number
 }
 
-/** Porte battante : l'origine du groupe est la charnière, en bas. */
+/**
+ * Porte battante de meuble, désormais statique : seule l'ouverture des portes
+ * de la maison reste interactive. Le `doorId` est conservé dans l'interface
+ * pour ne pas casser les appels, mais n'est plus utilisé.
+ *
+ * Les pièces restent au même endroit que la porte fermée et sont fusionnées
+ * avec le reste du meuble par l'AutoMerge parent.
+ */
 function HingedDoor({
-  doorId,
+  doorId: _doorId,
   side,
   direction = -1,
   width,
@@ -139,87 +138,51 @@ function HingedDoor({
   handle = null,
   groove = null,
   seams = [],
-  openAngle = DOOR_ANGLE,
+  openAngle: _openAngle = DOOR_ANGLE,
 }: HingedDoorProps) {
-  const { open, tool, toggleDoor } = useDoorState(doorId)
-  const ref = useRef<THREE.Group>(null)
-
-  useFrame((_, delta) => {
-    if (!ref.current) return
-    const target = open ? side * -direction * openAngle : 0
-    ref.current.rotation.y = THREE.MathUtils.damp(
-      ref.current.rotation.y,
-      target,
-      9,
-      Math.min(delta, 0.05),
-    )
-  })
-
   return (
-    <group name={`door-${doorId}`} position={position}>
-      <group ref={ref}>
-        <group
-          onPointerDown={(event) => {
-            if (tool !== "doors") return
-            event.stopPropagation()
-            toggleDoor(doorId)
-          }}
-          onPointerOver={(event) => {
-            if (tool !== "doors") return
-            event.stopPropagation()
-            document.body.style.cursor = "pointer"
-          }}
-          onPointerOut={() => {
-            if (tool === "doors") document.body.style.cursor = "auto"
-          }}
-        >
-          <RBox
-            size={[width, height, thickness]}
-            position={[side * width / 2, height / 2, 0]}
-            radius={0.004}
-            material={material}
-          />
-          {handle ? (
-            <Cyl
-              radiusTop={0.007}
-              radiusBottom={0.007}
-              height={Math.min(0.22, height * 0.3)}
-              position={[
-                side * (width - 0.065),
-                height * 0.52,
-                direction * (thickness / 2 + 0.018),
-              ]}
-              material={handle}
-              segments={10}
-            />
-          ) : null}
-          {groove ? (
-            <Box
-              size={[width - 0.018, 0.012, 0.004]}
-              position={[
-                side * width / 2,
-                groove === "top" ? height - 0.035 : 0.035,
-                direction * (thickness / 2 + 0.002),
-              ]}
-              material={DOOR_GROOVE}
-              castShadow={false}
-            />
-          ) : null}
-          {seams.map((seam, index) => (
-            <Box
-              key={`seam-${index}`}
-              size={[width - 0.018, 0.008, 0.004]}
-              position={[
-                side * width / 2,
-                seam,
-                direction * (thickness / 2 + 0.002),
-              ]}
-              material={DOOR_GROOVE}
-              castShadow={false}
-            />
-          ))}
-        </group>
-      </group>
+    <group position={position}>
+      <RBox
+        size={[width, height, thickness]}
+        position={[side * width / 2, height / 2, 0]}
+        radius={0.004}
+        material={material}
+      />
+      {handle ? (
+        <Cyl
+          radiusTop={0.007}
+          radiusBottom={0.007}
+          height={Math.min(0.22, height * 0.3)}
+          position={[
+            side * (width - 0.065),
+            height * 0.52,
+            direction * (thickness / 2 + 0.018),
+          ]}
+          material={handle}
+          segments={10}
+        />
+      ) : null}
+      {groove ? (
+        <Box
+          size={[width - 0.018, 0.012, 0.004]}
+          position={[
+            side * width / 2,
+            groove === "top" ? height - 0.035 : 0.035,
+            direction * (thickness / 2 + 0.002),
+          ]}
+          material={DOOR_GROOVE}
+          castShadow={false}
+        />
+      ) : null}
+      {seams.map((seam, index) => (
+        <Box
+          key={`seam-${index}`}
+          size={[width - 0.018, 0.008, 0.004]}
+          position={[side * width / 2, seam, direction * (thickness / 2 + 0.002)]}
+          material={DOOR_GROOVE}
+          castShadow={false}
+        />
+      ))}
     </group>
   )
 }
@@ -237,9 +200,9 @@ interface SlidingDrawerProps {
   travel?: number
 }
 
-/** Tiroir coulissant ; `position` est le centre bas de la façade fermée. */
+/** Tiroir de meuble statique ; `position` est le centre bas de la façade. */
 function SlidingDrawer({
-  doorId,
+  doorId: _doorId,
   width,
   height,
   depth,
@@ -248,75 +211,43 @@ function SlidingDrawer({
   material,
   boxMaterial,
   handle = null,
-  travel = 0.26,
+  travel: _travel = 0.26,
 }: SlidingDrawerProps) {
-  const { open, tool, toggleDoor } = useDoorState(doorId)
-  const ref = useRef<THREE.Group>(null)
-
-  useFrame((_, delta) => {
-    if (!ref.current) return
-    const target = open ? direction * travel : 0
-    ref.current.position.z = THREE.MathUtils.damp(
-      ref.current.position.z,
-      target,
-      9,
-      Math.min(delta, 0.05),
-    )
-  })
-
   return (
     <group position={position}>
-      <group ref={ref}>
-        <group
-          onPointerDown={(event) => {
-            if (tool !== "doors") return
-            event.stopPropagation()
-            toggleDoor(doorId)
-          }}
-          onPointerOver={(event) => {
-            if (tool !== "doors") return
-            event.stopPropagation()
-            document.body.style.cursor = "pointer"
-          }}
-          onPointerOut={() => {
-            if (tool === "doors") document.body.style.cursor = "auto"
-          }}
-        >
-          <RBox
-            size={[width, height, 0.016]}
-            position={[0, height / 2, 0]}
-            radius={0.003}
-            material={material}
-          />
-          <Box
-            size={[width - 0.025, 0.012, depth]}
-            position={[0, 0.02, -direction * depth / 2]}
-            material={boxMaterial ?? material}
-          />
-          <Box
-            size={[0.012, height - 0.025, depth]}
-            position={[-width / 2 + 0.01, height / 2, -direction * depth / 2]}
-            material={boxMaterial ?? material}
-          />
-          <Box
-            size={[0.012, height - 0.025, depth]}
-            position={[width / 2 - 0.01, height / 2, -direction * depth / 2]}
-            material={boxMaterial ?? material}
-          />
-          <Box
-            size={[width - 0.025, height - 0.025, 0.012]}
-            position={[0, height / 2, -direction * (depth - 0.006)]}
-            material={boxMaterial ?? material}
-          />
-          {handle ? (
-            <Box
-              size={[Math.min(0.16, width * 0.35), 0.012, 0.012]}
-              position={[0, height * 0.55, direction * 0.028]}
-              material={handle}
-            />
-          ) : null}
-        </group>
-      </group>
+      <RBox
+        size={[width, height, 0.016]}
+        position={[0, height / 2, 0]}
+        radius={0.003}
+        material={material}
+      />
+      <Box
+        size={[width - 0.025, 0.012, depth]}
+        position={[0, 0.02, -direction * depth / 2]}
+        material={boxMaterial ?? material}
+      />
+      <Box
+        size={[0.012, height - 0.025, depth]}
+        position={[-width / 2 + 0.01, height / 2, -direction * depth / 2]}
+        material={boxMaterial ?? material}
+      />
+      <Box
+        size={[0.012, height - 0.025, depth]}
+        position={[width / 2 - 0.01, height / 2, -direction * depth / 2]}
+        material={boxMaterial ?? material}
+      />
+      <Box
+        size={[width - 0.025, height - 0.025, 0.012]}
+        position={[0, height / 2, -direction * (depth - 0.006)]}
+        material={boxMaterial ?? material}
+      />
+      {handle ? (
+        <Box
+          size={[Math.min(0.16, width * 0.35), 0.012, 0.012]}
+          position={[0, height * 0.55, direction * 0.028]}
+          material={handle}
+        />
+      ) : null}
     </group>
   )
 }

@@ -10,6 +10,7 @@ import type {
   FurnitureItem,
   LevelId,
   Point2,
+  QualityTier,
   Tool,
   ViewMode,
 } from "@/types"
@@ -60,6 +61,8 @@ interface PlannerState {
   tool: Tool
   rotationStep: 15 | 90
   ambience: AmbienceConfig
+  /** Qualité courante, pilotée par le moniteur de performances (non persistée). */
+  quality: QualityTier
   past: FurnitureItem[][]
   future: FurnitureItem[][]
   transaction: FurnitureItem[] | null
@@ -90,6 +93,7 @@ interface PlannerState {
   setRotationStep: (step: 15 | 90) => void
   setAmbience: (patch: Partial<AmbienceConfig>) => void
   setRealistic: (enabled: boolean) => void
+  setQuality: (quality: QualityTier) => void
   undo: () => void
   redo: () => void
   clearMeasure: () => void
@@ -181,6 +185,7 @@ export const usePlanner = create<PlannerState>()(
       tool: "move",
       rotationStep: 15,
       ambience: { ...HOUSE.ambience },
+      quality: "high",
       past: [],
       future: [],
       transaction: null,
@@ -409,6 +414,9 @@ export const usePlanner = create<PlannerState>()(
             ambientOcclusion: enabled,
           },
         })),
+
+      setQuality: (quality) =>
+        set((state) => (state.quality === quality ? state : { quality })),
 
       undo: () => {
         const state = get()

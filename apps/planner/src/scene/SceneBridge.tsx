@@ -6,7 +6,7 @@ import { usePlanner } from "@/store/planner"
 import { sceneApi } from "./scene-api"
 
 export function SceneBridge() {
-  const { camera, gl, size } = useThree()
+  const { camera, gl, scene, size } = useThree()
   const level = usePlanner((state) => state.level)
   const plane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), [])
   const raycaster = useMemo(() => new THREE.Raycaster(), [])
@@ -29,6 +29,9 @@ export function SceneBridge() {
     }
     sceneApi.current.capture = () => {
       try {
+        // Sans `preserveDrawingBuffer`, on redessine juste avant la capture :
+        // le tampon est valide jusqu'à la fin de cette tâche.
+        gl.render(scene, camera)
         return gl.domElement.toDataURL("image/png")
       } catch {
         return null
@@ -37,7 +40,7 @@ export function SceneBridge() {
     sceneApi.current.resetCamera = () => {
       window.dispatchEvent(new CustomEvent("planner:reset-camera"))
     }
-  }, [camera, gl, level, plane, pointer, point, raycaster, size.height, size.width])
+  }, [camera, gl, level, plane, pointer, point, raycaster, scene, size.height, size.width])
 
   return null
 }

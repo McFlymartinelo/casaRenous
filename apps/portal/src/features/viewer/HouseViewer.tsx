@@ -20,18 +20,22 @@ import { TouchStick } from "./TouchStick"
 import { WalkRig, type WalkMeshes } from "./WalkRig"
 import { createWalkInput } from "./walk"
 import type { ViewerMode, ViewerSpot } from "./spots"
+import { QualityMonitor, dprForTier, initialDpr, type QualitySample } from "./QualityMonitor"
 
 export type ViewerLevel = "global" | "rdc" | "etage"
 export type { ViewerMode, ViewerSpot }
 
 const MODEL_URL = "/models/casarenous.glb"
 
-/** Repère du modèle : maison de x 0 → 7,10, z 0 → -13,60, sols à y 0 et 2,72. */
-const HOUSE_CENTER: [number, number, number] = [3.55, 1.4, -6.8]
+/** Plafond de résolution : au-delà, le gain visuel est nul et le coût GPU explose. */
+const MAX_DPR = 1.5
+
+/** Repère du modèle : maison de x 0 → 7,00, z 0 → -13,80, sols à y 0 et 2,82. */
+const HOUSE_CENTER: [number, number, number] = [3.5, 1.4, -6.9]
 const OVERVIEW: [number, number, number] = [17.5, 12, 9.5]
 
 const ROOM_MATCH =
-  /(piece-de-vie|entree|cellier|garage|chambre-parentale|chambre-[1-4]|dressing|salle-d-eau[a-z-]*|salle-de-bain|degagement|wc|terrasse-bois)/i
+  /(piece-de-vie|entree|cellier|garage|chambre-parentale|chambre-[1-4]|dressing|salle-d-eau[a-z-]*|salle-de-bain|degagement[a-z-]*|wc[a-z-]*|placard|terrasse-bois)/i
 
 function roomSlugFromName(name: string): string | null {
   const match = name.match(ROOM_MATCH)
@@ -413,6 +417,16 @@ export default function HouseViewer({
   const groundTint = readTokenColor("--aura-surface-3", "oklch(92.6% 0.018 78)")
   const sunTint = readTokenColor("--aura-accent-soft", "oklch(95.5% 0.028 45)")
   const { active: loadingModel, progress } = useProgress()
+  const [sample, setSample] = useState<QualitySample>({ tier: "high", fps: 0 })
+  const handleSample = useCallback((next: QualitySample) => {
+    setSample(next)
+    if (import.meta.env.DEV) {
+      (window as unknown as Record<string, unknown>).__casaViewerQuality = next
+    }
+  }, [])
+  const quality = sample.tier
+  const maxDpr = initialDpr(MAX_DPR)
+  const dpr = dprForTier(quality, maxDpr)
   const input = useMemo(() => createWalkInput(), [])
   const meshesRef = useRef<WalkMeshes>({ rdcWalls: [], upperWalls: [], floors: [] })
   const [locked, setLocked] = useState(false)
@@ -430,7 +444,7 @@ export default function HouseViewer({
   return (
     <>
       <Canvas
-        dpr={[1, 1.75]}
+        dpr={dpr}
         shadows
         frameloop={mode === "walk" ? "always" : "demand"}
         camera={{ fov: 45, near: 0.05, far: 300, position: OVERVIEW }}
@@ -447,9 +461,9 @@ export default function HouseViewer({
           position={[HOUSE_CENTER[0] + 14, 20, HOUSE_CENTER[2] + 12]}
           intensity={3.1}
           color={sunTint}
-          castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
+          castShadow={quality !== "low"}
+          shadow-mapSize-width={quality === "low" ? 512 : 1024}
+          shadow-mapSize-height={quality === "low" ? 512 : 1024}
           shadow-camera-left={-18}
           shadow-camera-right={18}
           shadow-camera-top={18}
@@ -490,6 +504,7 @@ export default function HouseViewer({
         />
         <CameraDirector mode={mode} />
         <DebugBridge />
+        <QualityMonitor maxDpr={maxDpr} onSample={handleSample} />
         {mode === "orbit" ? (
           <OrbitControls
             makeDefault
@@ -504,6 +519,15 @@ export default function HouseViewer({
           />
         ) : null}
       </Canvas>
+
+      {quality !== "high" ? (
+        <div
+          className="app-viewer__quality"
+          title={`Qualité ajustée automatiquement · ${Math.round(sample.fps)} images/s mesurées`}
+        >
+          Qualité auto · {quality === "low" ? "réduite" : "moyenne"} · {Math.round(sample.fps)} i/s
+        </div>
+      ) : null}
 
       {loadingModel ? (
         <div className="app-viewer__loading">

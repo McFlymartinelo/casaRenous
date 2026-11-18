@@ -9,6 +9,7 @@ import { usePlanner } from "@/store/planner"
 import type { FurnitureItem, Point2 } from "@/types"
 import { LockIcon } from "@/components/Icons"
 import { sceneApi } from "./scene-api"
+import { AutoMerge } from "./AutoMerge"
 import { FurnitureModel, PARAMETRIC_KINDS } from "./furniture/models"
 
 interface DragState {
@@ -132,7 +133,15 @@ function FurniturePiece({ item }: { item: FurnitureItem }) {
               ]
         }
       >
-        <FurnitureModel item={modelItem} variant={variant} seed={item.id} />
+        {catalog.model ? (
+          // Les modèles GLB (voitures, carport…) ont leurs propres matériaux et
+          // transformations : on ne les fusionne pas pour éviter toute altération.
+          <FurnitureModel item={modelItem} variant={variant} seed={item.id} />
+        ) : (
+          <AutoMerge key={`${item.variantId}-${size.w}-${size.d}-${size.h}`}>
+            <FurnitureModel item={modelItem} variant={variant} seed={item.id} />
+          </AutoMerge>
+        )}
       </group>
       {selected || hovered ? (
         <SelectionEdges

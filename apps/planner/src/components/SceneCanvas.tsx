@@ -1,7 +1,8 @@
-import { Component, Suspense, useEffect, useState, type ReactNode } from "react"
+import { Component, Suspense, useCallback, useEffect, useState, type ReactNode } from "react"
 import { Canvas } from "@react-three/fiber"
 import * as THREE from "three"
 import { HOUSE, getLevel, roomAt } from "@/config/house"
+import { QualityMonitor, dprForTier, initialDpr, type QualitySample } from "@/scene/QualityMonitor"
 import { addCatalogAt } from "@/lib/place"
 import { formatHour, sunState, timeOfDay } from "@/lib/sun"
 import { formatMeters } from "@/lib/format"
@@ -9,6 +10,9 @@ import { usePlanner } from "@/store/planner"
 import { sceneApi } from "@/scene/scene-api"
 import { HouseScene } from "@/scene/HouseScene"
 import { getCatalogItem, getItemSize } from "@/catalog/catalog"
+
+/** Plafond de résolution : au-delà, le gain visuel est nul et le coût GPU explose. */
+const MAX_DPR = 1.5
 
 class SceneBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   override state = { failed: false }
@@ -40,6 +44,21 @@ export function SceneCanvas() {
   const ambience = usePlanner((state) => state.ambience)
   const selectedId = usePlanner((state) => state.selectedId)
   const furniture = usePlanner((state) => state.furniture)
+  const quality = usePlanner((state) => state.quality)
+  const setQuality = usePlanner((state) => state.setQuality)
+  const [fps, setFps] = useState(0)
+  const handleSample = useCallback(
+    (sample: QualitySample) => {
+      setQuality(sample.tier)
+      setFps(sample.fps)
+      if (import.meta.env.DEV) {
+        (window as unknown as Record<string, unknown>).__plannerQuality = sample
+      }
+    },
+    [setQuality],
+  )
+  const maxDpr = initialDpr(MAX_DPR)
+  const dpr = dprForTier(quality, maxDpr)
   const [dropActive, setDropActive] = useState(false)
   const [locked, setLocked] = useState(false)
   const [ready, setReady] = useState(false)
@@ -85,12 +104,13 @@ export function SceneCanvas() {
       <SceneBoundary>
         <Canvas
           shadows
-          dpr={[1, 1.5]}
+          dpr={dpr}
           frameloop="always"
           gl={{
             antialias: true,
             powerPreference: "high-performance",
-            preserveDrawingBuffer: true,
+            // Coûteux en continu : la capture PNG redessine juste avant toDataURL.
+            preserveDrawingBuffer: false,
             toneMapping: THREE.AgXToneMapping,
             toneMappingExposure: ambience.exposure,
           }}
@@ -109,6 +129,7 @@ export function SceneCanvas() {
           <Suspense fallback={null}>
             <HouseScene />
           </Suspense>
+          <QualityMonitor maxDpr={maxDpr} onSample={handleSample} />
         </Canvas>
       </SceneBoundary>
 
@@ -128,6 +149,14 @@ export function SceneCanvas() {
             {timeOfDay(ambience.hour)} · {Math.round(ambience.exposure * 100)} % d'exposition
           </div>
         )}
+        {quality !== "high" ? (
+          <div
+            className="scene-pill scene-pill--quality"
+            title={`Qualité ajustée automatiquement · ${Math.round(fps)} images/s mesurées`}
+          >
+            Qualité auto · {quality === "low" ? "réduite" : "moyenne"} · {Math.round(fps)} i/s
+          </div>
+        ) : null}
       </div>
 
       {view === "plan" ? (

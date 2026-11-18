@@ -2,6 +2,9 @@ export type LevelId = "rdc" | "etage"
 export type Point2 = [number, number]
 export type Rect2 = [number, number, number, number]
 
+/** Palier de qualité ajusté automatiquement selon les performances mesurées. */
+export type QualityTier = "high" | "medium" | "low"
+
 export type TextureKind =
   | "wood"
   | "tile"

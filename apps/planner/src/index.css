@@ -967,6 +967,15 @@ button:disabled {
   padding: 3px 9px;
 }
 
+.scene-pill--quality {
+  background: rgba(255, 248, 235, 0.92);
+  border-color: rgba(212, 166, 90, 0.6);
+  box-shadow: none;
+  color: var(--ink-2);
+  font-size: 9.5px;
+  padding: 3px 9px;
+}
+
 /* ------------------------------------------------------- récapitulatif projet */
 
 .project-summary {
