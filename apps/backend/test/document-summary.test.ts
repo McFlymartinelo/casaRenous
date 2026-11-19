@@ -56,6 +56,20 @@ describe("buildDocumentSummary", () => {
     expect(summary.reservedWorksEdited).toBe(false)
   })
 
+  it("tolère le bruit OCR du serveur (Goûttotài, montant à la ligne)", () => {
+    const noisy = [
+      "NOTICE DESCRIPTIVE",
+      "Abattage, dessouchage et évacuation d'arbres génants l'accès au chantier x 5000,00]",
+      "Goûttotài [303 903 €]",
+      "/_____Montant du prix convenu pour les ouvrages de la colonne 3",
+      "|_218 800 €",
+    ].join("\n")
+    const result = buildDocumentSummary(noisy, "NOTICE")
+    expect(result.amounts).toContainEqual({ label: "Coût total", amountCents: 30_390_300 })
+    expect(result.amounts).toContainEqual({ label: "Prix convenu", amountCents: 21_880_000 })
+    expect(result.reservedWorks.some((item) => item.amountCents === 500_000)).toBe(true)
+  })
+
   it("rédige une description lisible", () => {
     expect(summary.description).toContain("303 903")
     expect(summary.description).toContain("Concernant M RENOUS Axel")

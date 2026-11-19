@@ -139,7 +139,8 @@ function findAmounts(text: string, invoice: InvoiceExtraction | null): DocumentS
   }
 
   const rules: AmountRule[] = [
-    { label: "Coût total", pattern: /(?:goût|go[uû]t|co[uû]t)\s*total/i },
+    // `tot` et non `total` : l'OCR produit parfois « Goûttotài ».
+    { label: "Coût total", pattern: /(?:go[uû]t|co[uû]t)\s*tot/i },
     { label: "Prix convenu", pattern: /montant\s+du\s+prix\s+convenu/i },
     { label: "Travaux réservés", pattern: /co[uû]t\s+des\s+travaux\s+dont/i },
     { label: "Budget à prévoir", pattern: /budg[ée]ter\s+un\s+montant\s+de/i },
@@ -148,11 +149,18 @@ function findAmounts(text: string, invoice: InvoiceExtraction | null): DocumentS
   const allLines = text.split(/\r?\n/)
   const values: DocumentSummary["amounts"] = []
   for (const rule of rules) {
-    for (const line of allLines) {
-      if (!rule.pattern.test(line) || /\bcapital\b/i.test(line)) continue
-      const amounts = [...line.matchAll(/([\d][\d\s]{2,12})\s*€/g)]
-        .map((match) => centsFrom(match))
-        .filter((value): value is number => value !== null && value > 0)
+    for (let index = 0; index < allLines.length; index += 1) {
+      if (!rule.pattern.test(allLines[index] ?? "")) continue
+      // Le montant peut être passé à la ligne suivante par l'OCR : on prend
+      // le premier montant trouvé, sans empiéter sur la ligne suivante.
+      let amounts: number[] = []
+      for (const candidate of allLines.slice(index, index + 3)) {
+        if (/\bcapital\b/i.test(candidate ?? "")) continue
+        amounts = [...(candidate ?? "").matchAll(/([\d][\d\s]{2,12})\s*€/g)]
+          .map((match) => centsFrom(match))
+          .filter((value): value is number => value !== null && value > 0)
+        if (amounts.length) break
+      }
       if (!amounts.length) continue
       values.push({ label: rule.label, amountCents: Math.max(...amounts) })
       break
@@ -173,11 +181,12 @@ export interface ReservedWorkItem {
  */
 export function extractReservedWorks(text: string): ReservedWorkItem[] {
   const allLines = text.split(/\r?\n/)
-  const totalIndex = allLines.findLastIndex((line) => /\b(?:go[uû]t|co[uû]t)\s*total\b/i.test(line))
-  const scope = totalIndex > 0 ? allLines.slice(0, totalIndex) : allLines
   const items: ReservedWorkItem[] = []
 
-  for (const raw of scope) {
+  // On parcourt tout le document : les lignes de tableau se reconnaissent à
+  // leur montant final sans symbole €, ce qui les distingue des assurances et
+  // autres montants narratifs (toujours accompagnés de €).
+  for (const raw of allLines) {
     const line = raw.replace(/[\t ]+/g, " ").trim()
     if (/€/.test(line)) continue
     if (/\bcapital\b|\bsiren\b|\bsiret\b|\bp[rêe]t\b|\bsinistre\b/i.test(line)) continue
@@ -189,7 +198,7 @@ export function extractReservedWorks(text: string): ReservedWorkItem[] {
     if (separator > -1) label = label.slice(separator + 1)
     label = label
       .replace(/^[^A-Za-zÀ-ÿ0-9]+/, "")
-      .replace(/[\s|x-]+$/, "")
+      .replace(/[\s|x\-–—]+$/, "")
       .trim()
     if (label.length < 8) continue
 
